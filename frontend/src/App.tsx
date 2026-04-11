@@ -1,0 +1,29 @@
+import { Routes, Route } from "react-router-dom";
+
+import Login from "./pages/Login";
+import Manufacturer from "./pages/Manufacturer";
+import Logistics from "./pages/Logistics";
+import Auditor from "./pages/Auditor";
+import Authority from "./pages/Authority";
+import Retailer from "./pages/Retailer";
+import RepairCenter from "./pages/RepairCenter";
+import Recycler from "./pages/Recycler";
+import Admin from "./pages/Admin";
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/manufacturer" element={<Manufacturer />} />
+      <Route path="/logistics" element={<Logistics />} />
+      <Route path="/auditor" element={<Auditor />} />
+      <Route path="/authority" element={<Authority />} />
+      <Route path="/retailer" element={<Retailer />} />
+      <Route path="/repair-center" element={<RepairCenter />} />
+      <Route path="/recycler" element={<Recycler />} />
+      <Route path="/admin" element={<Admin />} />
+    </Routes>
+  );
+}
+
+export default App;
