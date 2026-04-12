@@ -1,6 +1,7 @@
 import { useState } from "react";
 import logo from "../assets/logo.png";
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -71,7 +72,7 @@ function Login() {
         return;
       }
 
-      // ✅ SAVE TOKEN
+      // SAVE TOKEN
       localStorage.setItem("token", data.token);
 
             // Save message for next page
@@ -104,6 +105,20 @@ function Login() {
       console.error(error);
     }
   };
+
+  useEffect(() => {
+  const msg = localStorage.getItem("loginSuccess");
+
+  if (msg) {
+    setSuccess(msg);
+
+    localStorage.removeItem("loginSuccess");
+
+    setTimeout(() => {
+      setSuccess("");
+    }, 2500);
+  }
+}, []);
 
   const getFieldWrapperStyle = (fieldName: string) => {
     if (errors[fieldName as keyof Errors]) {
@@ -248,35 +263,42 @@ function Login() {
   );
 }
 
-/* ================= NEW SUCCESS STYLES ================= */
+/* ================= STYLES ================= */
 
 const successPopup: React.CSSProperties = {
   position: "fixed",
   top: "20px",
   right: "20px",
-  background: "#E6F4EA",
-  color: "#1B5E20",
-  padding: "14px 20px",
-  borderRadius: "10px",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+  background: "#EAF7EE",
+  color: "#14532d",
+  padding: "12px 16px",
+  borderRadius: "12px",
+  boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
   display: "flex",
   alignItems: "center",
   gap: "10px",
   fontSize: "13px",
   fontWeight: 500,
   zIndex: 999,
+  border: "1px solid #D1FADF",
+  maxWidth: "260px",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const successIcon: React.CSSProperties = {
-  background: "#1B5E20",
-  color: "white",
-  width: "20px",
+  width: "40px",
   height: "20px",
   borderRadius: "50%",
+  background: "#16a34a",
+  color: "#ffffff",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   fontSize: "12px",
+  fontWeight: 700,
+  flexShrink: 0,
 };
 
 const container: React.CSSProperties = {
