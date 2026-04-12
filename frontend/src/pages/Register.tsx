@@ -9,6 +9,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 
 type Errors = {
   fullName?: string;
@@ -23,16 +24,15 @@ function Register() {
   const [focusedField, setFocusedField] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [organisation, setOrganisation] = useState("");
   const [role, setRole] = useState("Manufacturer");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [errors, setErrors] = useState<Errors>({});
 
@@ -81,18 +81,8 @@ function Register() {
   if (!password) {
     newErrors.password = "Password is required.";
   } else if (password.length < 8) {
-    newErrors.password = "Password must be at least 8 characters.";
-  } else if (/\s/.test(password)) {
-    newErrors.password = "Password cannot contain spaces.";
-  } else if (!/[A-Z]/.test(password)) {
-    newErrors.password = "Password must include at least one uppercase letter.";
-  } else if (!/[a-z]/.test(password)) {
-    newErrors.password = "Password must include at least one lowercase letter.";
-  } else if (!/[0-9]/.test(password)) {
-    newErrors.password = "Password must include at least one number.";
-  } else if (!/[^A-Za-z0-9]/.test(password)) {
-    newErrors.password = "Password must include at least one special character.";
-  }
+    newErrors.password = "Password must be at least 8 characters."
+  } 
 
   if (!confirmPassword) {
     newErrors.confirmPassword = "Please confirm your password.";
@@ -104,44 +94,49 @@ function Register() {
   return Object.keys(newErrors).length === 0;
 };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+// ================= HANDLE REGISTER =================
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!validate()) return;
+  const isValid = validate();
 
-    setLoading(true);
+  if (!isValid) return;
 
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName,
-          email,
-          organization: organisation,
-          role,
-          password,
-        }),
-      });
+  setLoading(true);
 
-      const data = await res.json();
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fullName,
+        email,
+        organization: organisation,
+        role,
+        password,
+      }),
+    });
 
-      if (!res.ok) {
-        alert(data.message);
-        setLoading(false);
-        return;
-      }
+    const data = await res.json();
 
+    if (!res.ok) {
+      setErrorMessage(data.message);
       setLoading(false);
-      setSubmitted(true);
-    } catch (err) {
-      console.error(err);
-      alert("Server error");
-      setLoading(false);
+
+      setTimeout(() => setErrorMessage(""), 3000);
+      return;
     }
-  };
+
+    setLoading(false);
+    setSubmitted(true);
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
+    setLoading(false);
+  }
+};
 
   const getFieldWrapperStyle = (fieldName: keyof Errors | string) => {
     if (errors[fieldName as keyof Errors]) {
@@ -202,6 +197,14 @@ function Register() {
             </>
           ) : (
             <>
+
+            {errorMessage && (
+              <div style={errorPopup}>
+                <ErrorOutlineRoundedIcon style={errorIcon} />
+                {errorMessage}
+              </div>
+            )}
+
               <form onSubmit={handleRegister} noValidate>
                 <p style={sectionTitle}>CREATE ACCOUNT</p>
 
@@ -242,7 +245,7 @@ function Register() {
                 </div>
 
                 <div style={field}>
-                  <label style={label}>ORGANISATION</label>
+                  <label style={label}>ORGANIZATION</label>
                   <div style={getFieldWrapperStyle("organisation")}>
                     <BusinessOutlinedIcon style={iconStyle} />
                     <input
@@ -314,14 +317,18 @@ function Register() {
                       style={input}
                       value={password}
                       onChange={(e) => {
-                        setPassword(e.target.value);
+                        const value = e.target.value;
+                        setPassword(value);
 
-                        // LIVE VALIDATION
                         setErrors((prev) => ({
                           ...prev,
                           password:
-                            e.target.value.length < 8
+                            value.length < 8
                               ? "Password must be at least 8 characters."
+                              : "",
+                          confirmPassword:
+                            confirmPassword && value !== confirmPassword
+                              ? "Passwords do not match"
                               : "",
                         }));
                       }}
@@ -348,24 +355,22 @@ function Register() {
                     <div style={getFieldWrapperStyle("confirmPassword")}>
                       <LockOutlinedIcon style={iconStyle} />
 
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Repeat"
-                        style={input}
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
+                     <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Repeat"
+                      style={input}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setConfirmPassword(value);
 
-                          // LIVE VALIDATION
-                          setErrors((prev) => ({
-                            ...prev,
-                            confirmPassword:
-                              e.target.value !== password
-                                ? "Passwords do not match"
-                                : "",
-                          }));
-                        }}
-                      />
+                        setErrors((prev) => ({
+                          ...prev,
+                          confirmPassword:
+                            value !== password ? "Passwords do not match" : "",
+                        }));
+                      }}
+                    />
 
                       <span
                         style={eyeWrap}
@@ -405,15 +410,7 @@ function Register() {
                 <button
                   type="submit"
                   style={loading ? loadingButton : button}
-                  disabled={
-                    loading ||
-                    !fullName ||
-                    !email ||
-                    !organisation ||
-                    !password ||
-                    !confirmPassword ||
-                    password !== confirmPassword
-                  }
+                  disabled={loading}
                 >
                   {loading ? (
                     <span style={loadingContent}>
@@ -744,4 +741,29 @@ const backToSignIn: React.CSSProperties = {
   textUnderlineOffset: "2px",
 };
 
+const errorPopup: React.CSSProperties = {
+  position: "fixed",
+  top: "20px",
+  right: "20px",
+  background: "#FEE2E2",
+  color: "#991B1B",
+  padding: "12px 16px",
+  borderRadius: "12px",
+  boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  fontSize: "13px",
+  fontWeight: 500,
+  zIndex: 999,
+  border: "1px solid #FCA5A5",
+  maxWidth: "260px",
+  transition: "all 0.25s ease",
+  transform: "translateY(0)",
+};
+
+const errorIcon: React.CSSProperties = {
+  color: "#dc2626",
+  fontSize: "20px",
+};
 export default Register;
