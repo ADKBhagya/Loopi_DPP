@@ -9,6 +9,7 @@ import Retailer from "./pages/Retailer";
 import RepairCenter from "./pages/RepairCenter";
 import Recycler from "./pages/Recycler";
 import Admin from "./pages/Admin";
+import Register from "./pages/Register";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
       <Route path="/repair-center" element={<RepairCenter />} />
       <Route path="/recycler" element={<Recycler />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/register" element={<Register />} />
     </Routes>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import logo from "../assets/logo.png";
+import { Link } from "react-router-dom";
 
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -21,7 +22,7 @@ function Login() {
   const [role, setRole] = useState("Manufacturer");
 
   const [errors, setErrors] = useState<Errors>({});
-  const [success, setSuccess] = useState(""); // ✅ NEW
+  const [success, setSuccess] = useState(""); 
 
   const validate = () => {
     const newErrors: Errors = {};
@@ -119,7 +120,7 @@ function Login() {
   return (
     <div style={container}>
 
-      {/* ✅ SUCCESS POPUP */}
+      {/* SUCCESS POPUP */}
       {success && (
         <div style={successPopup}>
           <span style={successIcon}>✔</span>
@@ -231,7 +232,7 @@ function Login() {
           </form>
 
           <p style={footer}>
-            Don't have an account? <span style={register}>Register</span>
+            Don't have an account? <Link to="/register" style={register}>Register</Link>
           </p>
         </div>
 
@@ -378,13 +379,13 @@ const input: React.CSSProperties = {
 
 const iconStyle: React.CSSProperties = {
   color: "#9ca3af",
-  fontSize: "18px",
+  fontSize: "15px",
   marginRight: "6px",
 };
 
 const eyeIcon: React.CSSProperties = {
   color: "#9ca3af",
-  fontSize: "18px",
+  fontSize: "14px",
   cursor: "pointer",
 };
 
