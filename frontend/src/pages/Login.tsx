@@ -186,7 +186,7 @@ function Login() {
             <div style={field}>
               <div style={passwordTop}>
                 <label style={label}>PASSWORD</label>
-                <span style={forgot}>Forgot password?</span>
+                <Link to="/forgot-password" style={forgot}>Forgot password?</Link>
               </div>
 
               <div style={getFieldWrapperStyle("password")}>
