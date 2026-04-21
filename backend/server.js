@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 import connectDB from "./config/db.js";
 import User from "./models/User.js";
@@ -81,6 +82,75 @@ app.post("/api/auth/login", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+
+// ================= FORGOT PASSWORD =================
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.json({
+      message: "If this email exists, a reset link has been sent",
+    });
+  }
+
+  // GENERATE TOKEN
+  const token = crypto.randomBytes(32).toString("hex");
+
+  user.resetToken = token;
+  user.resetTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
+
+  await user.save();
+
+  // TEMP (NO EMAIL YET)
+  console.log("RESET LINK:");
+  console.log(`http://localhost:5173/reset-password/${token}`);
+
+  res.json({
+    message: "Reset link sent to your email",
+  });
+});
+
+
+// ================= RESET PASSWORD =================
+app.post("/api/auth/reset-password", async (req, res) => {
+  const { token, password } = req.body;
+
+  const user = await User.findOne({
+    resetToken: token,
+    resetTokenExpiry: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({
+      message: "Invalid or expired token",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  user.password = hashedPassword;
+  user.resetToken = undefined;
+  user.resetTokenExpiry = undefined;
+
+  await user.save();
+
+  res.json({
+    message: "Password updated successfully",
+  });
+});
+
+
+
+
+
+
+
+
+
+
 
 
 app.listen(5000, () => {
