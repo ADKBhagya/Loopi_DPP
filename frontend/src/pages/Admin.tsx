@@ -5,22 +5,24 @@ function Admin() {
   const [message, setMessage] = useState("");
   const role = localStorage.getItem("userRole");
 
+
   // ROLE PROTECTION
   if (role !== "Admin") {
     return <Navigate to="/" />;
   }
 
   // SUCCESS POPUP
-  useEffect(() => {
-    const msg = localStorage.getItem("loginSuccess");
+const token = localStorage.getItem("token");
 
-    if (msg) {
-      setMessage(msg);
-      localStorage.removeItem("loginSuccess");
-
-      setTimeout(() => setMessage(""), 3000);
-    }
-  }, []);
+useEffect(() => {
+  fetch("http://localhost:5000/api/admin/dashboard", {
+    headers: {
+      Authorization: `Bearer ${token}`, 
+    },
+  })
+    .then((res) => res.json())
+    .then((data) => console.log(data));
+}, []);
 
   return (
     <div>

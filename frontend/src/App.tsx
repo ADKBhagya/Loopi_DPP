@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
 import Manufacturer from "./pages/Manufacturer";
@@ -17,14 +18,29 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/manufacturer" element={<Manufacturer />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["Admin"]}>
+            <Admin />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/manufacturer"
+        element={
+          <ProtectedRoute allowedRoles={["Manufacturer"]}>
+            <Manufacturer />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/logistics" element={<Logistics />} />
       <Route path="/auditor" element={<Auditor />} />
       <Route path="/authority" element={<Authority />} />
       <Route path="/retailer" element={<Retailer />} />
       <Route path="/repair-center" element={<RepairCenter />} />
       <Route path="/recycler" element={<Recycler />} />
-      <Route path="/admin" element={<Admin />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />

@@ -242,6 +242,7 @@ function Login() {
                   onFocus={() => setFocusedField("role")}
                   onBlur={() => setFocusedField("")}
                 >
+                  <option value="">Select Role</option>
                   <option value="Manufacturer">Manufacturer</option>
                   <option value="Logistics">Logistics</option>
                   <option value="Auditor">Auditor</option>

@@ -27,7 +27,7 @@ function Register() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [organisation, setOrganisation] = useState("");
-  const [role, setRole] = useState("Manufacturer");
+  const [role, setRole] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,18 +36,16 @@ function Register() {
 
   const [errors, setErrors] = useState<Errors>({});
 
-  const getPasswordStrength = () => {
-    if (!password) return 0;
+const getPasswordStrength = () => {
+  let score = 0;
 
-    const length = password.length;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    if (length >= 8) return 4;
-    if (length >= 6) return 3;
-    if (length >= 4) return 2;
-    if (length >= 2) return 1;
-
-    return 1;
-  };
+  return score;
+};
 
   const getStrengthColor = (level: number) => {
     if (level === 1) return "#ef4444";
@@ -98,9 +96,15 @@ function Register() {
 const handleRegister = async (e: React.FormEvent) => {
   e.preventDefault();
 
-  const isValid = validate();
+  if (loading) return;
 
+  const isValid = validate();
   if (!isValid) return;
+
+  if (role === "Admin") {
+    setErrorMessage("Admin registration is not allowed.");
+    return;
+  }
 
   setLoading(true);
 
@@ -112,7 +116,7 @@ const handleRegister = async (e: React.FormEvent) => {
       },
       body: JSON.stringify({
         fullName,
-        email,
+        email: email.toLowerCase().trim(),
         organization: organisation,
         role,
         password,
@@ -122,18 +126,25 @@ const handleRegister = async (e: React.FormEvent) => {
     const data = await res.json();
 
     if (!res.ok) {
-      setErrorMessage(data.message);
+      setErrorMessage(data.message || "Registration failed");
       setLoading(false);
-
       setTimeout(() => setErrorMessage(""), 3000);
       return;
     }
 
     setLoading(false);
     setSubmitted(true);
+
+    // RESET FORM
+    setFullName("");
+    setEmail("");
+    setOrganisation("");
+    setPassword("");
+    setConfirmPassword("");
+
   } catch (err) {
     console.error(err);
-    alert("Server error");
+    setErrorMessage("Server error");
     setLoading(false);
   }
 };
@@ -186,7 +197,7 @@ const handleRegister = async (e: React.FormEvent) => {
                 <h3 style={submittedTitle}>Request Submitted</h3>
 
                 <p style={submittedText}>
-                  Your {role} registration is pending admin approval. You'll be
+                  Your {role} account has been created successfully and is pending admin approval. You'll be
                   notified by email.
                 </p>
 
@@ -273,6 +284,7 @@ const handleRegister = async (e: React.FormEvent) => {
                       onFocus={() => setFocusedField("role")}
                       onBlur={() => setFocusedField("")}
                     >
+                      <option value="">Select Role</option>
                       <option value="Manufacturer">Manufacturer</option>
                       <option value="Logistics">Logistics</option>
                       <option value="Retailer">Retailer</option>
@@ -280,7 +292,6 @@ const handleRegister = async (e: React.FormEvent) => {
                       <option value="Recycler">Recycler</option>
                       <option value="Auditor">Auditor</option>
                       <option value="Authority">Authority</option>
-                      <option value="Admin">Admin</option>
                     </select>
                   </div>
 
