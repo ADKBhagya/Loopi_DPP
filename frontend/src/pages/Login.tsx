@@ -49,62 +49,78 @@ function Login() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    setErrors({});
-    setSuccess("");
+  setErrors({});
+  setSuccess("");
 
-    if (!validate()) return;
+  if (!validate()) return;
 
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, role }),
-      });
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+     
+      body: JSON.stringify({ email, password, role }) 
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
+   
       if (!res.ok) {
-        setErrors({ email: "Invalid email or password" });
-        return;
-      }
-
-      // SAVE TOKEN
-      localStorage.setItem("token", data.token);
-
-            // Save message for next page
-      localStorage.setItem("loginSuccess", `Welcome back, ${email}!`);
-
-      // Redirect immediately
-      localStorage.setItem("userRole", role);
-
-      if (role === "Manufacturer") {
-        window.location.href = "/manufacturer";
-      } else if (role === "Logistics") {
-        window.location.href = "/logistics";
-      } else if (role === "Auditor") {
-        window.location.href = "/auditor";
-      } else if (role === "Authority") {
-        window.location.href = "/authority";
-      } else if (role === "Retailer") {
-        window.location.href = "/retailer";
-      } else if (role === "Repair Center") {
-        window.location.href = "/repair-center";
-      } else if (role === "Recycler") {
-        window.location.href = "/recycler";
-      } else if (role === "Admin") {
-        window.location.href = "/admin";
-      } else {
-        window.location.href = "/";
-      }
-
-    } catch (error) {
-      console.error(error);
+      setErrors({ email: data.message }); 
+      return;
     }
-  };
+
+    // SAVE TOKEN (if you add JWT later)
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
+
+    // SAVE MESSAGE
+    localStorage.setItem("loginSuccess", `Welcome back, ${data.user.email}!`);
+
+    // CRITICAL FIX → USE BACKEND ROLE
+    const userRole = data.user.role;
+    localStorage.setItem("userRole", userRole);
+
+    // ROLE-BASED REDIRECT (SAFE)
+    switch (userRole) {
+      case "Manufacturer":
+        window.location.href = "/manufacturer";
+        break;
+      case "Logistics":
+        window.location.href = "/logistics";
+        break;
+      case "Auditor":
+        window.location.href = "/auditor";
+        break;
+      case "Authority":
+        window.location.href = "/authority";
+        break;
+      case "Retailer":
+        window.location.href = "/retailer";
+        break;
+      case "Repair Center":
+        window.location.href = "/repair-center";
+        break;
+      case "Recycler":
+        window.location.href = "/recycler";
+        break;
+      case "Admin":
+        window.location.href = "/admin";
+        break;
+      default:
+        window.location.href = "/";
+    }
+
+  } catch (error) {
+    console.error("Login error:", error);
+    setErrors({ email: "Something went wrong. Please try again." });
+  }
+};
 
   useEffect(() => {
   const msg = localStorage.getItem("loginSuccess");
@@ -269,35 +285,29 @@ const successPopup: React.CSSProperties = {
   position: "fixed",
   top: "20px",
   right: "20px",
-  background: "#EAF7EE",
-  color: "#14532d",
+  background: "#EDF7ED",
+  color: "#166534",
   padding: "12px 16px",
   borderRadius: "12px",
-  boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
+  boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
   display: "flex",
   alignItems: "center",
   gap: "10px",
   fontSize: "13px",
   fontWeight: 500,
   zIndex: 999,
-  border: "1px solid #D1FADF",
-  maxWidth: "260px",
+  border: "1px solid #CDEEDB",
+  maxWidth: "100%",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
+  transition: "all 0.25s ease",
+  fontFamily: "'Inter', sans-serif",
 };
 
 const successIcon: React.CSSProperties = {
-  width: "40px",
-  height: "20px",
-  borderRadius: "50%",
-  background: "#16a34a",
-  color: "#ffffff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "12px",
-  fontWeight: 700,
+ color: "#16a34a",
+  fontSize: "20px",
   flexShrink: 0,
 };
 
