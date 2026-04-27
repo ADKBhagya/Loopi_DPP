@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 
 function Manufacturer() {
   const [message, setMessage] = useState("");
+  const [show, setShow] = useState(false);
+
   const role = localStorage.getItem("userRole");
 
   // ROLE PROTECTION
@@ -12,23 +13,32 @@ function Manufacturer() {
     return <Navigate to="/" />;
   }
 
-  // SUCCESS POPUP
+  // SUCCESS POPUP (ENHANCED FLOW)
   useEffect(() => {
     const msg = localStorage.getItem("loginSuccess");
 
     if (msg) {
       setMessage(msg);
+      setShow(true);
       localStorage.removeItem("loginSuccess");
 
-      setTimeout(() => setMessage(""), 2500);
+      // Fade out before remove
+      setTimeout(() => setShow(false), 2200);
+      setTimeout(() => setMessage(""), 2600);
     }
   }, []);
 
   return (
     <div>
-      {/* ✅ MODERN TOAST */}
+      {/* MODERN TOAST */}
       {message && (
-        <div style={successPopup}>
+        <div
+          style={{
+            ...successPopup,
+            opacity: show ? 1 : 0,
+            transform: show ? "translateY(0)" : "translateY(-10px)",
+          }}
+        >
           <CheckCircleRoundedIcon style={icon} />
           <span style={text}>{message}</span>
         </div>
@@ -38,15 +48,13 @@ function Manufacturer() {
     </div>
   );
 }
-
 /* ================= UPDATED STYLES ================= */
-
 const successPopup: React.CSSProperties = {
   position: "fixed",
   top: "20px",
   right: "20px",
-  background: "#EDF7ED", 
-  color: "#166534",      
+  background: "#EDF7ED",
+  color: "#166534",
   padding: "12px 16px",
   borderRadius: "12px",
   boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
@@ -57,22 +65,22 @@ const successPopup: React.CSSProperties = {
   fontWeight: 500,
   zIndex: 999,
   border: "1px solid #CDEEDB",
-  maxWidth: "260px",
+  maxWidth: "100%",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
   transition: "all 0.25s ease",
-  transform: "translateY(0)",
+  fontFamily: "'Inter', sans-serif",
 };
 
 const icon: React.CSSProperties = {
-  color: "#16a34a",
+   color: "#16a34a",
   fontSize: "20px",
   flexShrink: 0,
 };
 
 const text: React.CSSProperties = {
-  overflow: "hidden",
+    overflow: "hidden",
   textOverflow: "ellipsis",
 };
 
