@@ -5,12 +5,12 @@ function Admin() {
   const [message, setMessage] = useState("");
   const role = localStorage.getItem("userRole");
 
-  // 🔐 ROLE PROTECTION
+  // ROLE PROTECTION
   if (role !== "Admin") {
     return <Navigate to="/" />;
   }
 
-  // ✅ SUCCESS POPUP
+  // SUCCESS POPUP
   useEffect(() => {
     const msg = localStorage.getItem("loginSuccess");
 
@@ -41,29 +41,30 @@ const successPopup: React.CSSProperties = {
   position: "fixed",
   top: "20px",
   right: "20px",
-  background: "#E6F4EA",
-  color: "#1B5E20",
-  padding: "14px 20px",
-  borderRadius: "10px",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+  background: "#EDF7ED",
+  color: "#166534",
+  padding: "12px 16px",
+  borderRadius: "12px",
+  boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
   display: "flex",
   alignItems: "center",
   gap: "10px",
   fontSize: "13px",
   fontWeight: 500,
   zIndex: 999,
+  border: "1px solid #CDEEDB",
+  maxWidth: "100%",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  transition: "all 0.25s ease",
+  fontFamily: "'Inter', sans-serif",
 };
 
 const icon: React.CSSProperties = {
-  background: "#1B5E20",
-  color: "white",
-  width: "20px",
-  height: "20px",
-  borderRadius: "50%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "12px",
+  color: "#16a34a",
+  fontSize: "20px",
+  flexShrink: 0,
 };
 
 export default Admin;
