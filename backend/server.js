@@ -7,6 +7,8 @@ import crypto from "crypto";
 import connectDB from "./config/db.js";
 import User from "./models/User.js";
 
+import { sendResetEmail } from "./utils/emailService.js";
+
 const app = express();
 
 app.use(cors());
@@ -53,25 +55,43 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 
-// ================= LOGIN =================
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
+    // VALIDATE ROLE FIRST
+    if (!role) {
+      return res.status(400).json({
+        message: "Please select a role",
+      });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
     }
 
+    // PASSWORD CHECK
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // ROLE VALIDATION (IMPROVED MESSAGE)
+    if (role !== user.role) {
+      return res.status(403).json({
+        message: `This account is not registered as you selected. Please select the correct role.`,
+      });
     }
 
     res.json({
-      message: "Login successful ✅",
+      message: "Login successful!",
       user: {
         email: user.email,
         role: user.role,
@@ -96,17 +116,16 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     });
   }
 
-  // GENERATE TOKEN
   const token = crypto.randomBytes(32).toString("hex");
 
   user.resetToken = token;
-  user.resetTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
+  user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
 
   await user.save();
 
-  // TEMP (NO EMAIL YET)
-  console.log("RESET LINK:");
-  console.log(`http://localhost:5173/reset-password/${token}`);
+  const resetLink = `http://localhost:5173/reset-password/${token}`;
+
+  await sendResetEmail(email, resetLink);
 
   res.json({
     message: "Reset link sent to your email",
@@ -124,10 +143,10 @@ app.post("/api/auth/reset-password", async (req, res) => {
   });
 
   if (!user) {
-    return res.status(400).json({
-      message: "Invalid or expired token",
-    });
-  }
+  return res.status(400).json({
+    message: "Invalid or expired reset link",
+  });
+}
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
