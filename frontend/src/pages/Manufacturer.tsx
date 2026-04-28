@@ -6,27 +6,30 @@ function Manufacturer() {
   const [message, setMessage] = useState("");
   const [show, setShow] = useState(false);
 
-  const role = localStorage.getItem("userRole");
+ const getRole = () => localStorage.getItem("userRole")?.toLowerCase();
 
-  // ROLE PROTECTION
-  if (role !== "Manufacturer") {
+  if (getRole() !== "manufacturer") {
     return <Navigate to="/" />;
   }
 
   // SUCCESS POPUP (ENHANCED FLOW)
-  useEffect(() => {
-    const msg = localStorage.getItem("loginSuccess");
+    useEffect(() => {
+      const fetchData = async () => {
+        const token = localStorage.getItem("token");
 
-    if (msg) {
-      setMessage(msg);
-      setShow(true);
-      localStorage.removeItem("loginSuccess");
+        const res = await fetch("http://localhost:5000/api/protected/manufacturer", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      // Fade out before remove
-      setTimeout(() => setShow(false), 2200);
-      setTimeout(() => setMessage(""), 2600);
-    }
-  }, []);
+        const data = await res.json();
+
+        console.log(data);
+      };
+
+      fetchData();
+    }, []);
 
   return (
     <div>
