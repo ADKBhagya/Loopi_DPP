@@ -13,6 +13,7 @@ import Admin from "./pages/Admin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Loading from "./pages/Loading";
 
 function App() {
   return (
@@ -35,15 +36,63 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/logistics" element={<Logistics />} />
-      <Route path="/auditor" element={<Auditor />} />
-      <Route path="/authority" element={<Authority />} />
-      <Route path="/retailer" element={<Retailer />} />
-      <Route path="/repair-center" element={<RepairCenter />} />
-      <Route path="/recycler" element={<Recycler />} />
+<Route
+  path="/logistics"
+  element={
+    <ProtectedRoute allowedRoles={["Logistics"]}>
+      <Logistics />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/auditor"
+  element={
+    <ProtectedRoute allowedRoles={["Auditor"]}>
+      <Auditor />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/authority"
+  element={
+    <ProtectedRoute allowedRoles={["Authority"]}>
+      <Authority />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/retailer"
+  element={
+    <ProtectedRoute allowedRoles={["Retailer"]}>
+      <Retailer />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/repair-center"
+  element={
+    <ProtectedRoute allowedRoles={["Repair Center"]}>
+      <RepairCenter />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/recycler"
+  element={
+    <ProtectedRoute allowedRoles={["Recycler"]}>
+      <Recycler />
+    </ProtectedRoute>
+  }
+/>
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/loading" element={<Loading />} />
     </Routes>
   );
 }
