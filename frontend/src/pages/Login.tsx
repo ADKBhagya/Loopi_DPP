@@ -1,7 +1,7 @@
-import { useState } from "react";
 import logo from "../assets/logo.png";
-import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+
 
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -24,6 +24,8 @@ function Login() {
 
   const [errors, setErrors] = useState<Errors>({});
   const [success, setSuccess] = useState(""); 
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const validate = () => {
     const newErrors: Errors = {};
@@ -49,92 +51,55 @@ function Login() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  setErrors({});
-  setSuccess("");
+    if (loading) return; // prevent spam click
 
-  if (!validate()) return;
+    setErrors({});
+    setSuccess("");
 
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-     
-      body: JSON.stringify({ email, password, role }) 
-    });
+    if (!validate()) return;
 
-    const data = await res.json();
+    setLoading(true); // 🔥 START LOADING
 
-   
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, role })
+      });
+
+      const data = await res.json();
+
       if (!res.ok) {
-      setErrors({ email: data.message }); 
-      return;
+        setErrors({ email: data.message });
+        setLoading(false); // 🔥 STOP LOADING
+        return;
+      }
+
+      // SAVE TOKEN
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      // SAVE MESSAGE
+      localStorage.setItem("loginSuccess", `Welcome back, ${data.user.email}!`);
+
+      // SAVE ROLE
+      const userRole = data.user.role.toLowerCase().replace(/\s/g, "");
+      localStorage.setItem("userRole", userRole);
+
+      // 🚀 GO TO LOADING PAGE
+      navigate("/loading");
+
+    } catch (error) {
+      console.error("Login error:", error);
+      setErrors({ email: "Something went wrong. Please try again." });
+      setLoading(false); // 🔥 STOP LOADING
     }
-
-    // SAVE TOKEN (if you add JWT later)
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-    }
-
-    // SAVE MESSAGE
-    localStorage.setItem("loginSuccess", `Welcome back, ${data.user.email}!`);
-
-    // CRITICAL FIX → USE BACKEND ROLE
-    const userRole = data.user.role;
-    localStorage.setItem("userRole", userRole);
-
-    // ROLE-BASED REDIRECT (SAFE)
-    switch (userRole) {
-      case "Manufacturer":
-        window.location.href = "/manufacturer";
-        break;
-      case "Logistics":
-        window.location.href = "/logistics";
-        break;
-      case "Auditor":
-        window.location.href = "/auditor";
-        break;
-      case "Authority":
-        window.location.href = "/authority";
-        break;
-      case "Retailer":
-        window.location.href = "/retailer";
-        break;
-      case "Repair Center":
-        window.location.href = "/repair-center";
-        break;
-      case "Recycler":
-        window.location.href = "/recycler";
-        break;
-      case "Admin":
-        window.location.href = "/admin";
-        break;
-      default:
-        window.location.href = "/";
-    }
-
-  } catch (error) {
-    console.error("Login error:", error);
-    setErrors({ email: "Something went wrong. Please try again." });
-  }
-};
-
-  useEffect(() => {
-  const msg = localStorage.getItem("loginSuccess");
-
-  if (msg) {
-    setSuccess(msg);
-
-    localStorage.removeItem("loginSuccess");
-
-    setTimeout(() => {
-      setSuccess("");
-    }, 2500);
-  }
-}, []);
+  };
 
   const getFieldWrapperStyle = (fieldName: string) => {
     if (errors[fieldName as keyof Errors]) {
@@ -147,7 +112,7 @@ function Login() {
 
     return inputWrapper;
   };
-
+ 
   return (
     <div style={container}>
 
@@ -258,8 +223,8 @@ function Login() {
             </div>
 
             {/* BUTTON */}
-            <button type="submit" style={button}>
-              Sign In
+            <button type="submit" style={button} disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
