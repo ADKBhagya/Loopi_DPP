@@ -7,18 +7,16 @@ interface Props {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: Props) => {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("userRole");
+const role = localStorage.getItem("userRole");
+const token = localStorage.getItem("token");
 
-  // NOT LOGGED IN
-  if (!token) {
-    return <Navigate to="/" />;
-  }
+if (!token) {
+  return <Navigate to="/" />;
+}
 
-  // WRONG ROLE
-  if (!allowedRoles.includes(role || "")) {
-    return <Navigate to="/" />;
-  }
+if (!role || !allowedRoles.map(r => r.toLowerCase()).includes(role)) {
+  return <Navigate to="/" />;
+}
 
   return <>{children}</>;
 };
