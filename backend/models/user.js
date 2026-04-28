@@ -7,11 +7,17 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  organisation: String,
+  organization: String,
   role: String,
   password: {
     type: String,
     required: true,
+  },
+  
+    // ✅ ADD THIS
+  isApproved: {
+    type: Boolean,
+    default: false,
   },
   
   resetToken: String,
