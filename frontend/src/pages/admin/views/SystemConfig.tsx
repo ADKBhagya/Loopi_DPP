@@ -9,7 +9,7 @@ export default function SystemConfig() {
     <div className="space-y-6">
 
       {/* ================= HEADER ================= */}
-      <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] text-white rounded-xl p-5 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] text-white rounded-xl p-5 flex justify-between items-center mt-6 ">
 
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
