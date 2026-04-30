@@ -9,7 +9,7 @@ import Authority from "./pages/Authority";
 import Retailer from "./pages/Retailer";
 import RepairCenter from "./pages/RepairCenter";
 import Recycler from "./pages/Recycler";
-import Admin from "./pages/Admin";
+import Admin from "./pages/admin/Admin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
