@@ -6,13 +6,15 @@ import BlockchainNetwork from "./views/BlockchainNetwork";
 import SystemConfig from "./views/SystemConfig";
 
 export default function AdminLayout({ view, setView }: any) {
+  const OverviewComponent: any = Overview;
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
       <Sidebar view={view} setView={setView} />
       <Topbar />
 
       <main className="ml-[210px] pt-[72px] px-8 py-6">
-        {view === "overview" && <Overview />}
+        {view === "overview" && <OverviewComponent setView={setView} />}
+        {view === "users" && <UserManagement />}
         {view === "users" && <UserManagement />}
         {view === "network" && <BlockchainNetwork />}
         {view === "settings" && <SystemConfig />}
