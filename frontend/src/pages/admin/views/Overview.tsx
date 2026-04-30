@@ -1,27 +1,62 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+
+/* ICONS */
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import SyncOutlinedIcon from "@mui/icons-material/SyncOutlined";
+import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
+import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
+import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import SettingsIcon from "@mui/icons-material/Settings";
 
-export default function Overview() {
+export default function Overview({ setView }: any) {
+  const navigate = useNavigate();
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const [showToast, setShowToast] = useState(false);
+  const [showChartDropdown, setShowChartDropdown] = useState(false);
+  
+
+  const handleSync = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+  };
+
   return (
     <div className="space-y-6">
 
       {/* ================= HEADER ================= */}
-      <div className="bg-[#1B5E20] text-white rounded-xl p-6 flex justify-between items-center">
+      <div className="bg-[#1B5E20] text-white rounded-xl p-6 flex justify-between items-center shadow mt-6">
 
-        <div>
-          <p className="text-lg font-semibold">Enterprise Infrastructure</p>
-          <p className="text-xs text-green-200 mt-1">
-            ● System Operational • Latency: 42ms • Block #8,442,109
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-green-700 rounded-xl flex items-center justify-center">
+            <StorageOutlinedIcon />
+          </div>
+
+          <div>
+            <p className="text-lg font-semibold">Enterprise Infrastructure</p>
+            <p className="text-xs text-green-200 mt-1">
+              ● System Operational • Latency: 42ms • Block #8,442,109
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-3">
-          <button className="bg-green-700 px-4 py-2 rounded-lg text-sm">
+          <button
+            onClick={handleSync}
+            className="bg-green-700 flex items-center gap-2 px-4 py-2 rounded-lg text-sm"
+          >
+            <SyncOutlinedIcon fontSize="small" />
             Sync Node
           </button>
-          <button className="bg-white text-[#1B5E20] px-4 py-2 rounded-lg text-sm font-semibold">
+
+          <button className="bg-white text-[#1B5E20] flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold">
+            <SecurityOutlinedIcon fontSize="small" />
             Secure Session
           </button>
         </div>
@@ -30,53 +65,35 @@ export default function Overview() {
       {/* ================= STATS ================= */}
       <div className="grid grid-cols-4 gap-4">
 
-        <StatCard
-          icon={<PeopleAltOutlinedIcon />}
-          title="TOTAL USERS"
-          value="1,284"
-          sub="+12 this week"
-          color="green"
-        />
-
-        <StatCard
-          icon={<StorageOutlinedIcon />}
-          title="ACTIVE NODES"
-          value="4 / 5"
-          sub="1 offline"
-          color="blue"
-        />
-
-        <StatCard
-          icon={<BoltOutlinedIcon />}
-          title="BLOCKCHAIN TXS"
-          value="8,442"
-          sub="+5.2% MTD"
-          color="orange"
-        />
-
-        <StatCard
-          icon={<Inventory2OutlinedIcon />}
-          title="PASSPORTS ISSUED"
-          value="23,910"
-          sub="+318 today"
-          color="purple"
-        />
+        <StatCard icon={<PeopleAltOutlinedIcon />} title="TOTAL USERS" value="1,284" sub="+12 this week" color="green" />
+        <StatCard icon={<StorageOutlinedIcon />} title="ACTIVE NODES" value="4 / 5" sub="1 offline" color="blue" />
+        <StatCard icon={<BoltOutlinedIcon />} title="BLOCKCHAIN TXS" value="8,442" sub="+5.2% MTD" color="orange" />
+        <StatCard icon={<Inventory2OutlinedIcon />} title="PASSPORTS ISSUED" value="23,910" sub="+318 today" color="purple" />
 
       </div>
 
       {/* ================= ALERT ================= */}
-      <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 flex justify-between items-center">
+      <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-5 py-4 flex justify-between items-center shadow-sm">
 
-        <div>
-          <p className="text-sm font-semibold text-yellow-800">
-            5 self-registrations awaiting your approval
-          </p>
-          <p className="text-xs text-yellow-600">
-            Manufacturer • Logistics • Retailer • Repair Center • Recycler accounts pending
-          </p>
+        <div className="flex gap-3 items-start">
+          <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            !
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-yellow-800">
+              5 self-registrations awaiting your approval
+            </p>
+            <p className="text-xs text-yellow-600">
+              Manufacturer • Logistics • Retailer • Repair Center • Recycler accounts pending
+            </p>
+          </div>
         </div>
 
-        <button className="bg-yellow-400 text-white px-4 py-2 rounded-lg text-sm">
+        <button
+          onClick={() => setView("users")}
+          className="bg-yellow-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium"
+        >
           Review Now →
         </button>
       </div>
@@ -89,9 +106,32 @@ export default function Overview() {
 
           {/* CHART */}
           <div className="bg-white rounded-xl p-5 border shadow-sm">
-            <p className="text-sm font-semibold mb-3">
-              Blockchain Transaction Volume
-            </p>
+
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUpOutlinedIcon fontSize="small" />
+                Blockchain Transaction Volume
+              </p>
+
+              {/* DROPDOWN */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowChartDropdown(!showChartDropdown)}
+                  className="text-xs border px-3 py-1 rounded-lg flex items-center gap-1"
+                >
+                  LAST 7 MONTHS
+                  <KeyboardArrowDownOutlinedIcon fontSize="small" />
+                </button>
+
+                {showChartDropdown && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow text-xs">
+                    <div className="p-2 hover:bg-gray-50 cursor-pointer">LAST 7 MONTHS</div>
+                    <div className="p-2 hover:bg-gray-50 cursor-pointer">LAST 30 DAYS</div>
+                    <div className="p-2 hover:bg-gray-50 cursor-pointer">YEAR TO DATE</div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
               Chart (Recharts later)
@@ -115,9 +155,9 @@ export default function Overview() {
             </div>
 
             <div className="space-y-4">
-              <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" />
-              <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" />
-              <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" />
+              <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" onSelect={setSelectedUser} />
+              <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" onSelect={setSelectedUser} />
+              <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" onSelect={setSelectedUser} />
             </div>
 
           </div>
@@ -129,7 +169,13 @@ export default function Overview() {
 
           {/* SECURITY */}
           <div className="bg-white rounded-xl p-5 border shadow-sm">
-            <p className="text-sm font-semibold mb-4">Security Event Log</p>
+
+            <div className="flex justify-between mb-4 items-center">
+              <p className="text-sm font-semibold">Security Event Log</p>
+              <span className="text-[10px] bg-red-100 text-red-500 px-2 py-1 rounded">
+                LIVE
+              </span>
+            </div>
 
             <div className="space-y-4">
               <LogItem title="Login Attempt Failure" time="2m ago" color="red" />
@@ -155,9 +201,21 @@ export default function Overview() {
           </div>
 
         </div>
-
       </div>
 
+      {/* ================= TOAST ================= */}
+      {showToast && (
+        <div className="fixed top-20 right-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg">
+          <CheckCircleIcon />
+          Node Synced — Block #8,442,109
+        </div>
+      )}
+      {selectedUser && (
+        <UserModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+        />
+      )}
     </div>
   );
 }
@@ -187,7 +245,7 @@ function StatCard({ icon, title, value, sub, color }: any) {
   );
 }
 
-function UserRow({ id, name, role, status }: any) {
+function UserRow({ id, name, role, status, onSelect }: any) {
   return (
     <div className="flex justify-between items-center border-t pt-3">
 
@@ -204,6 +262,32 @@ function UserRow({ id, name, role, status }: any) {
 
       <StatusBadge status={status} />
 
+      <SettingsIcon
+        onClick={() => onSelect({ id, name, role, status })}
+        className="text-gray-400 cursor-pointer"
+      />
+    </div>
+  );
+}
+
+function UserModal({ user, onClose }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold">User Details</p>
+          <button onClick={onClose} className="text-sm text-gray-500">
+            Close
+          </button>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <p><span className="font-semibold">ID:</span> {user.id}</p>
+          <p><span className="font-semibold">Name:</span> {user.name}</p>
+          <p><span className="font-semibold">Role:</span> {user.role}</p>
+          <p><span className="font-semibold">Status:</span> {user.status}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -245,9 +329,7 @@ function LogItem({ title, time, color }: any) {
 function NodeItem({ name, status }: any) {
   return (
     <div className="flex justify-between items-center border-t py-3 text-sm">
-
       <p>{name}</p>
-
       <StatusBadge status={status} />
     </div>
   );
