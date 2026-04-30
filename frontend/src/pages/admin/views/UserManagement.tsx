@@ -1,46 +1,42 @@
-import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import SettingsIcon from "@mui/icons-material/Settings";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 
 export default function UserManagement() {
   return (
     <div className="space-y-6">
 
-      {/* ================= PENDING REGISTRATIONS ================= */}
-      <div className="bg-[#FFF7E6] border border-[#FACC15] rounded-xl overflow-hidden">
+      {/* ================= PENDING ================= */}
+      <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5">
 
         {/* HEADER */}
-        <div className="flex items-center justify-between px-5 py-3 border-b">
-
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-yellow-100 flex items-center justify-center">
-              <WarningAmberRoundedIcon className="text-yellow-600 text-[20px]" />
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-gray-800">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">
                 Pending Registrations
-              </p>
-              <p className="text-xs text-gray-500">
-                Self-registered accounts requiring admin approval to activate
-              </p>
+              </span>
+
+              <span className="bg-yellow-200 text-yellow-800 text-[10px] px-2 py-1 rounded-full font-bold">
+                3 AWAITING REVIEW
+              </span>
             </div>
 
-            <span className="ml-2 text-[10px] bg-yellow-400 text-white px-2 py-0.5 rounded-md font-semibold">
-              5 AWAITING REVIEW
-            </span>
+            <p className="text-xs text-gray-500 mt-1">
+              Self-registered accounts requiring admin approval to activate
+            </p>
           </div>
 
-          {/* FILTER BUTTONS */}
-          <div className="flex gap-2 text-[11px]">
-            {["ALL", "MANUFACTURER", "LOGISTICS", "RETAILER"].map((f, i) => (
+          {/* FILTERS */}
+          <div className="flex gap-2 text-xs">
+            {["ALL", "MANUFACTURER", "LOGISTICS", "RETAILER", "REPAIR CENTER", "RECYCLER"].map((f, i) => (
               <span
                 key={i}
-                className={`px-3 py-1 rounded-md cursor-pointer ${
-                  i === 0
+                className={`px-3 py-1 rounded-full border cursor-pointer ${
+                  f === "ALL"
                     ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-500"
+                    : "bg-white text-gray-500"
                 }`}
               >
                 {f}
@@ -50,192 +46,168 @@ export default function UserManagement() {
         </div>
 
         {/* LIST */}
-        {pendingUsers.map((u, i) => (
-          <div
-            key={i}
-            className="flex justify-between items-center px-5 py-4 border-t"
-          >
+        <div className="space-y-4">
+          <PendingRow
+            initials="PN"
+            name="Priya Nair"
+            role="RETAILER"
+            email="priya@flashwd.de"
+            org="FlashForward GmbH • Germany"
+            time="Feb 20, 2026 • 09:58"
+            roleColor="purple"
+          />
 
-            {/* LEFT */}
-            <div className="flex items-center gap-3">
+          <PendingRow
+            initials="MÖ"
+            name="Mikael Öberg"
+            role="REPAIR CENTER"
+            email="mikael@textilefix.se"
+            org="TextileFix Stockholm • Sweden"
+            time="Feb 19, 2026 • 11:30"
+            roleColor="orange"
+          />
 
-              {/* AVATAR */}
-              <div className="w-10 h-10 bg-green-700 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                {u.initials}
-              </div>
-
-              {/* USER INFO */}
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {u.name}
-                </p>
-
-                <p className="text-xs text-gray-500">
-                  {u.email} · {u.company} · {u.country}
-                </p>
-
-                <span className="mt-1 inline-block text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-600 font-medium">
-                  {u.role}
-                </span>
-              </div>
-            </div>
-
-            {/* RIGHT */}
-            <div className="flex items-center gap-4">
-
-              <div className="text-right text-xs text-gray-400">
-                <p className="uppercase text-[10px]">Submitted</p>
-                <p>{u.date}</p>
-              </div>
-
-              <button className="border border-gray-200 px-3 py-1 rounded-md text-xs">
-                Review
-              </button>
-
-              <button className="bg-green-700 text-white px-3 py-1 rounded-md text-xs">
-                ✓ Approve
-              </button>
-
-              <CancelIcon className="text-red-500 cursor-pointer text-[18px]" />
-            </div>
-          </div>
-        ))}
-
-        <div className="px-5 py-3 text-[10px] text-gray-400 border-t">
-          SELF-REGISTRABLE ROLES: MANUFACTURER · LOGISTICS · RETAILER · REPAIR CENTER · RECYCLER
+          <PendingRow
+            initials="FA"
+            name="Fatima Al-Rashid"
+            role="RECYCLER"
+            email="fatima@greenloop.nl"
+            org="GreenLoop NL • Netherlands"
+            time="Feb 18, 2026 • 16:05"
+            roleColor="green"
+          />
         </div>
+
+        {/* FOOTER */}
+        <div className="flex justify-between mt-4 text-xs text-gray-500">
+          <span>1 approved • 1 rejected this session</span>
+          <span className="text-orange-500">
+            SELF-REGISTRABLE ROLES: MANUFACTURER • LOGISTICS • RETAILER • REPAIR CENTER • RECYCLER
+          </span>
+        </div>
+
       </div>
 
-      {/* ================= USER TABLE ================= */}
-      <div className="bg-white border rounded-xl p-5 shadow-sm">
+      {/* ================= USERS TABLE ================= */}
+      <div className="bg-white rounded-xl border shadow-sm">
 
-        <div className="flex justify-between mb-4">
+        <div className="p-5 flex justify-between items-center border-b">
           <div>
-            <p className="text-sm font-semibold text-gray-800">
-              User Management
-            </p>
+            <p className="font-semibold text-sm">User Management</p>
             <p className="text-xs text-gray-400">
               Manage all system users and permissions
             </p>
           </div>
 
-          <button className="bg-green-800 text-white px-4 py-2 rounded-md text-xs">
-            + Provision New User
+          <button className="bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm">
+            Add New User
           </button>
         </div>
 
-        {/* HEADER */}
-        <div className="grid grid-cols-5 text-[11px] text-gray-400 pb-2 border-b">
-          <span>IDENTITY ID</span>
-          <span>FULL NAME</span>
-          <span>ENTERPRISE ROLE</span>
-          <span>ACCESS STATUS</span>
-          <span></span>
+        <div className="p-5 space-y-4">
+          <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" />
+          <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" />
+          <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" />
         </div>
 
-        {/* ROWS */}
-        {users.map((u, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-5 items-center py-3 border-t"
-          >
+      </div>
 
-            {/* ID */}
-            <div>
-              <p className="text-xs font-medium">{u.id}</p>
-              <p className="text-[10px] text-gray-400">{u.sub}</p>
-            </div>
+    </div>
+  );
+}
 
-            {/* NAME */}
-            <div>
-              <p className="text-sm font-semibold">{u.name}</p>
-              <p className="text-xs text-gray-400">{u.email}</p>
-            </div>
+/* ================= PENDING ROW ================= */
 
-            {/* ROLE */}
-            <div>
-              <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-1 rounded-md font-medium">
-                {u.role}
-              </span>
-            </div>
+function PendingRow({ initials, name, role, email, org, time, roleColor }: any) {
+  const roleColors: any = {
+    purple: "bg-purple-100 text-purple-600",
+    orange: "bg-orange-100 text-orange-600",
+    green: "bg-green-100 text-green-600",
+  };
 
-            {/* STATUS */}
-            <div>
-              {u.status === "ACTIVE" ? (
-                <span className="flex items-center gap-1 text-green-600 text-xs">
-                  <CheckCircleIcon fontSize="small" /> ACTIVE
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-red-500 text-xs">
-                  <CancelIcon fontSize="small" /> SUSPENDED
-                </span>
-              )}
-            </div>
+  return (
+    <div className="flex justify-between items-center border-t pt-4">
 
-            {/* SETTINGS */}
-            <div className="flex justify-end">
-              <SettingsIcon className="text-gray-400 cursor-pointer" />
-            </div>
+      {/* LEFT */}
+      <div className="flex items-center gap-4">
+
+        {/* AVATAR */}
+        <div className="w-10 h-10 rounded-full bg-green-700 text-white flex items-center justify-center text-sm font-bold">
+          {initials}
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm">{name}</p>
+
+            <span className={`text-[10px] px-2 py-1 rounded ${roleColors[roleColor]}`}>
+              {role}
+            </span>
           </div>
-        ))}
+
+          <p className="text-xs text-gray-500">{email} • {org}</p>
+        </div>
+      </div>
+
+      {/* RIGHT */}
+      <div className="flex items-center gap-4 text-xs text-gray-500">
+
+        <div className="text-right">
+          <p className="text-[10px] uppercase">Submitted</p>
+          <p>{time}</p>
+        </div>
+
+        <button className="border px-3 py-1 rounded text-xs">
+          Review
+        </button>
+
+        <button className="bg-green-700 text-white px-3 py-1 rounded text-xs">
+          ✓ Approve
+        </button>
+
+        <CancelIcon className="text-red-500 cursor-pointer" fontSize="small" />
+
       </div>
     </div>
   );
 }
 
-const pendingUsers = [
-  {
-    name: "Lena Johansson",
-    initials: "LJ",
-    email: "lena@textlab.se",
-    company: "Textlab AB",
-    country: "Sweden",
-    role: "MANUFACTURER",
-    date: "Feb 21, 2026 · 07:42",
-  },
-  {
-    name: "Carlos Ferreira",
-    initials: "CF",
-    email: "c.ferreira@northlog.pt",
-    company: "NorthLog Portugal",
-    country: "Portugal",
-    role: "LOGISTICS",
-    date: "Feb 20, 2026 · 15:10",
-  },
-  {
-    name: "Priya Nair",
-    initials: "PN",
-    email: "priya@flashwd.de",
-    company: "FlashForward GmbH",
-    country: "Germany",
-    role: "RETAILER",
-    date: "Feb 20, 2026 · 09:58",
-  },
-];
+/* ================= USER ROW ================= */
 
-const users = [
-  {
-    id: "U-001",
-    sub: "Stockholm-MF-01",
-    name: "Erik Larsson",
-    email: "erik@loopi.se",
-    role: "MANUFACTURER",
-    status: "ACTIVE",
-  },
-  {
-    id: "U-002",
-    sub: "Porto-AU-04",
-    name: "Maria Silva",
-    email: "m.silva@porto.pt",
-    role: "AUDITOR",
-    status: "ACTIVE",
-  },
-  {
-    id: "U-003",
-    sub: "Berlin-LG-08",
-    name: "Hans Müller",
-    email: "h.muller@berlin.de",
-    role: "LOGISTICS",
-    status: "SUSPENDED",
-  },
-];
+function UserRow({ id, name, role, status }: any) {
+  return (
+    <div className="flex justify-between items-center border-t pt-4">
+
+      <div>
+        <p className="text-xs text-gray-400">{id}</p>
+        <p className="font-semibold text-sm">{name}</p>
+      </div>
+
+      <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+        {role}
+      </span>
+
+      <StatusBadge status={status} />
+
+      <SettingsIcon className="text-gray-400 cursor-pointer" />
+    </div>
+  );
+}
+
+/* ================= STATUS ================= */
+
+function StatusBadge({ status }: any) {
+  if (status === "ACTIVE") {
+    return (
+      <span className="flex items-center gap-1 text-green-600 text-xs">
+        <CheckCircleIcon fontSize="small" /> ACTIVE
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-1 text-red-500 text-xs">
+      <CancelIcon fontSize="small" /> SUSPENDED
+    </span>
+  );
+}
