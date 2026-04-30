@@ -8,7 +8,7 @@ export default function BlockchainNetwork() {
     <div className="space-y-6">
 
       {/* ================= HEADER ================= */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl p-5 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl p-5 flex justify-between items-center mt-6">
 
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
