@@ -2,13 +2,39 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import SettingsIcon from "@mui/icons-material/Settings";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import { useState } from "react";
+
+// Local fallback UserModal in case the external file isn't a module/exported correctly.
+function UserModal({ user, onClose }: any) {
+  if (!user) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 w-96">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold">User Details</h3>
+          <button onClick={onClose} className="text-gray-500">Close</button>
+        </div>
+
+        <div className="text-sm text-gray-700 space-y-2">
+          <div><strong>ID:</strong> {user.id}</div>
+          <div><strong>Name:</strong> {user.name}</div>
+          <div><strong>Role:</strong> {user.role}</div>
+          <div><strong>Status:</strong> {user.status}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function UserManagement() {
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
   return (
     <div className="space-y-6">
 
       {/* ================= PENDING ================= */}
-      <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5">
+      <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5 mt-6">
 
         {/* HEADER */}
         <div className="flex justify-between items-center mb-4">
@@ -105,12 +131,16 @@ export default function UserManagement() {
         </div>
 
         <div className="p-5 space-y-4">
-          <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" />
-          <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" />
-          <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" />
+          <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" onSelect={setSelectedUser} />
+          <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" onSelect={setSelectedUser} />
+          <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" onSelect={setSelectedUser} />
         </div>
 
       </div>
+
+      {selectedUser && (
+        <UserModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+      )}
 
     </div>
   );
@@ -174,7 +204,9 @@ function PendingRow({ initials, name, role, email, org, time, roleColor }: any) 
 
 /* ================= USER ROW ================= */
 
-function UserRow({ id, name, role, status }: any) {
+function UserRow({ id, name, role, status, onSelect }: any) {
+  const user = { id, name, role, status };
+
   return (
     <div className="flex justify-between items-center border-t pt-4">
 
@@ -189,7 +221,10 @@ function UserRow({ id, name, role, status }: any) {
 
       <StatusBadge status={status} />
 
-      <SettingsIcon className="text-gray-400 cursor-pointer" />
+      <SettingsIcon
+        onClick={() => onSelect(user)}
+        className="text-gray-400 cursor-pointer"
+      />
     </div>
   );
 }
