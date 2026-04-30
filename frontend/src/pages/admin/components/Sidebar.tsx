@@ -63,23 +63,6 @@ export default function Sidebar({ view, setView }: any) {
             />
           </nav>
         </div>
-
-        {/* PUBLIC TOOLS */}
-        <div className="px-4 mt-8">
-          <p className="text-[10px] font-bold text-gray-400 tracking-widest mb-3">
-            PUBLIC TOOLS
-          </p>
-
-          <div className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 text-sm">
-            <OpenInNewOutlinedIcon style={{ fontSize: 18 }} />
-            <span className="leading-tight">
-              Consumer <br /> View
-            </span>
-            <span className="ml-auto bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded">
-              MOBILE
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* WALLET */}
