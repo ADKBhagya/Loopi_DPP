@@ -11,13 +11,18 @@ export default function AdminLayout({ view, setView }: any) {
 
   // GLOBAL STATE FOR SECURITY EXPLORER
   const [showExplorer, setShowExplorer] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const OverviewComponent: any = Overview;
 
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
 
-      <Sidebar view={view} setView={setView} />
+      <Sidebar
+        view={view}
+        setView={setView}
+        pendingCount={pendingCount}
+      />
 
       <Topbar onOpenExplorer={() => setShowExplorer(true)} />
 
@@ -26,13 +31,17 @@ export default function AdminLayout({ view, setView }: any) {
         {view === "overview" && (
           <OverviewComponent
             setView={setView}
-            onOpenExplorer={() => setShowExplorer(true)} // also pass here
+            onOpenExplorer={() => setShowExplorer(true)}
+            setPendingCount={setPendingCount}
           />
         )}
 
-        {view === "users" && <UserManagement />}
+        {view === "users" && (
+          <UserManagement setPendingCount={setPendingCount} />
+        )}
         {view === "network" && <BlockchainNetwork />}
         {view === "settings" && <SystemConfig />}
+        
       </main>
       
       {showExplorer && (
