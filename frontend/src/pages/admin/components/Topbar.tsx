@@ -44,7 +44,6 @@ export default function Topbar({ onOpenExplorer }: any) {
 
       {/* LEFT */}
       <div className="flex items-center gap-5">
-        <MenuOutlinedIcon className="text-gray-500 cursor-pointer" />
 
         <div className="relative">
           <SearchOutlinedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
