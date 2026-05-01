@@ -2,21 +2,23 @@ import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import WifiOutlinedIcon from "@mui/icons-material/WifiOutlined";
+import { useState } from "react";
+
 
 export default function BlockchainNetwork() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 py-5">
 
       {/* ================= HEADER ================= */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl p-5 flex justify-between items-center mt-6">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl px-6 py-5 flex justify-between items-center shadow">
 
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+          <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
             <StorageOutlinedIcon />
           </div>
 
           <div>
-            <p className="text-sm font-semibold">Blockchain Network</p>
+            <p className="text-[15px] font-semibold">Blockchain Network</p>
             <p className="text-xs text-blue-100">
               Hyperledger Fabric v2.4 — Mainnet
             </p>
@@ -24,40 +26,70 @@ export default function BlockchainNetwork() {
         </div>
 
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-white/20 rounded-lg text-sm">
+          <button className="px-4 py-2 bg-white/20 rounded-lg text-sm hover:bg-white/30 transition">
             Refresh
           </button>
-          <button className="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold">
-            ● MAINNET ONLINE
+
+          <button className="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-semibold flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            MAINNET ONLINE
           </button>
         </div>
       </div>
 
       {/* ================= STATS ================= */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-5">
 
-        <StatCard icon={<StorageOutlinedIcon />} label="Latest Block" value="8,442,109" />
-        <StatCard icon={<AccessTimeOutlinedIcon />} label="Block Time" value="2.4s avg" />
-        <StatCard icon={<BoltOutlinedIcon />} label="Gas Used (24h)" value="14.2K" />
-        <StatCard icon={<WifiOutlinedIcon />} label="Peer Connections" value="24" />
+        <StatCard
+          icon={<StorageOutlinedIcon />}
+          label="LATEST BLOCK"
+          value="8,442,109"
+          bg="bg-blue-100"
+          color="text-blue-600"
+        />
+
+        <StatCard
+          icon={<AccessTimeOutlinedIcon />}
+          label="BLOCK TIME"
+          value="2.4s avg"
+          bg="bg-green-100"
+          color="text-green-700"
+        />
+
+        <StatCard
+          icon={<BoltOutlinedIcon />}
+          label="GAS USED (24H)"
+          value="14.2K"
+          extra="+8.1%"
+          bg="bg-orange-100"
+          color="text-orange-600"
+        />
+
+        <StatCard
+          icon={<WifiOutlinedIcon />}
+          label="PEER CONNECTIONS"
+          value="24"
+          bg="bg-purple-100"
+          color="text-purple-600"
+        />
 
       </div>
 
       {/* ================= MAIN GRID ================= */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-3 gap-6">
 
-        {/* ================= LEFT TABLE ================= */}
-        <div className="col-span-2 bg-white rounded-xl border shadow-sm">
+        {/* ================= TABLE ================= */}
+        <div className="col-span-2 bg-white rounded-2xl border shadow-sm">
 
-          <div className="p-4 border-b">
+          <div className="px-5 py-4 border-b">
             <p className="text-sm font-semibold text-gray-800">Network Nodes</p>
             <p className="text-xs text-gray-400">3 of 5 nodes online</p>
           </div>
 
-          <div className="px-4">
+          <div className="px-5">
 
-            {/* TABLE HEADER */}
-            <div className="grid grid-cols-6 text-[11px] text-gray-400 py-3 border-b">
+            {/* HEADER */}
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.5fr_2fr] text-[11px] text-gray-400 py-3 border-b tracking-wide uppercase">
               <span>NODE</span>
               <span>TYPE</span>
               <span>STATUS</span>
@@ -67,14 +99,17 @@ export default function BlockchainNetwork() {
             </div>
 
             {nodes.map((n, i) => (
-              <div key={i} className="grid grid-cols-6 items-center py-4 border-b text-sm">
+              <div
+                key={i}
+                className="grid grid-cols-[2fr_1fr_1fr_1fr_1.5fr_2fr] items-center py-5 border-b last:border-none text-sm"
+              >
 
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${n.color}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${n.color}`} />
                   {n.name}
                 </div>
 
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded-md">
+                <span className="inline-flex items-center justify-center text-[10px] px-2.5 py-[2px] rounded-md bg-gray-100 text-gray-500 font-semibold w-fit">
                   {n.type}
                 </span>
 
@@ -98,46 +133,61 @@ export default function BlockchainNetwork() {
           </div>
         </div>
 
-        {/* ================= RIGHT PANEL ================= */}
+        {/* ================= RIGHT ================= */}
         <div className="space-y-5">
 
-          {/* BLOCK PRODUCTION */}
-          <div className="bg-white rounded-xl p-4 border shadow-sm">
-            <p className="text-sm font-semibold mb-2">Block Production (24h)</p>
-
-            <div className="h-[150px] flex items-end justify-between px-4">
-              {[8, 4, 10, 12, 11, 7].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-6 bg-blue-500 rounded"
-                  style={{ height: `${h * 10}px` }}
-                />
-              ))}
-            </div>
-          </div>
+          {/* BLOCK CHART */}
+          <BlockChart />
 
           {/* CHAIN INFO */}
-          <div className="bg-white rounded-xl p-4 border shadow-sm space-y-3 text-sm">
-            <p className="font-semibold">Chain Information</p>
+          <div className="bg-[#F8FAFC] rounded-2xl border border-gray-100 shadow-sm p-5">
 
-            <InfoRow label="Chain ID" value="LOOPI-MAIN-01" />
-            <InfoRow label="Consensus" value="PBFT / PoA" />
-            <InfoRow label="Smart Contract" value="v3.2.1" />
-            <InfoRow label="TLS Cert Expiry" value="Aug 12, 2026" />
+            {/* TITLE */}
+            <p className="text-sm font-semibold text-gray-800 mb-4">
+              Chain Information
+            </p>
+
+            {/* CONTENT */}
+            <div className="space-y-4">
+
+              <InfoRow label="Chain ID" value="LOOPI-MAIN-01" />
+              <InfoRow label="Consensus" value="PBFT / PoA" />
+              <InfoRow label="Smart Contract" value="v3.2.1" />
+              <InfoRow label="TLS Cert Expiry" value="Aug 12, 2026" />
+
+            </div>
+
           </div>
 
         </div>
       </div>
 
-      {/* ================= BOTTOM CHART ================= */}
-      <div className="bg-white rounded-xl p-5 border shadow-sm">
-        <p className="text-sm font-semibold mb-3">
-          Gas Usage & Transaction Volume
-        </p>
+      {/* ================= BOTTOM ================= */}
+      <div className="bg-white rounded-2xl p-6 border shadow-sm">
 
-        <div className="h-[180px] flex items-center justify-center text-gray-400 text-sm">
-          Chart (Recharts later)
+        <div className="flex justify-between mb-4">
+          <p className="text-sm font-semibold">
+            Gas Usage & Transaction Volume
+          </p>
+
+          <div className="flex gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              Transactions
+            </span>
+
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+              Gas
+            </span>
+          </div>
         </div>
+
+        {/* FAKE SMOOTH CURVE (visual only) */}
+        <div className="h-[200px] flex items-center justify-center text-gray-300">
+          Chart (Recharts / Chart.js next)
+        </div>
+
       </div>
 
     </div>
@@ -146,16 +196,24 @@ export default function BlockchainNetwork() {
 
 /* ================= COMPONENTS ================= */
 
-function StatCard({ icon, label, value }: any) {
+function StatCard({ icon, label, value, extra, bg, color }: any) {
   return (
-    <div className="bg-white border rounded-xl p-4 flex items-center gap-3 shadow-sm">
-      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+    <div className="bg-white border rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${bg} ${color}`}>
         {icon}
       </div>
 
       <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-lg font-semibold">{value}</p>
+        <p className="text-[10px] text-gray-400 font-semibold tracking-wide">
+          {label}
+        </p>
+
+        <p className="text-lg font-semibold text-gray-800">{value}</p>
+
+        {extra && (
+          <p className="text-xs text-green-600 font-medium">↑ {extra}</p>
+        )}
       </div>
     </div>
   );
@@ -163,23 +221,34 @@ function StatCard({ icon, label, value }: any) {
 
 function StatusBadge({ status }: any) {
   const map: any = {
-    ONLINE: "bg-green-100 text-green-600",
+    ONLINE: "bg-green-100 text-green-700",
     OFFLINE: "bg-red-100 text-red-500",
     SYNCING: "bg-blue-100 text-blue-600",
   };
 
   return (
-    <span className={`text-[10px] px-2 py-1 rounded-md ${map[status]}`}>
-      {status}
-    </span>
+    <div className="w-fit">
+      <span
+        className={`inline-flex items-center justify-center text-[10px] px-3 py-[2px] rounded-full font-semibold tracking-wide ${map[status]}`}
+      >
+        {status}
+      </span>
+    </div>
   );
 }
 
 function InfoRow({ label, value }: any) {
   return (
-    <div className="flex justify-between text-gray-600">
-      <span>{label}</span>
-      <span className="font-medium text-gray-800">{value}</span>
+    <div className="flex justify-between items-center">
+
+      <span className="text-[13px] text-gray-400">
+        {label}
+      </span>
+
+      <span className="text-[13px] font-medium text-gray-800">
+        {value}
+      </span>
+
     </div>
   );
 }
@@ -228,3 +297,61 @@ const nodes = [
     color: "bg-red-500",
   },
 ];
+
+function BlockChart() {
+  const data = [
+    { time: "00", value: 10 },
+    { time: "04", value: 6 },
+    { time: "08", value: 24 },
+    { time: "12", value: 30 },
+    { time: "16", value: 28 },
+    { time: "20", value: 16 },
+  ];
+
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border shadow-sm relative">
+      <p className="text-sm font-semibold mb-4">Block Production (24h)</p>
+
+      <div className="h-[170px] flex items-end justify-between px-4 relative">
+
+        {data.map((d, i) => (
+          <div
+            key={i}
+            className="flex flex-col items-center relative"
+            onMouseEnter={() => setHoverIndex(i)}
+            onMouseLeave={() => setHoverIndex(null)}
+          >
+            {/* HOVER BACKGROUND */}
+            {hoverIndex === i && (
+              <div className="absolute -top-6 w-10 h-[180px] bg-gray-100 rounded-lg z-0 transition" />
+            )}
+
+            {/* BAR */}
+            <div
+              className="w-6 bg-blue-500 rounded-md z-10 transition-all duration-200"
+              style={{ height: `${d.value * 4}px` }}
+            />
+
+            {/* X LABEL */}
+            <span className="text-[10px] text-gray-400 mt-2 z-10">
+              {d.time}
+            </span>
+
+            {/* TOOLTIP */}
+            {hoverIndex === i && (
+              <div className="absolute -top-16 bg-white border shadow-md rounded-lg px-3 py-2 text-xs z-20">
+                <p className="text-gray-500">{d.time}</p>
+                <p className="text-blue-600 font-semibold">
+                  Blocks: {d.value}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+
+      </div>
+    </div>
+  );
+}
