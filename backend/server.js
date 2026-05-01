@@ -14,21 +14,21 @@ import { sendResetEmail } from "./utils/emailService.js";
 
 const app = express();
 
-// ✅ FIRST
+// FIRST
 app.use(cors({
   origin: "http://localhost:5173",
   credentials: true
 }));
 
-// ✅ SECOND
+// SECOND
 app.use(express.json());
 
-// ✅ THEN routes
+// THEN routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/protected", protectedRoutes);
 
-// 🔥 CONNECT DB
+// CONNECT DB
 connectDB();
 
 // TEST ROUTE
@@ -58,6 +58,9 @@ app.post("/api/auth/register", async (req, res) => {
       organization,
       role,
       password: hashedPassword,
+
+      status: "pending",     
+      isApproved: false      
     });
 
     await newUser.save();
@@ -129,7 +132,15 @@ app.post("/api/auth/reset-password", async (req, res) => {
   });
 });
 
-
+// ================= TEST PENDING USERS =================
+app.get("/test-pending", async (req, res) => {
+  try {
+    const users = await User.find({ status: "pending" });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 
 
