@@ -5,14 +5,17 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import { useState } from "react";
 
-export default function ReviewModal({ user, onClose, onComplete }: any){
+export default function ReviewModal({ user, onClose, onApprove, onReject }: any) {
 
   const [mode, setMode] = useState<"default" | "approve" | "reject">("default");
   const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const reset = () => {
     setMode("default");
     setReason("");
+    setError("");
   };
 
   return (
@@ -22,7 +25,6 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
 
         {/* HEADER */}
         <div className="flex justify-between items-center px-6 py-4 border-b">
-
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-yellow-400 rounded-full flex items-center justify-center text-white">
               <AccessTimeIcon fontSize="small" />
@@ -31,7 +33,7 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
             <div>
               <p className="font-semibold text-sm">Review Registration</p>
               <p className="text-xs text-gray-400">
-                REG-005 · Submitted Feb 18, 2026 · 16:05
+                REG-005 · Submitted {new Date().toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -45,7 +47,7 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
           {/* USER CARD */}
           <div className="border rounded-xl p-4 flex gap-4 bg-gray-50">
             <div className="w-10 h-10 bg-[#1B5E20] text-white rounded-full flex items-center justify-center font-bold">
-              FA
+              {user.name?.charAt(0) || "U"}
             </div>
 
             <div className="flex-1">
@@ -63,14 +65,12 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
               <div className="grid grid-cols-2 mt-3 text-xs text-gray-600">
                 <div>
                   <p className="uppercase text-gray-400 text-[10px]">Company</p>
-                  <p>GreenLoop NL</p>
-                  <p className="uppercase text-gray-400 text-[10px] mt-2">VAT / TAX NO.</p>
-                  <p>NL864321987B01</p>
+                  <p>{user.org || "—"}</p>
                 </div>
 
                 <div>
                   <p className="uppercase text-gray-400 text-[10px]">Country</p>
-                  <p>Netherlands</p>
+                  <p>—</p>
                 </div>
               </div>
             </div>
@@ -80,11 +80,11 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
           <div>
             <p className="text-xs text-gray-400 mb-2">APPLICANT NOTE</p>
             <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-100 text-sm">
-              Industrial textile recycler, ISO 14001 certified.
+              Submitted via self-registration
             </div>
           </div>
 
-          {/* ================= APPROVE MODE ================= */}
+          {/* APPROVE MODE */}
           {mode === "approve" && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-700 text-sm space-y-2">
               <p className="font-semibold flex items-center gap-2">
@@ -92,10 +92,9 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
               </p>
 
               <ul className="text-xs space-y-1 ml-5 list-disc">
-                <li>Blockchain identity provisioned under node NET-RE-20</li>
-                <li>Welcome email sent</li>
-                <li>Permissions activated</li>
-                <li>Audit log created</li>
+                <li>Account will be activated</li>
+                <li>User can login immediately</li>
+                <li>Permissions will be enabled</li>
               </ul>
 
               <button onClick={reset} className="text-xs text-gray-500 mt-2">
@@ -104,7 +103,7 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
             </div>
           )}
 
-          {/* ================= REJECT MODE ================= */}
+          {/* REJECT MODE */}
           {mode === "reject" && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
 
@@ -118,14 +117,13 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
                 className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">— Select a reason —</option>
-                <option>Incomplete documentation submitted</option>
-                <option>VAT / company registration could not be verified</option>
-                <option>Role not applicable</option>
-                <option>Duplicate account detected</option>
+                <option>Incomplete documentation</option>
+                <option>Invalid company details</option>
+                <option>Duplicate account</option>
               </select>
 
               <textarea
-                placeholder="Add any additional context..."
+                placeholder="Optional note..."
                 className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm"
               />
 
@@ -135,20 +133,21 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
             </div>
           )}
 
-          {/* ================= DEFAULT MODE ================= */}
+          {/* DEFAULT MODE */}
           {mode === "default" && (
             <div>
               <p className="text-xs text-gray-400 mb-2">ASSIGN NODE ID</p>
 
               <div className="flex items-center border rounded-lg px-3 py-2 bg-gray-50">
                 <LocationOnOutlinedIcon className="text-gray-400 mr-2" fontSize="small" />
-                <input value="NET-RE-20" readOnly className="bg-transparent w-full text-sm outline-none" />
+                <input value="AUTO-GENERATED" readOnly className="bg-transparent w-full text-sm outline-none" />
               </div>
-
-              <p className="text-[10px] text-gray-400 mt-1">
-                Auto-generated — edit if needed before approving.
-              </p>
             </div>
+          )}
+
+          {/* ERROR MESSAGE */}
+          {error && (
+            <p className="text-xs text-red-500">{error}</p>
           )}
 
         </div>
@@ -156,7 +155,7 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
         {/* FOOTER */}
         <div className="flex justify-between items-center px-6 py-4 border-t">
 
-          <p className="text-xs text-gray-400">REG-005</p>
+          <p className="text-xs text-gray-400">USER REVIEW</p>
 
           <div className="flex items-center gap-3">
 
@@ -182,26 +181,52 @@ export default function ReviewModal({ user, onClose, onComplete }: any){
 
             {mode === "approve" && (
               <button
-                onClick={() => {
-                    onComplete(user.id); 
-                    onClose();          
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    setError("");
+
+                    await onApprove(user.id);
+
+                    onClose();
+                  } catch {
+                    setError("Failed to approve user");
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
-                className="bg-green-700 text-white px-5 py-2 rounded-xl"
-                >
-                Approve & Provision
-                </button>
+                className={`px-5 py-2 rounded-xl text-white ${
+                  loading ? "bg-green-400 cursor-not-allowed" : "bg-green-700"
+                }`}
+              >
+                {loading ? "Processing..." : "Approve & Provision"}
+              </button>
             )}
 
             {mode === "reject" && (
               <button
-                onClick={() => {
-                    onComplete(user.id); 
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    setError("");
+
+                    await onReject(user.id);
+
                     onClose();
+                  } catch {
+                    setError("Failed to reject user");
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
-                className="bg-red-500 text-white px-5 py-2 rounded-xl"
-                >
-                Confirm Rejection
-                </button>
+                className={`px-5 py-2 rounded-xl text-white ${
+                  loading ? "bg-red-300 cursor-not-allowed" : "bg-red-500"
+                }`}
+              >
+                {loading ? "Processing..." : "Confirm Rejection"}
+              </button>
             )}
 
           </div>
