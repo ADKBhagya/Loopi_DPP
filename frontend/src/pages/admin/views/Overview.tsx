@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ProvisionUserModal from "../components/ProvisionUserModal";
+import UserModal from "../components/UserModal";
 
 
 /* ICONS */
@@ -13,10 +15,13 @@ import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import SettingsIcon from "@mui/icons-material/Settings";
+import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
+import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 
-export default function Overview({ setView }: any) {
+export default function Overview({ setView, onOpenExplorer }: any) {
   const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showProvision, setShowProvision] = useState(false);
 
   const [showToast, setShowToast] = useState(false);
   const [showChartDropdown, setShowChartDropdown] = useState(false);
@@ -124,80 +129,159 @@ export default function Overview({ setView }: any) {
                 </button>
 
                 {showChartDropdown && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow text-xs">
-                    <div className="p-2 hover:bg-gray-50 cursor-pointer">LAST 7 MONTHS</div>
-                    <div className="p-2 hover:bg-gray-50 cursor-pointer">LAST 30 DAYS</div>
-                    <div className="p-2 hover:bg-gray-50 cursor-pointer">YEAR TO DATE</div>
+                  <div className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg text-xs overflow-hidden">
+                    <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer">LAST 7 MONTHS</div>
+                    <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer">LAST 30 DAYS</div>
+                    <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer">YEAR TO DATE</div>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
-              Chart (Recharts later)
+            <div className="h-[220px] bg-gradient-to-b from-green-50 to-white rounded-lg flex items-end px-4 pb-4">
+              <div className="w-full h-[2px] bg-green-500 opacity-70 rounded-full" />
             </div>
           </div>
 
           {/* USER TABLE */}
-          <div className="bg-white rounded-xl p-5 border shadow-sm">
+          <div className="bg-white rounded-xl border shadow-sm">
 
-            <div className="flex justify-between mb-4">
+            {/* HEADER */}
+            <div className="p-5 flex justify-between items-center border-b">
               <div>
-                <p className="text-sm font-semibold">Authorized User Access</p>
+                <p className="font-semibold text-sm">Authorized User Access</p>
                 <p className="text-xs text-gray-400">
                   Node permissions & cryptographic identities
                 </p>
               </div>
 
-              <button className="bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm">
-                Add New User
+              <button
+                onClick={() => setShowProvision(true)}
+                className="bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+              >
+                + Provision New User
               </button>
             </div>
 
-            <div className="space-y-4">
-              <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" onSelect={setSelectedUser} />
-              <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" onSelect={setSelectedUser} />
-              <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" onSelect={setSelectedUser} />
+            {/* TABLE HEADER */}
+            <div className="grid grid-cols-5 px-5 py-3 text-[11px] text-gray-400 font-semibold uppercase">
+              <p>Identity ID</p>
+              <p>Full Name</p>
+              <p>Enterprise Role</p>
+              <p>Access Status</p>
+              <p></p>
             </div>
 
+            {/* ROWS */}
+            <div className="divide-y">
+
+              <UserRowNew
+                id="U-001"
+                node="Stockholm-MF-01"
+                name="Erik Larsson"
+                email="erik@loopi.se"
+                role="MANUFACTURER"
+                status="ACTIVE"
+                onSelect={setSelectedUser}
+              />
+
+              <UserRowNew
+                id="U-002"
+                node="Porto-AU-04"
+                name="Maria Silva"
+                email="m.silva@porto.pt"
+                role="AUDITOR"
+                status="ACTIVE"
+                onSelect={setSelectedUser}
+              />
+
+              <UserRowNew
+                id="U-003"
+                node="Berlin-LG-08"
+                name="Hans Müller"
+                email="h.muller@berlin.de"
+                role="LOGISTICS"
+                status="SUSPENDED"
+                onSelect={setSelectedUser}
+              />
+
+            </div>
           </div>
 
         </div>
 
         {/* RIGHT */}
-        <div className="space-y-5">
+        <div className="space-y-6">
 
           {/* SECURITY */}
           <div className="bg-white rounded-xl p-5 border shadow-sm">
 
             <div className="flex justify-between mb-4 items-center">
-              <p className="text-sm font-semibold">Security Event Log</p>
+              <div className="flex items-center gap-2">
+                <ShieldOutlinedIcon className="text-red-500" fontSize="small" />
+                <p className="text-sm font-semibold">Security Event Log</p>
+              </div>
               <span className="text-[10px] bg-red-100 text-red-500 px-2 py-1 rounded">
                 LIVE
               </span>
             </div>
 
             <div className="space-y-4">
-              <LogItem title="Login Attempt Failure" time="2m ago" color="red" />
-              <LogItem title="Blockchain Sync Failure" time="15m ago" color="yellow" />
-              <LogItem title="New Admin Assigned" time="1h ago" color="blue" />
-              <LogItem title="Data Export Request" time="3h ago" color="blue" />
-              <LogItem title="Password Reset Triggered" time="5h ago" color="yellow" />
+              <LogItem
+                title="Login Attempt Failure"
+                desc="u_9812@loopi.io"
+                time="2M AGO"
+                color="yellow"
+              />
+
+              <LogItem
+                title="Blockchain Sync Failure"
+                desc="Node Stockholm-X2"
+                time="15M AGO"
+                color="red"
+              />
+
+              <LogItem
+                title="New Admin Assigned"
+                desc="admin_root"
+                time="1H AGO"
+                color="blue"
+              />
+
+              <LogItem
+                title="Data Export Request"
+                desc="maria@auditor.pt"
+                time="3H AGO"
+                color="blue"
+              />
+
+              <LogItem
+                title="Password Reset Triggered"
+                desc="hans@berlin.de"
+                time="5H AGO"
+                color="yellow"
+              />
             </div>
 
-            <button className="mt-4 w-full border rounded-lg py-2 text-xs text-gray-500">
+            <button
+              onClick={onOpenExplorer}
+              className="mt-4 w-full border rounded-lg py-2 text-xs text-gray-500 hover:bg-gray-50 transition"
+            >
               VIEW SECURITY EXPLORER
             </button>
           </div>
 
           {/* NODE STATUS */}
           <div className="bg-white rounded-xl p-5 border shadow-sm">
-            <p className="text-sm font-semibold mb-4">Network Node Status</p>
+            <div className="flex items-center gap-2 mb-4">
+              <DnsOutlinedIcon className="text-blue-500" fontSize="small" />
+              <p className="text-sm font-semibold">Network Node Status</p>
+            </div>
 
-            <NodeItem name="Node Stockholm-01" status="ONLINE" />
-            <NodeItem name="Node Porto-04" status="ONLINE" />
-            <NodeItem name="Node Istanbul-08" status="SYNCING" />
-            <NodeItem name="Node Berlin-02" status="OFFLINE" />
+            <NodeItem name="Node Stockholm-01" role="CORE" status="ONLINE" />
+            <NodeItem name="Node Porto-04" role="VALIDATOR" status="ONLINE" />
+            <NodeItem name="Node Istanbul-08" role="VALIDATOR" status="SYNCING" />
+            <NodeItem name="Node Berlin-02" role="RELAY" status="OFFLINE" />
           </div>
 
         </div>
@@ -216,6 +300,12 @@ export default function Overview({ setView }: any) {
           onClose={() => setSelectedUser(null)}
         />
       )}
+
+      {showProvision && (
+        <ProvisionUserModal onClose={() => setShowProvision(false)} />
+      )}
+
+
     </div>
   );
 }
@@ -245,70 +335,74 @@ function StatCard({ icon, title, value, sub, color }: any) {
   );
 }
 
-function UserRow({ id, name, role, status, onSelect }: any) {
+function UserRowNew({ id, node, name, email, role, status, onSelect }: any) {
   return (
-    <div className="flex justify-between items-center border-t pt-3">
+    <div className="grid grid-cols-5 px-5 py-4 items-center text-sm">
 
-      <div className="flex gap-4 items-center">
-        <div>
-          <p className="text-xs text-gray-400">{id}</p>
-          <p className="text-sm font-semibold">{name}</p>
-        </div>
+      {/* ID */}
+      <div>
+        <p className="text-xs text-gray-400">{id}</p>
+        <p className="text-xs text-gray-400">{node}</p>
+      </div>
 
-        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+      {/* NAME */}
+      <div>
+        <p className="font-semibold">{name}</p>
+        <p className="text-xs text-gray-400">{email}</p>
+      </div>
+
+      {/* ROLE */}
+      <div>
+        <span className="text-[11px] bg-blue-100 text-blue-600 px-2 py-1 rounded">
           {role}
         </span>
       </div>
 
-      <StatusBadge status={status} />
-
-      <SettingsIcon
-        onClick={() => onSelect({ id, name, role, status })}
-        className="text-gray-400 cursor-pointer"
-      />
-    </div>
-  );
-}
-
-function UserModal({ user, onClose }: any) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold">User Details</p>
-          <button onClick={onClose} className="text-sm text-gray-500">
-            Close
-          </button>
-        </div>
-
-        <div className="space-y-2 text-sm">
-          <p><span className="font-semibold">ID:</span> {user.id}</p>
-          <p><span className="font-semibold">Name:</span> {user.name}</p>
-          <p><span className="font-semibold">Role:</span> {user.role}</p>
-          <p><span className="font-semibold">Status:</span> {user.status}</p>
-        </div>
+      {/* STATUS */}
+      <div>
+        <StatusBadge status={status} />
       </div>
+
+      {/* SETTINGS */}
+      <div className="flex justify-end">
+        <SettingsIcon
+          onClick={() =>
+            onSelect({
+              id,
+              name,
+              email,
+              role,
+              status,
+              node,
+            })
+          }
+          className="text-gray-400 cursor-pointer hover:text-black"
+        />
+      </div>
+
     </div>
   );
 }
 
 function StatusBadge({ status }: any) {
-  const styles: any = {
-    ACTIVE: "bg-green-100 text-green-600",
-    SUSPENDED: "bg-red-100 text-red-500",
-    ONLINE: "bg-green-100 text-green-600",
-    OFFLINE: "bg-red-100 text-red-500",
-    SYNCING: "bg-blue-100 text-blue-600",
-  };
+  if (status === "ACTIVE") {
+    return (
+      <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+        ACTIVE
+      </span>
+    );
+  }
 
   return (
-    <span className={`text-xs px-3 py-1 rounded-full ${styles[status]}`}>
-      {status}
+    <span className="inline-flex items-center gap-2 bg-red-100 text-red-500 px-3 py-1 rounded-full text-xs font-medium">
+      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+      SUSPENDED
     </span>
   );
 }
 
-function LogItem({ title, time, color }: any) {
+function LogItem({ title, desc, time, color }: any) {
   const colors: any = {
     red: "bg-red-500",
     yellow: "bg-yellow-400",
@@ -317,20 +411,38 @@ function LogItem({ title, time, color }: any) {
 
   return (
     <div className="flex gap-3 items-start">
-      <div className={`w-1 h-6 rounded ${colors[color]}`} />
-      <div>
-        <p className="text-sm">{title}</p>
-        <p className="text-xs text-gray-400">{time}</p>
+
+      <div className={`w-[3px] h-10 rounded ${colors[color]}`} />
+
+      <div className="flex flex-col">
+        <p className="text-sm font-semibold text-gray-800">{title}</p>
+        <p className="text-xs text-gray-500">{desc}</p>
+        <p className="text-[10px] text-gray-400 mt-1">{time}</p>
       </div>
+
     </div>
   );
 }
 
-function NodeItem({ name, status }: any) {
+function NodeItem({ name, role, status }: any) {
+  const statusStyles: any = {
+    ONLINE: "bg-green-100 text-green-700",
+    SYNCING: "bg-blue-100 text-blue-600",
+    OFFLINE: "bg-red-100 text-red-500",
+  };
+
   return (
-    <div className="flex justify-between items-center border-t py-3 text-sm">
-      <p>{name}</p>
-      <StatusBadge status={status} />
+    <div className="flex justify-between items-center bg-gray-50 px-4 py-4 rounded-xl">
+
+      <div>
+        <p className="text-sm font-semibold">{name}</p>
+        <p className="text-[10px] text-gray-400 uppercase">{role}</p>
+      </div>
+
+      <span className={`text-[11px] px-3 py-1 rounded-full font-semibold ${statusStyles[status]}`}>
+        {status}
+      </span>
+
     </div>
   );
 }
