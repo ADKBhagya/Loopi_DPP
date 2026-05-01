@@ -1,52 +1,93 @@
 import CancelIcon from "@mui/icons-material/Cancel";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReviewModal from "../components/ReviewModal";
+import UserModal from "../components/UserModal";
+import ProvisionUserModal from "../components/ProvisionUserModal";
 
 /* ================= MAIN ================= */
 
-export default function UserManagement() {
+export default function UserManagement({ setPendingCount }: any){
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [reviewUser, setReviewUser] = useState<any>(null);
+  const [approveUser, setApproveUser] = useState<any>(null);
+  const [showProvisionModal, setShowProvisionModal] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const token = localStorage.getItem("token");
+  const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
 
-  // ADD STATE (THIS IS THE FIX)
-  const [pendingUsers, setPendingUsers] = useState([
-    {
-      id: "REG-001",
-      initials: "PN",
-      name: "Priya Nair",
-      role: "RETAILER",
-      email: "priya@flashwd.de",
-      org: "FlashForward GmbH • Germany",
-      time: "Feb 20, 2026 • 09:58",
-      color: "purple",
-    },
-    {
-      id: "REG-004",
-      initials: "MÖ",
-      name: "Mikael Öberg",
-      role: "REPAIR CENTER",
-      email: "mikael@textilefix.se",
-      org: "TextileFix Stockholm • Sweden",
-      time: "Feb 19, 2026 • 11:30",
-      color: "orange",
-    },
-    {
-      id: "REG-005",
-      initials: "FA",
-      name: "Fatima Al-Rashid",
-      role: "RECYCLER",
-      email: "fatima@greenloop.nl",
-      org: "GreenLoop NL • Netherlands",
-      time: "Feb 18, 2026 • 16:05",
-      color: "green",
-    },
-  ]);
+  const pendingUsers = users.map((u) => ({
+  id: u._id,
+  name: u.fullName,
+  email: u.email,
+  org: u.organization,
+  role: u.role,
+  initials: u.fullName?.charAt(0) || "U",
+  time: new Date(u.createdAt).toLocaleDateString(),
+  color: "green",
+}));
 
-  // REMOVE FUNCTION (IMPORTANT)
-  const handleComplete = (id: string) => {
-    setPendingUsers(prev => prev.filter(user => user.id !== id));
+  // ================= FETCH USERS =================
+  const fetchUsers = () => {
+    fetch("http://localhost:5000/api/admin/pending-users", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setUsers(data);
+        setPendingCount(data.length); // update sidebar
+      })
+      .catch((err) => console.error(err));
   };
+
+    // ================= APPROVE =================
+  const handleApprove = async (id: string) => {
+  try {
+    await fetch(`http://localhost:5000/api/admin/approve/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setToast({ type: "success", message: "User approved successfully" });
+
+    fetchUsers();
+  } catch {
+    setToast({ type: "error", message: "Approval failed" });
+  }
+};
+
+  // ================= REJECT =================
+const handleReject = async (id: string) => {
+  try {
+    await fetch(`http://localhost:5000/api/admin/reject/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setToast({ type: "error", message: "User rejected" });
+
+    fetchUsers();
+  } catch {
+    setToast({ type: "error", message: "Rejection failed" });
+  }
+};
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+  if (toast) {
+    const timer = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(timer);
+  }
+}, [toast]);
 
   return (
     <div className="p-6 space-y-6 bg-[#F9FAFB] min-h-screen">
@@ -94,9 +135,11 @@ export default function UserManagement() {
         <div className="space-y-3">
           {pendingUsers.map((user) => (
             <PendingRow
+              key={user.id}
               {...user}
               setReviewUser={setReviewUser}
-              onApprove={handleComplete}
+              setApproveUser={setApproveUser}
+              onApprove={handleApprove}
             />
           ))}
         </div>
@@ -123,7 +166,10 @@ export default function UserManagement() {
             </p>
           </div>
 
-          <button className="bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm">
+          <button
+            onClick={() => setShowProvisionModal(true)}
+            className="bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm"
+          >
             + Provision New User
           </button>
         </div>
@@ -149,8 +195,43 @@ export default function UserManagement() {
         <ReviewModal
           user={reviewUser}
           onClose={() => setReviewUser(null)}
-          onComplete={handleComplete}
+          onApprove={handleApprove}
+          onReject={handleReject}
         />
+      )}
+
+      {approveUser && (
+        <ApproveConfirmModal
+          user={approveUser}
+          onClose={() => setApproveUser(null)}
+          onConfirm={() => {
+            handleApprove(approveUser.id);
+            setApproveUser(null);
+          }}
+        />
+      )}
+
+      {selectedUser && (
+        <UserModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+        />
+      )}
+
+      {showProvisionModal && (
+        <ProvisionUserModal
+          onClose={() => setShowProvisionModal(false)}
+        />
+      )}
+
+      {toast && (
+        <div className={`fixed top-20 right-6 px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50 ${
+          toast.type === "success"
+            ? "bg-green-50 border border-green-200 text-green-700"
+            : "bg-red-50 border border-red-200 text-red-600"
+        }`}>
+          {toast.message}
+        </div>
       )}
 
     </div>
@@ -159,7 +240,19 @@ export default function UserManagement() {
 
 /* ================= PENDING ROW ================= */
 
-function PendingRow({ id, initials, name, role, email, org, time, color, setReviewUser, onApprove }: any) {
+function PendingRow({
+  id,
+  initials,
+  name,
+  role,
+  email,
+  org,
+  time,
+  color,
+  setReviewUser,
+  setApproveUser,
+  onApprove,
+}: any) {
 
   const [confirmApprove, setConfirmApprove] = useState(false);
 
@@ -216,7 +309,7 @@ function PendingRow({ id, initials, name, role, email, org, time, color, setRevi
 
         {!confirmApprove ? (
           <button
-            onClick={() => setConfirmApprove(true)}
+            onClick={() => setApproveUser({ id, name, email, role })}
             className="bg-[#166534] text-white px-3.5 py-1.5 rounded-full text-xs font-medium"
           >
             ✓ Approve
@@ -303,5 +396,56 @@ function StatusBadge({ status }: any) {
       }`} />
       {status}
     </span>
+  );
+}
+
+function ApproveConfirmModal({ user, onClose, onConfirm }: any) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+      />
+
+      <div className="fixed inset-0 flex items-center justify-center z-[60]">
+        <div className="w-[420px] bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b">
+            <p className="text-sm font-semibold text-gray-800">
+              Confirm Approval
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Approve this registration and activate account access
+            </p>
+          </div>
+
+          <div className="px-6 py-5">
+            <p className="text-sm text-gray-700">
+              Are you sure you want to approve{" "}
+              <span className="font-semibold">{user.name}</span>?
+            </p>
+
+            <div className="mt-4 bg-green-50 border border-green-200 text-green-700 text-xs rounded-xl p-3">
+              This will provision blockchain identity, activate permissions, and remove the request from pending registrations.
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t flex justify-end gap-3 bg-gray-50">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm border rounded-lg text-gray-600 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={onConfirm}
+              className="px-5 py-2 text-sm rounded-lg bg-[#166534] text-white font-semibold hover:bg-[#14532d]"
+            >
+              Confirm Approve
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
