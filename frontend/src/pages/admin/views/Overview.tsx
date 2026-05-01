@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProvisionUserModal from "../components/ProvisionUserModal";
 import UserModal from "../components/UserModal";
-
 
 /* ICONS */
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
@@ -18,19 +17,69 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 
-export default function Overview({ setView, onOpenExplorer }: any) {
+export default function Overview({ setView, onOpenExplorer, setPendingCount }: any) {
   const navigate = useNavigate();
+
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showProvision, setShowProvision] = useState(false);
 
   const [showToast, setShowToast] = useState(false);
   const [showChartDropdown, setShowChartDropdown] = useState(false);
-  
+
+  const [pendingCount, setPendingCountLocal] = useState(0);
+
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    pendingUsers: 0,
+    approvedUsers: 0,
+    activeNodes: 0,
+  });
+
+  const token = localStorage.getItem("token");
 
   const handleSync = () => {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
   };
+
+  // ================= SINGLE CLEAN FETCH =================
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/dashboard", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      setStats(data);
+
+      // 🔥 sync pending count everywhere
+      setPendingCountLocal(data.pendingUsers);
+
+      if (setPendingCount) {
+        setPendingCount(data.pendingUsers);
+      }
+
+    } catch (err) {
+      console.error("Stats fetch error:", err);
+    }
+  };
+
+  // ================= INITIAL LOAD =================
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  // ================= AUTO REFRESH =================
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -70,38 +119,67 @@ export default function Overview({ setView, onOpenExplorer }: any) {
       {/* ================= STATS ================= */}
       <div className="grid grid-cols-4 gap-4">
 
-        <StatCard icon={<PeopleAltOutlinedIcon />} title="TOTAL USERS" value="1,284" sub="+12 this week" color="green" />
-        <StatCard icon={<StorageOutlinedIcon />} title="ACTIVE NODES" value="4 / 5" sub="1 offline" color="blue" />
-        <StatCard icon={<BoltOutlinedIcon />} title="BLOCKCHAIN TXS" value="8,442" sub="+5.2% MTD" color="orange" />
-        <StatCard icon={<Inventory2OutlinedIcon />} title="PASSPORTS ISSUED" value="23,910" sub="+318 today" color="purple" />
+        <StatCard
+          icon={<PeopleAltOutlinedIcon />}
+          title="TOTAL USERS"
+          value={stats.totalUsers}
+          sub={`${stats.pendingUsers} pending`}
+          color="green"
+        />
+
+        <StatCard
+          icon={<StorageOutlinedIcon />}
+          title="ACTIVE NODES"
+          value={`${stats.activeNodes} / 5`}
+          sub="1 offline"
+          color="blue"
+        />
+
+        <StatCard
+          icon={<BoltOutlinedIcon />}
+          title="BLOCKCHAIN TXS"
+          value="LIVE"
+          sub="Real-time"
+          color="orange"
+        />
+
+        <StatCard
+          icon={<Inventory2OutlinedIcon />}
+          title="PASSPORTS ISSUED"
+          value={stats.approvedUsers}
+          sub="Approved users"
+          color="purple"
+        />
 
       </div>
 
       {/* ================= ALERT ================= */}
-      <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-5 py-4 flex justify-between items-center shadow-sm">
+      {pendingCount > 0 && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-5 py-4 flex justify-between items-center shadow-sm">
 
-        <div className="flex gap-3 items-start">
-          <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
-            !
+          <div className="flex gap-3 items-start">
+            <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+              !
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-yellow-800">
+                {pendingCount} self-registrations awaiting your approval
+              </p>
+              <p className="text-xs text-yellow-600">
+                Manufacturer • Logistics • Retailer • Repair Center • Recycler accounts pending
+              </p>
+            </div>
           </div>
 
-          <div>
-            <p className="text-sm font-semibold text-yellow-800">
-              5 self-registrations awaiting your approval
-            </p>
-            <p className="text-xs text-yellow-600">
-              Manufacturer • Logistics • Retailer • Repair Center • Recycler accounts pending
-            </p>
-          </div>
+          <button
+            onClick={() => setView("users")}
+            className="bg-yellow-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium"
+          >
+            Review Now →
+          </button>
         </div>
-
-        <button
-          onClick={() => setView("users")}
-          className="bg-yellow-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium"
-        >
-          Review Now →
-        </button>
-      </div>
+      )}
 
       {/* ================= MAIN GRID ================= */}
       <div className="grid grid-cols-3 gap-5">
