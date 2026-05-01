@@ -117,3 +117,26 @@ function NavItem({ icon, label, active, onClick, badge }: any) {
     </div>
   );
 }
+
+function SidebarUserManagement() {
+  return (
+    <div className="flex items-center justify-between bg-green-50 text-[#1B5E20] px-4 py-3 rounded-xl cursor-pointer">
+
+      <div className="flex items-center gap-3">
+        {/* ICON */}
+        <div className="text-[#1B5E20]">
+          👤
+        </div>
+
+        <span className="font-medium text-sm">
+          User Management
+        </span>
+      </div>
+
+      {/* BADGE */}
+      <span className="bg-yellow-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+        5
+      </span>
+    </div>
+  );
+}
