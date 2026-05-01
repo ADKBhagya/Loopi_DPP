@@ -6,25 +6,25 @@ import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
 
 export default function SystemConfig() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 py-5">
 
       {/* ================= HEADER ================= */}
-      <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] text-white rounded-xl p-5 flex justify-between items-center mt-6 ">
+      <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] text-white rounded-2xl px-6 py-5 flex justify-between items-center shadow">
 
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+          <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
             <SettingsOutlinedIcon />
           </div>
 
           <div>
-            <p className="font-semibold">System Configuration</p>
+            <p className="text-[15px] font-semibold">System Configuration</p>
             <p className="text-xs text-gray-300">
               Global node parameters, security protocols & integrations
             </p>
           </div>
         </div>
 
-        <button className="bg-green-700 px-4 py-2 rounded-lg text-sm font-semibold">
+        <button className="bg-green-600 hover:bg-green-700 transition px-5 py-2 rounded-xl text-sm font-semibold">
           Save Changes
         </button>
       </div>
@@ -33,94 +33,92 @@ export default function SystemConfig() {
       <div className="grid grid-cols-2 gap-6">
 
         {/* AUTH */}
-        <ConfigCard icon={<LockOutlinedIcon />} title="Authentication Protocols">
-          <Toggle label="Multi-Factor Authentication" desc="Require 2FA for all admin logins" />
+        <ConfigCard
+          icon={<LockOutlinedIcon />}
+          title="Authentication Protocols"
+          subtitle="Identity & access management"
+          color="green"
+        >
+        
+          <Toggle label="Multi-Factor Authentication" desc="Require 2FA for all admin logins" enabled />
           <Toggle label="Session Timeout (30 min)" desc="Auto-logout after inactivity" enabled />
           <Toggle label="IP Allowlist Enforcement" desc="Restrict access to approved IP ranges" />
           <Toggle label="Single Sign-On (SSO)" desc="SAML 2.0 enterprise SSO integration" />
         </ConfigCard>
 
         {/* BLOCKCHAIN */}
-        <ConfigCard icon={<StorageOutlinedIcon />} title="Blockchain Parameters">
-          <Toggle label="Auto-Sync on Block Mismatch" enabled />
-          <Toggle label="Gas Credit Alerts" enabled />
-          <Toggle label="Archive Mode" />
-          <Toggle label="Telemetry Reporting" enabled />
+          <ConfigCard
+            icon={<StorageOutlinedIcon />}
+            title="Blockchain Parameters"
+            subtitle="Node synchronisation & consensus settings"
+            color="blue"
+          >
+            <Toggle label="Auto-Sync on Block Mismatch" desc="Sync when local and remote blocks diverge" enabled />
+          <Toggle label="Gas Credit Alerts" desc="Alert when wallet drops below 500 LOOPI" enabled />
+          <Toggle label="Archive Mode" desc="Store full chain history locally" />
+          <Toggle label="Telemetry Reporting" desc="Send anonymised metrics to LOOPI core" enabled />
         </ConfigCard>
 
         {/* NOTIFICATIONS */}
-        <ConfigCard icon={<NotificationsNoneOutlinedIcon />} title="Notification Settings">
-          <Toggle label="Security Event Alerts" enabled />
-          <Toggle label="Node Offline Alerts" enabled />
-          <Toggle label="Daily Digest Email" />
-          <Toggle label="Audit Trail Exports" />
+        <ConfigCard
+          icon={<NotificationsNoneOutlinedIcon />}
+          title="Notification Settings"
+          subtitle="Alerts & event delivery preferences"
+          color="yellow"
+        >
+          <Toggle label="Security Event Alerts" desc="Email on critical security events" enabled />
+          <Toggle label="Node Offline Alerts" desc="Push notification when node goes offline" enabled />
+          <Toggle label="Daily Digest Email" desc="Summary of activity at 08:00 CET" />
+          <Toggle label="Audit Trail Exports" desc="Weekly automated PDF export" />
         </ConfigCard>
 
         {/* API KEYS */}
-        <ConfigCard icon={<KeyOutlinedIcon />} title="API Keys & Integrations">
+          <ConfigCard
+            icon={<KeyOutlinedIcon />}
+            title="API Keys & Integrations"
+            subtitle="External service credentials"
+            color="purple"
+          >
+            <Input label="LOOPI CORE API KEY" value="••••••••••••••••••••••••" />
+          <Input label="BLOCKCHAIN RPC URL" value="••••••••••••••••••••••••" />
+          <Input label="WEBHOOK SECRET" value="••••••••••••••••••••••••" />
 
-          <Input label="Loopi Core API Key" value="sk-lp-****************3a8f" />
-          <Input label="Blockchain RPC URL" value="https://rpc.loopi.net/mainnet" />
-          <Input label="Webhook Secret" value="whsec-*************d92c" />
-
-          <button className="text-blue-600 text-xs mt-2">Reveal Keys</button>
-
+          <button className="text-blue-600 text-xs font-medium mt-2 hover:underline">
+            Reveal Keys
+          </button>
         </ConfigCard>
 
       </div>
-
-      {/* ================= DANGER ZONE ================= */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-5">
-
-        <p className="text-red-600 font-semibold mb-1">Danger Zone</p>
-        <p className="text-xs text-red-400 mb-4">
-          Irreversible system actions
-        </p>
-
-        <div className="grid grid-cols-3 gap-4">
-
-          <DangerCard
-            title="Purge Audit Cache"
-            desc="Clear temporary audit logs cache"
-          />
-
-          <DangerCard
-            title="Rotate API Keys"
-            desc="Invalidate and regenerate all keys"
-          />
-
-          <DangerCard
-            title="Factory Reset Node"
-            desc="Wipe node config to default state"
-          />
-
-        </div>
-      </div>
-
     </div>
   );
 }
 
-/* ================= COMPONENTS ================= */
 
-function ConfigCard({ icon, title, children }: any) {
+function ConfigCard({ icon, title, subtitle, children, color }: any) {
+
+  const colorMap: any = {
+    green: "bg-green-100 text-green-700",
+    blue: "bg-blue-100 text-blue-600",
+    yellow: "bg-yellow-100 text-yellow-600",
+    purple: "bg-purple-100 text-purple-600",
+  };
+
   return (
-    <div className="bg-white rounded-xl p-5 border shadow-sm">
+    <div className="bg-[#F8FAFC] rounded-2xl border border-gray-100 p-5 shadow-sm">
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600">
+      <div className="flex items-center gap-3 mb-5">
+        {/* ICON BOX */}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[color]}`}>
           {icon}
         </div>
 
         <div>
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="text-xs text-gray-400">
-            Identity & access management
-          </p>
+          <p className="text-sm font-semibold text-gray-800">{title}</p>
+          <p className="text-xs text-gray-400">{subtitle}</p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {children}
       </div>
     </div>
@@ -129,20 +127,20 @@ function ConfigCard({ icon, title, children }: any) {
 
 function Toggle({ label, desc, enabled = false }: any) {
   return (
-    <div className="flex justify-between items-center">
+    <div className="flex items-center justify-between">
 
       <div>
-        <p className="text-sm font-medium">{label}</p>
-        {desc && <p className="text-xs text-gray-400">{desc}</p>}
+        <p className="text-[13px] font-medium text-gray-800">{label}</p>
+        <p className="text-[11px] text-gray-400">{desc}</p>
       </div>
 
       <div
-        className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer ${
+        className={`w-11 h-6 flex items-center rounded-full p-1 transition ${
           enabled ? "bg-green-600" : "bg-gray-300"
         }`}
       >
         <div
-          className={`w-4 h-4 bg-white rounded-full shadow transform ${
+          className={`w-4 h-4 bg-white rounded-full shadow transform transition ${
             enabled ? "translate-x-5" : ""
           }`}
         />
@@ -155,21 +153,15 @@ function Toggle({ label, desc, enabled = false }: any) {
 function Input({ label, value }: any) {
   return (
     <div>
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <p className="text-[10px] font-semibold text-gray-400 mb-2 tracking-wide">
+        {label}
+      </p>
+
       <input
         value={value}
         readOnly
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50"
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none"
       />
-    </div>
-  );
-}
-
-function DangerCard({ title, desc }: any) {
-  return (
-    <div className="bg-white border border-red-200 rounded-lg p-4 hover:bg-red-50 cursor-pointer transition">
-      <p className="text-red-600 font-semibold text-sm">{title}</p>
-      <p className="text-xs text-red-400 mt-1">{desc}</p>
     </div>
   );
 }
