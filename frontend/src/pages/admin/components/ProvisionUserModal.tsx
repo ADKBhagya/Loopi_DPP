@@ -174,12 +174,6 @@ export default function ProvisionUserModal({ onClose }: any) {
             </span>
 
             <div className="flex items-center gap-4">
-              <button
-                onClick={onClose}
-                className="text-sm text-gray-500"
-              >
-                Cancel
-              </button>
 
               <button className="bg-[#1B5E20] text-white px-5 py-2 rounded-lg text-sm font-semibold shadow">
                 Save & Provision
