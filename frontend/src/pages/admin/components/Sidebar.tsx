@@ -4,10 +4,9 @@ import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import ElectricBoltOutlinedIcon from "@mui/icons-material/ElectricBoltOutlined";
 
-export default function Sidebar({ view, setView }: any) {
+export default function Sidebar({ view, setView, pendingCount = 5 }: any) {
   return (
     <aside className="w-[210px] h-screen bg-white border-r border-gray-100 flex flex-col justify-between fixed left-0 top-0">
 
@@ -40,10 +39,11 @@ export default function Sidebar({ view, setView }: any) {
               onClick={() => setView("overview")}
             />
 
+            {/*  FIXED HERE */}
             <NavItem
               icon={<PeopleAltOutlinedIcon />}
               label="User Management"
-              badge="5"
+              badge={pendingCount}
               active={view === "users"}
               onClick={() => setView("users")}
             />
@@ -92,6 +92,8 @@ export default function Sidebar({ view, setView }: any) {
   );
 }
 
+/* ================= NAV ITEM ================= */
+
 function NavItem({ icon, label, active, onClick, badge }: any) {
   return (
     <div
@@ -105,7 +107,8 @@ function NavItem({ icon, label, active, onClick, badge }: any) {
       <span className="text-[18px]">{icon}</span>
       <span className="flex-1 leading-tight">{label}</span>
 
-      {badge && (
+      {/* FIX: hide badge if 0 */}
+      {badge > 0 && (
         <span className="bg-yellow-400 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
           {badge}
         </span>
@@ -114,29 +117,6 @@ function NavItem({ icon, label, active, onClick, badge }: any) {
       {active && (
         <span className="w-1.5 h-1.5 bg-[#1B5E20] rounded-full"></span>
       )}
-    </div>
-  );
-}
-
-function SidebarUserManagement() {
-  return (
-    <div className="flex items-center justify-between bg-green-50 text-[#1B5E20] px-4 py-3 rounded-xl cursor-pointer">
-
-      <div className="flex items-center gap-3">
-        {/* ICON */}
-        <div className="text-[#1B5E20]">
-          👤
-        </div>
-
-        <span className="font-medium text-sm">
-          User Management
-        </span>
-      </div>
-
-      {/* BADGE */}
-      <span className="bg-yellow-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-        5
-      </span>
     </div>
   );
 }
