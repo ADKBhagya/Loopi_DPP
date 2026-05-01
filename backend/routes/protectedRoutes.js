@@ -4,7 +4,7 @@ import { allowRoles } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Manufacturer Dashboard API
+// Manufacturer Dashboard API
 router.get(
   "/manufacturer",
   verifyToken,
@@ -17,7 +17,7 @@ router.get(
   }
 );
 
-// ✅ Admin Dashboard API
+// Admin Dashboard API
 router.get(
   "/admin",
   verifyToken,
