@@ -4,7 +4,7 @@ const configSchema = new mongoose.Schema(
   {
     security: {
       mfa: { type: Boolean, default: false },
-      sessionTimeout: { type: Number, default: 30 }, // FIXED (was Boolean ❌)
+      sessionTimeout: { type: Number, default: 30 },
       ipAllowlist: { type: Boolean, default: false },
       sso: { type: Boolean, default: false }
     },
@@ -21,6 +21,12 @@ const configSchema = new mongoose.Schema(
       nodeAlerts: { type: Boolean, default: true },
       digestEmail: { type: Boolean, default: false },
       auditExport: { type: Boolean, default: false }
+    },
+
+    integrations: {
+      apiKey: String,
+      rpcUrl: String,
+      webhookSecret: String
     }
   },
   { timestamps: true }
