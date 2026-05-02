@@ -133,17 +133,7 @@ const handleRegister = async (e: React.FormEvent) => {
     }
 
     setLoading(false);
-
-    //  IMPORTANT FIX
-    if (data.requiresApproval) {
-      setSubmitted(true); // show "Request Submitted"
-    } else {
-      // instant login users
-      setErrorMessage("Account created successfully. Please sign in.");
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
-    }
+    setSubmitted(true);
 
     // RESET FORM
     setFullName("");
@@ -171,11 +161,15 @@ const handleRegister = async (e: React.FormEvent) => {
     return inputWrapper;
   };
 
-const approvalRoles = ["Manufacturer", "Logistics", "Repair Center", "Recycler"];
-
-const roleNote = approvalRoles.includes(role)
-  ? "~ Pending admin approval"
-  : "✓ Instant access";
+  const roleNote =
+    role === "Manufacturer" ||
+    role === "Logistics" ||
+    role === "Repair Center" ||
+    role === "Recycler"
+      ? "~ Pending admin approval"
+      : role === "Retailer"
+      ? "✓ Instant access"
+      : "~ Pending admin approval";
       
 
   return (
