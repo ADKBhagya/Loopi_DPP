@@ -11,6 +11,7 @@ export const getDashboardStats = async (req, res) => {
     const totalUsers = await User.countDocuments();
     const pendingUsers = await User.countDocuments({ status: "pending" });
     const approvedUsers = await User.countDocuments({ status: "approved" });
+    
 
     res.json({
       totalUsers,
@@ -95,7 +96,7 @@ export const provisionUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const tempPassword = crypto.randomBytes(6).toString("hex");
+    const tempPassword = req.body.password;
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     const newUser = new User({
