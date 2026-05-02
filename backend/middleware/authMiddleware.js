@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -15,7 +16,16 @@ export const verifyToken = (req, res, next) => {
       process.env.JWT_SECRET || "secret123"
     );
 
-    req.user = decoded; // { id, role }
+    // NEW: Validate user from DB
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // Attach full user (NOT just token data)
+    req.user = user;
+
     next();
   } catch (error) {
     return res.status(401).json({ message: "Invalid token" });
