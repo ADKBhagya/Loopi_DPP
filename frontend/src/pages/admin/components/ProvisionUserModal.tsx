@@ -16,6 +16,9 @@ export default function ProvisionUserModal({
   const [role, setRole] = useState("");
   const [nodeId, setNodeId] = useState("");
   const [toast, setToastLocal] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [tempPassword, setTempPassword] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
 useEffect(() => {
   if (toast) {
@@ -33,6 +36,15 @@ const roleMap: any = {
   AUDITOR: "AUD",
 };
 
+const generatePassword = () => {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let pass = "";
+  for (let i = 0; i < 10; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pass;
+};
+
 const generateNodeId = (role: string) => {
   const city = "Stockholm";
   const roleCode = roleMap[role.toUpperCase()] || "XX";
@@ -43,12 +55,19 @@ const generateNodeId = (role: string) => {
 
 useEffect(() => {
   if (role) {
-    const generated = generateNodeId(role);
-    setNodeId(generated);
+    const generatedNode = generateNodeId(role);
+    setNodeId(generatedNode);
+
+    const generatedPassword = generatePassword(); 
+    setTempPassword(generatedPassword);
   }
 }, [role]);
 
   const handleProvision = async () => {
+  if (loading) return; // 
+
+  setLoading(true);
+
   try {
     const res = await fetch("http://localhost:5000/api/admin/provision-user", {
       method: "POST",
@@ -62,17 +81,20 @@ useEffect(() => {
         role,
         status,
         organization: nodeId,
+        password: tempPassword,
       }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.message);
+      setToast({
+        type: "error",
+        message: data.message,
+      });
       return;
     }
 
-    // SUCCESS
     setToast({
       type: "success",
       message: data.message,
@@ -81,12 +103,12 @@ useEffect(() => {
     onClose();
 
   } catch (error) {
-    console.error("Provision error:", error);
-
     setToast({
       type: "error",
       message: "Provision failed",
     });
+  } finally {
+    setLoading(false); 
   }
 };
 
@@ -239,6 +261,33 @@ useEffect(() => {
               </div>
 
             </div>
+            
+             {/* TEMP PASSWORD DISPLAY */}
+            {tempPassword && (
+              <div className="border rounded-xl p-4 bg-blue-50 mt-3">
+                <p className="text-sm font-semibold text-blue-700">
+                  Temporary Login Credentials
+                </p>
+
+                <div className="mt-2 text-xs text-gray-700 space-y-1">
+                  <p>
+                    <strong>Email:</strong> {email || "example@email.com"}
+                  </p>
+                  <p>
+                    <strong>Password:</strong> {tempPassword}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() =>
+                    navigator.clipboard.writeText(`${email} / ${tempPassword}`)
+                  }
+                  className="mt-3 bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                >
+                  Copy Credentials
+                </button>
+              </div>
+            )}
 
           </div>
 
@@ -251,8 +300,12 @@ useEffect(() => {
 
             <div className="flex items-center gap-4">
 
-              <button onClick={handleProvision} className="bg-[#1B5E20] text-white px-5 py-2 rounded-lg text-sm font-semibold shadow">
-                Save & Provision
+              <button
+                onClick={handleProvision}
+                disabled={loading}
+                className="bg-[#1B5E20] text-white px-5 py-2 rounded-lg text-sm font-semibold shadow disabled:opacity-50"
+              >
+                {loading ? "Provisioning..." : "Save & Provision"}
               </button>
             </div>
 
