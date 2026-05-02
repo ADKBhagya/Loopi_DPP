@@ -1,9 +1,12 @@
 import CancelIcon from "@mui/icons-material/Cancel";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactElement } from "react";
 import ReviewModal from "../components/ReviewModal";
 import UserModal from "../components/UserModal";
 import ProvisionUserModal from "../components/ProvisionUserModal";
+
+const ProvisionUserModalComponent =
+  ProvisionUserModal as unknown as (props: any) => ReactElement;
 
 /* ================= MAIN ================= */
 
@@ -16,6 +19,7 @@ export default function UserManagement({ setPendingCount }: any){
   const token = localStorage.getItem("token");
   const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
   const [filterRole, setFilterRole] = useState("ALL");
+  const [approvedUsers, setApprovedUsers] = useState<any[]>([]);
 
 // session counters
 const [approvedCount, setApprovedCount] = useState(0);
@@ -36,6 +40,17 @@ const pendingUsers = filteredUsers.map((u) => ({
   time: new Date(u.createdAt).toLocaleDateString(),
   color: "green",
 }));
+
+
+useEffect(() => {
+  if (!token) return;
+
+  fetch("http://localhost:5000/api/admin/approved-users", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then(res => res.json())
+    .then(data => setApprovedUsers(data));
+}, [token]);
 
   // ================= FETCH USERS =================
   const fetchUsers = () => {
@@ -199,11 +214,18 @@ const handleReject = async (id: string) => {
           <p></p>
         </div>
 
-        <div className="divide-y">
-          <UserRow id="U-001" name="Erik Larsson" role="MANUFACTURER" status="ACTIVE" onSelect={setSelectedUser} />
-          <UserRow id="U-002" name="Maria Silva" role="AUDITOR" status="ACTIVE" onSelect={setSelectedUser} />
-          <UserRow id="U-003" name="Hans Müller" role="LOGISTICS" status="SUSPENDED" onSelect={setSelectedUser} />
-        </div>
+       <div className="divide-y">
+        {approvedUsers.map((user) => (
+          <UserRow
+            key={user._id}
+            id={user._id}
+            name={user.fullName}
+            role={user.role}
+            status={user.status === "approved" ? "ACTIVE" : "REJECTED"}
+            onSelect={setSelectedUser}
+          />
+        ))}
+      </div>
 
       </div>
 
@@ -235,14 +257,15 @@ const handleReject = async (id: string) => {
         />
       )}
 
-      {showProvisionModal && (
-        <ProvisionUserModal
-          onClose={() => setShowProvisionModal(false)}
-        />
-      )}
+    {showProvisionModal && (
+      <ProvisionUserModalComponent
+        onClose={() => setShowProvisionModal(false)}
+        setToast={setToast} 
+      />
+    )}
 
-      {toast && (
-        <div className={`fixed top-20 right-6 px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50 ${
+     {toast && (
+        <div className={`fixed top-20 right-6 px-5 py-3 rounded-xl shadow-lg ${
           toast.type === "success"
             ? "bg-green-50 border border-green-200 text-green-700"
             : "bg-red-50 border border-red-200 text-red-600"
@@ -396,24 +419,32 @@ function UserRow({ id, name, role, status, onSelect }: any) {
       </div>
 
     </div>
+
+    
   );
 }
 
 /* ================= STATUS ================= */
 
 function StatusBadge({ status }: any) {
-  const isActive = status === "ACTIVE";
 
-  return (
-    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-      isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"
-    }`}>
-      <span className={`w-2 h-2 rounded-full ${
-        isActive ? "bg-green-500" : "bg-red-500"
-      }`} />
-      {status}
-    </span>
-  );
+  if (status === "ACTIVE") {
+    return (
+      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">
+        ACTIVE
+      </span>
+    );
+  }
+
+  if (status === "REJECTED") {
+    return (
+      <span className="bg-red-100 text-red-500 px-3 py-1 rounded-full text-xs">
+        REJECTED
+      </span>
+    );
+  }
+
+  return null;
 }
 
 function ApproveConfirmModal({ user, onClose, onConfirm }: any) {
@@ -466,3 +497,4 @@ function ApproveConfirmModal({ user, onClose, onConfirm }: any) {
     </>
   );
 }
+
