@@ -2,6 +2,7 @@ import express from "express";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/roleMiddleware.js";
 import { provisionUser } from "../controllers/adminController.js";
+import { getConfig, updateConfig } from "../controllers/configController.js";
 
 import {
   getDashboardStats,
@@ -38,6 +39,20 @@ router.post(
   verifyToken,
   allowRoles("Admin"),
   provisionUser
+);
+
+router.get(
+  "/system-config",
+  verifyToken,
+  allowRoles("Admin"),
+  getConfig
+);
+
+router.put(
+  "/system-config",
+  verifyToken,
+  allowRoles("Admin"),
+  updateConfig
 );
 
 export default router;
