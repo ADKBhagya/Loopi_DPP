@@ -15,8 +15,18 @@ export default function UserManagement({ setPendingCount }: any){
   const [users, setUsers] = useState<any[]>([]);
   const token = localStorage.getItem("token");
   const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
+  const [filterRole, setFilterRole] = useState("ALL");
 
-  const pendingUsers = users.map((u) => ({
+// session counters
+const [approvedCount, setApprovedCount] = useState(0);
+const [rejectedCount, setRejectedCount] = useState(0);
+
+const filteredUsers = users.filter((u) => {
+  if (filterRole === "ALL") return true;
+  return u.role.toUpperCase() === filterRole;
+});
+
+const pendingUsers = filteredUsers.map((u) => ({
   id: u._id,
   name: u.fullName,
   email: u.email,
@@ -43,7 +53,7 @@ export default function UserManagement({ setPendingCount }: any){
   };
 
     // ================= APPROVE =================
-  const handleApprove = async (id: string) => {
+const handleApprove = async (id: string) => {
   try {
     await fetch(`http://localhost:5000/api/admin/approve/${id}`, {
       method: "PUT",
@@ -51,6 +61,8 @@ export default function UserManagement({ setPendingCount }: any){
         Authorization: `Bearer ${token}`,
       },
     });
+
+    setApprovedCount(prev => prev + 1); 
 
     setToast({ type: "success", message: "User approved successfully" });
 
@@ -64,11 +76,13 @@ export default function UserManagement({ setPendingCount }: any){
 const handleReject = async (id: string) => {
   try {
     await fetch(`http://localhost:5000/api/admin/reject/${id}`, {
-      method: "DELETE",
+      method: "PUT", // 
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    setRejectedCount(prev => prev + 1);
 
     setToast({ type: "error", message: "User rejected" });
 
@@ -116,18 +130,19 @@ const handleReject = async (id: string) => {
 
           {/* FILTERS (UNCHANGED) */}
           <div className="flex gap-2 text-xs">
-            {["ALL", "MANUFACTURER", "LOGISTICS", "RETAILER", "REPAIR CENTER", "RECYCLER"].map((f) => (
-              <span
-                key={f}
-                className={`px-3 py-1 rounded-full border text-[11px] font-medium cursor-pointer ${
-                  f === "ALL"
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-500 hover:bg-gray-100"
-                }`}
-              >
-                {f}
-              </span>
-            ))}
+          {["ALL", "MANUFACTURER", "LOGISTICS", "RETAILER", "REPAIR CENTER", "RECYCLER"].map((f) => (
+            <span
+              key={f}
+              onClick={() => setFilterRole(f)} 
+              className={`px-3 py-1 rounded-full border text-[11px] font-medium cursor-pointer ${
+                filterRole === f
+                  ? "bg-black text-white"
+                  : "bg-white text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {f}
+            </span>
+          ))}
           </div>
         </div>
 
@@ -146,7 +161,9 @@ const handleReject = async (id: string) => {
 
         {/* FOOTER */}
         <div className="flex justify-between items-center mt-5 text-xs text-gray-500">
-          <span>1 approved • 1 rejected this session</span>
+          <span>
+            {approvedCount} approved • {rejectedCount} rejected this session
+          </span>
 
           <span className="text-orange-500 font-medium">
             SELF-REGISTRABLE ROLES: MANUFACTURER • LOGISTICS • RETAILER • REPAIR CENTER • RECYCLER
