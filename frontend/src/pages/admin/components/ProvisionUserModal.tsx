@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import MailOutlineOutlinedIcon from "@mui/icons-material/MailOutlineOutlined";
@@ -6,11 +6,92 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 
-export default function ProvisionUserModal({ onClose }: any) {
+export default function ProvisionUserModal({
+  onClose,
+  setToast
+}: any) {
   const [status, setStatus] = useState("ACTIVE");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
+  const [nodeId, setNodeId] = useState("");
+  const [toast, setToastLocal] = useState<any>(null);
+
+useEffect(() => {
+  if (toast) {
+    const timer = setTimeout(() => setToastLocal(null), 2500);
+    return () => clearTimeout(timer);
+  }
+}, [toast]);
+  
+console.log("ROLE:", role);
+console.log("NODE ID:", nodeId);
+
+const roleMap: any = {
+  ADMIN: "AD",
+  AUTHORITY: "AU",
+  AUDITOR: "AUD",
+};
+
+const generateNodeId = (role: string) => {
+  const city = "Stockholm";
+  const roleCode = roleMap[role.toUpperCase()] || "XX";
+  const random = Math.floor(100 + Math.random() * 900);
+
+  return `${city}-${roleCode}-${random}`;
+};
+
+useEffect(() => {
+  if (role) {
+    const generated = generateNodeId(role);
+    setNodeId(generated);
+  }
+}, [role]);
+
+  const handleProvision = async () => {
+  try {
+    const res = await fetch("http://localhost:5000/api/admin/provision-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        fullName,
+        email,
+        role,
+        status,
+        organization: nodeId,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    // SUCCESS
+    setToast({
+      type: "success",
+      message: data.message,
+    });
+
+    onClose();
+
+  } catch (error) {
+    console.error("Provision error:", error);
+
+    setToast({
+      type: "error",
+      message: "Provision failed",
+    });
+  }
+};
 
   return (
-    <>
+    <div>
       {/* BACKDROP */}
       <div
         onClick={onClose}
@@ -40,7 +121,7 @@ export default function ProvisionUserModal({ onClose }: any) {
               </div>
             </div>
 
-            <button className="text-gray-400" onClick={onClose}>
+            <button className="text-gray-400 hover:text-gray-600 text-lg" onClick={onClose}>
               <CloseOutlinedIcon />
             </button>
           </div>
@@ -58,60 +139,55 @@ export default function ProvisionUserModal({ onClose }: any) {
             </div>
 
             {/* FORM */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="px-6 py-5 space-y-4">
 
-              {/* FULL NAME */}
-              <div>
-                <label className="text-[11px] text-gray-400 font-bold">
-                  FULL NAME *
-                </label>
-                <div className="flex items-center border rounded-lg px-3 h-10 bg-gray-50">
-                  <PersonOutlineOutlinedIcon className="text-gray-300 mr-2" fontSize="small" />
+              {/* NAME + EMAIL */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">Full Name</label>
                   <input
-                    placeholder="John Doe"
-                    className="bg-transparent outline-none text-sm w-full"
+                    className="w-full mt-1 px-3 py-2 border border-[#1B5E20] rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Doe"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500">Email</label>
+                  <input
+                    className="w-full mt-1 px-3 py-2 border border-[#1B5E20] rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="john@co.com"
                   />
                 </div>
               </div>
 
-              {/* EMAIL */}
-              <div>
-                <label className="text-[11px] text-gray-400 font-bold">
-                  EMAIL *
-                </label>
-                <div className="flex items-center border rounded-lg px-3 h-10 bg-gray-50">
-                  <MailOutlineOutlinedIcon className="text-gray-300 mr-2" fontSize="small" />
+              {/* ROLE + NODE */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">Enterprise Role</label>
+                  <select 
+                    className="w-full mt-1 px-3 py-2 border border-[#1B5E20] rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    value={role}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setRole(e.target.value)}
+                  >
+                    <option>Auditor</option>
+                    <option>Admin</option>
+                    <option>Authority</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500">Dept / Node ID</label>
                   <input
-                    placeholder="john@co.com"
-                    className="bg-transparent outline-none text-sm w-full"
+                    value={nodeId}
+                    disabled
+                    className="w-full mt-1 px-3 py-2 border border-[#1B5E20] rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
               </div>
-
-              {/* ROLE */}
-              <div>
-                <label className="text-[11px] text-gray-400 font-bold">
-                  ENTERPRISE ROLE
-                </label>
-                <select className="w-full h-10 border rounded-lg px-3 text-sm bg-gray-50">
-                  <option>Auditor</option>
-                  <option>Manufacturer</option>
-                  <option>Logistics</option>
-                </select>
-              </div>
-
-              {/* NODE (DISABLED STYLE) */}
-              <div>
-                <label className="text-[11px] text-gray-400 font-bold">
-                  DEPT / NODE ID
-                </label>
-                <div className="flex items-center border rounded-lg px-3 h-10 bg-gray-100 text-gray-400">
-                  <LockOutlinedIcon className="mr-2" fontSize="small" />
-                  Stockholm-AU-01
-                </div>
-              </div>
-
-            </div>
 
             {/* STATUS CARD */}
             <div className="border rounded-xl p-4 bg-gray-50">
@@ -175,15 +251,31 @@ export default function ProvisionUserModal({ onClose }: any) {
 
             <div className="flex items-center gap-4">
 
-              <button className="bg-[#1B5E20] text-white px-5 py-2 rounded-lg text-sm font-semibold shadow">
+              <button onClick={handleProvision} className="bg-[#1B5E20] text-white px-5 py-2 rounded-lg text-sm font-semibold shadow">
                 Save & Provision
               </button>
             </div>
+
+            {toast && (
+              <div
+                className={`fixed top-20 right-6 px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50 ${
+                  toast.type === "success"
+                    ? "bg-green-50 border border-green-200 text-green-700"
+                    : "bg-red-50 border border-red-200 text-red-600"
+                }`}
+              >
+                {toast.message}
+              </div>
+            )}
+
+            
 
           </div>
 
         </div>
       </div>
-    </>
+    </div>
+    </div>
   );
+
 }
