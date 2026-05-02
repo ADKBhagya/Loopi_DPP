@@ -1,11 +1,16 @@
 import mongoose from "mongoose";
 
 const auditSchema = new mongoose.Schema({
-  action: String, // APPROVE_USER, LOGIN, CONFIG_CHANGE
-  performedBy: String, // admin email
+  action: { type: String, required: true },
+  performedBy: { type: String, required: true },
   targetUser: String,
-  timestamp: { type: Date, default: Date.now },
-  details: Object
+
+  details: Object,
+
+  ipAddress: String, 
+  userAgent: String, 
+
+  timestamp: { type: Date, default: Date.now }
 });
 
 export default mongoose.model("AuditLog", auditSchema);
