@@ -1,4 +1,9 @@
 import User from "../models/User.js";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+
+
 
 // ================= DASHBOARD STATS =================
 export const getDashboardStats = async (req, res) => {
@@ -64,3 +69,57 @@ export const rejectUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getApprovedUsers = async (req, res) => {
+  try {
+    const users = await User.find({
+      status: { $in: ["approved", "rejected"] }
+    });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const provisionUser = async (req, res) => {
+  try {
+    const { fullName, email, role, organization, status } = req.body;
+
+    const existing = await User.findOne({ email });
+
+    if (!fullName || !email || !role || !organization) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    if (existing) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const tempPassword = crypto.randomBytes(6).toString("hex");
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    const newUser = new User({
+      fullName,
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      role,
+      organization,
+
+      // DYNAMIC STATUS
+      status: status === "suspended" ? "rejected" : "approved",
+      isApproved: status !== "suspended",
+    });
+
+    await newUser.save();
+
+    res.json({
+      message: "User provisioned successfully",
+      tempPassword,
+    });
+
+  } catch (err) {
+  console.error("Provision Error:", err);
+  res.status(500).json({ message: err.message }); 
+}
+};
+
