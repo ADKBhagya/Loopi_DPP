@@ -86,13 +86,12 @@ export const loginUser = async (req, res) => {
     }
 
     // ================= GENERATE TOKEN =================
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET || "secret123",
-      { expiresIn: "1d" }
-    );
-
-    // ================= RESPONSE =================
+  const token = jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET || "secret123",
+    { expiresIn: "1d" }
+  );
+      // ================= RESPONSE =================
     res.status(200).json({
       message: "Login successful",
       token,
