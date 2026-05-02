@@ -19,6 +19,7 @@ import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 
 export default function Overview({ setView, onOpenExplorer, setPendingCount }: any) {
   const navigate = useNavigate();
+  const ProvisionUserModalComponent = ProvisionUserModal as any;
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showProvision, setShowProvision] = useState(false);
@@ -66,6 +67,19 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
       console.error("Stats fetch error:", err);
     }
   };
+
+  const [authorizedUsers, setAuthorizedUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/api/admin/approved-users", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(data => setAuthorizedUsers(data))
+      .catch(err => console.error(err));
+  }, []);
 
   // ================= INITIAL LOAD =================
   useEffect(() => {
@@ -252,37 +266,20 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
 
             {/* ROWS */}
             <div className="divide-y">
-
-              <UserRowNew
-                id="U-001"
-                node="Stockholm-MF-01"
-                name="Erik Larsson"
-                email="erik@loopi.se"
-                role="MANUFACTURER"
-                status="ACTIVE"
-                onSelect={setSelectedUser}
-              />
-
-              <UserRowNew
-                id="U-002"
-                node="Porto-AU-04"
-                name="Maria Silva"
-                email="m.silva@porto.pt"
-                role="AUDITOR"
-                status="ACTIVE"
-                onSelect={setSelectedUser}
-              />
-
-              <UserRowNew
-                id="U-003"
-                node="Berlin-LG-08"
-                name="Hans Müller"
-                email="h.muller@berlin.de"
-                role="LOGISTICS"
-                status="SUSPENDED"
-                onSelect={setSelectedUser}
-              />
-
+              {authorizedUsers
+              .filter((user) => user.status === "approved") 
+              .map((user) => (
+                <UserRowNew
+                  key={user._id}
+                  id={user._id}
+                  node="Stockholm-MF-01"
+                  name={user.fullName}
+                  email={user.email}
+                  role={user.role.toUpperCase()}
+                  status="ACTIVE"
+                  onSelect={setSelectedUser}
+                />
+            ))}
             </div>
           </div>
 
@@ -380,7 +377,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
       )}
 
       {showProvision && (
-        <ProvisionUserModal onClose={() => setShowProvision(false)} />
+        <ProvisionUserModalComponent onClose={() => setShowProvision(false)} />
       )}
 
 
