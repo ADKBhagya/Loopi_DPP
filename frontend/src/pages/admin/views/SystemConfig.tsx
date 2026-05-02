@@ -3,8 +3,29 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
+import { useEffect, useState } from "react";
 
 export default function SystemConfig() {
+  const [config, setConfig] = useState<any>({});
+
+  useEffect(() => {
+    fetch("/api/admin/system-config")
+      .then(res => res.json())
+      .then(data => setConfig(data));
+  }, []);
+
+  const handleSave = async () => {
+    await fetch("/api/admin/system-config", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(config)
+    });
+
+    alert("Saved successfully");
+  };
+
   return (
     <div className="space-y-6 py-5">
 
@@ -24,7 +45,7 @@ export default function SystemConfig() {
           </div>
         </div>
 
-        <button className="bg-green-600 hover:bg-green-700 transition px-5 py-2 rounded-xl text-sm font-semibold">
+        <button onClick={handleSave} className="bg-green-600 hover:bg-green-700 transition px-5 py-2 rounded-xl text-sm font-semibold">
           Save Changes
         </button>
       </div>
