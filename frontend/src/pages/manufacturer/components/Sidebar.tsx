@@ -10,7 +10,7 @@ import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ElectricBoltOutlinedIcon from "@mui/icons-material/ElectricBoltOutlined";
 
-export default function Sidebar({ view, setView, pendingCount = 5 }: any) {
+export default function Sidebar({ view, setView, onOpenGarment, pendingCount = 5 }: any) {
   return (
     <aside className="w-[210px] h-screen bg-white border-r border-gray-100 flex flex-col justify-between fixed left-0 top-0">
 
@@ -45,7 +45,10 @@ export default function Sidebar({ view, setView, pendingCount = 5 }: any) {
                 icon={<CheckroomOutlinedIcon />}
                 label="Garment Creation"
                 active={view === "garment"}
-                onClick={() => setView("garment")}
+                onClick={() => {
+                setView("garment");       
+                onOpenGarment();          
+              }}
             />
 
             <NavItem
