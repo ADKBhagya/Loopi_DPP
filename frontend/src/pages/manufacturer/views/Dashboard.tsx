@@ -4,6 +4,7 @@ import Topbar from "../../manufacturer/components/Topbar";
 import { createPortal } from "react-dom";
 import Shipments from "./Shipments";
 import Certificates from "./Certificates";
+import BlockchainExplorer from "./BlockchainExplorer";
 
 /* ICONS */
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -119,9 +120,10 @@ function Dashboard() {
         <Topbar />
 
         <div className="pt-[90px] px-6">
-          
-          {view === "overview" && (
+
+                    {view === "overview" && (
              <>
+          
 
           {/* ================= STATS ================= */}
           <div className="grid grid-cols-5 gap-4 mb-6">
@@ -293,10 +295,12 @@ function Dashboard() {
             </div>
 
           </div>
-              </>
+                        </>
   )}
           {view === "shipments" && <Shipments />}
           {view === "certificates" && <Certificates />}
+          {view === "explorer" && <BlockchainExplorer />}
+
         </div>
 
       {/* MODALS */}
