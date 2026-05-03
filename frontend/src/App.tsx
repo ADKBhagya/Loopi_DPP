@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
-import Manufacturer from "./pages/Manufacturer";
+import Manufacturer from "./pages/manufacturer/Manufacturer";
 import Logistics from "./pages/Logistics";
 import Auditor from "./pages/Auditor";
 import Authority from "./pages/Authority";
