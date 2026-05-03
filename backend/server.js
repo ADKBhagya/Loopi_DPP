@@ -9,6 +9,10 @@ import User from "./models/User.js";
 import authRoutes from "./routes/authRoutes.js";
 import protectedRoutes from "./routes/protectedRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import garmentRoutes from "./routes/garmentRoutes.js";
+import shipmentRoutes from "./routes/shipmentRoutes.js";
+
+
 
 import { sendResetEmail } from "./utils/emailService.js";
 
@@ -27,7 +31,8 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/protected", protectedRoutes);
-
+app.use("/api/garments", garmentRoutes);
+app.use("/api/shipments", shipmentRoutes);
 // CONNECT DB
 connectDB();
 
