@@ -52,6 +52,7 @@ function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [garments, setGarments] = useState<any[]>([]);
 
   const handleOpenGarment = () => {
     setShowCreateModal(true);
@@ -71,6 +72,30 @@ function Dashboard() {
       setTimeout(() => setMessage(""), 3000);
     }
   }, []);
+
+useEffect(() => {
+  const fetchGarments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:5000/api/garments", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      console.log("GARMENTS:", data);
+
+      setGarments(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchGarments();
+}, []);
 
   useEffect(() => {
     const close = () => setMenuOpen(false);
@@ -235,50 +260,30 @@ function Dashboard() {
               </thead>
 
               <tbody>
-                <ProductRow 
-                  id="GP-9822"
-                  name="Organic Cotton T-Shirt"
-                  material="Cotton"
-                  co2="1.8kg"
-                  water="2.5L"
-                  status="pending"
-                  onQRClick={(data:any) => {
-                    setSelectedQR(data);
-                    setShowQRModal(true);
-                  }}
-                  onMenuClick={(pos:any, data:any) => {
-                    setMenuPosition(pos);
-                    setSelectedRow(data);
-                    setMenuOpen(true);
-                  }}
-                />
+                {garments.map((g, index) => {
+                  console.log("ROW:", g);
 
-                <ProductRow id="GP-9822" name="Organic Cotton T-Shirt" material="Cotton" co2="1.8kg" water="2.5L" status="pending" onQRClick={(data:any) => {
-                  setSelectedQR(data);
-                  setShowQRModal(true);
-                }} onMenuClick={(pos:any, data:any) => {
-                  setMenuPosition(pos);
-                  setSelectedRow(data);
-                  setMenuOpen(true);
-                }} />
-
-                <ProductRow id="GP-9823" name="Linen Trousers" material="Linen" co2="2.1kg" water="8L" status="shipment" onQRClick={(data:any) => {
-                  setSelectedQR(data);
-                  setShowQRModal(true);
-                }} onMenuClick={(pos:any, data:any) => {
-                  setMenuPosition(pos);
-                  setSelectedRow(data);
-                  setMenuOpen(true);
-                }} />
-                <ProductRow id="GP-9824" name="Denim Jacket" material="Cotton, Elastane" co2="12.5kg" water="45L" status="draft" onQRClick={(data:any) => {
-                  setSelectedQR(data);
-                  setShowQRModal(true);
-
-                }} onMenuClick={(pos:any, data:any) => {
-                  setMenuPosition(pos);
-                  setSelectedRow(data);
-                  setMenuOpen(true);
-                }} />
+                  return (
+                    <ProductRow
+                      key={g._id}
+                      id={`GP-${g._id.slice(-4).toUpperCase()}`}
+                      name={g.productName}
+                      material={g.materials?.join(", ")}
+                      co2={`${g.carbon}kg`}
+                      water={`${g.water}L`}
+                      status={g.status}
+                      onQRClick={(data:any) => {
+                        setSelectedQR(data);
+                        setShowQRModal(true);
+                      }}
+                      onMenuClick={(pos:any, data:any) => {
+                        setMenuPosition(pos);
+                        setSelectedRow(data);
+                        setMenuOpen(true);
+                      }}
+                    />
+                  );
+                })}
               </tbody>
             </table>
 
@@ -382,7 +387,9 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
       </td>
 
       <td className="font-medium">{name}</td>
-      <td className="text-gray-500">{material}</td>
+      <td className="text-gray-500">
+        {material || "N/A"}
+      </td>
 
       <td className="flex gap-4">
         <span className="flex items-center gap-1 text-green-600">
@@ -528,6 +535,48 @@ function CreateGarmentModal({ onClose }: any) {
         ? prev.materials.filter((m) => m !== material)
         : [...prev.materials, material],
     }));
+  };
+
+  const handleFinalize = async () => {
+    if (!isStepValid() || !savedSteps[3]) {
+      showToast("Complete all steps before finalizing");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:5000/api/garments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productName: form.productName,
+          location: form.location,
+          materials: form.materials,
+          carbon: form.carbon,
+          water: form.water,
+          logisticsProvider: form.logisticsProvider,
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log("CREATED:", data);
+
+      showToast("Garment created successfully");
+
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1200);
+
+    } catch (err) {
+      console.error(err);
+      showToast("Error creating garment");
+    }
   };
 
   const handleFiles = (e: any) => {
@@ -880,27 +929,17 @@ function CreateGarmentModal({ onClose }: any) {
                   Continue <ArrowForwardOutlinedIcon style={{ fontSize: 18 }} />
                 </button>
               ) : (
-                <button
-                  onClick={() => {
-                    if (!isStepValid() || !savedSteps[3]) {
-                      showToast("Complete all steps before finalizing");
-                      return;
-                    }
-
-                    showToast("Garment created successfully");
-
-                    setTimeout(() => {
-                      onClose();
-                    }, 1200);
-                  }}
-                  className={`px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${
-                    isStepValid() && savedSteps[3]
-                      ? "bg-[#1B5E20] text-white"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}>
-                  <SendOutlinedIcon style={{ fontSize: 18 }} />
-                  Finalize & Ship
-                </button>
+              <button
+                onClick={handleFinalize}
+                className={`px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${
+                  isStepValid() && savedSteps[3]
+                    ? "bg-[#1B5E20] text-white"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <SendOutlinedIcon style={{ fontSize: 18 }} />
+                Finalize & Ship
+              </button>
               )}
             </div>
           </div>
