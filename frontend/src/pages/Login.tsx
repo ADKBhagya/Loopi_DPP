@@ -60,7 +60,7 @@ function Login() {
 
     if (!validate()) return;
 
-    setLoading(true); // 🔥 START LOADING
+    setLoading(true); //  START LOADING
 
     try {
       const res = await fetch("http://localhost:5000/api/auth/login", {
@@ -75,7 +75,7 @@ function Login() {
 
       if (!res.ok) {
         setErrors({ email: data.message });
-        setLoading(false); // 🔥 STOP LOADING
+        setLoading(false); // STOP LOADING
         return;
       }
 
@@ -85,19 +85,20 @@ function Login() {
       }
 
       // SAVE MESSAGE
-      localStorage.setItem("loginSuccess", `Welcome back, ${data.user.email}!`);
+      localStorage.setItem("loginSuccess", `Welcome back, ${data.user.fullName}!`);
 
       // SAVE ROLE
       const userRole = data.user.role.toLowerCase().replace(/\s/g, "");
       localStorage.setItem("userRole", userRole);
+      localStorage.setItem("fullName", data.user.fullName);
 
-      // 🚀 GO TO LOADING PAGE
+      // GO TO LOADING PAGE
       navigate("/loading");
 
     } catch (error) {
       console.error("Login error:", error);
       setErrors({ email: "Something went wrong. Please try again." });
-      setLoading(false); // 🔥 STOP LOADING
+      setLoading(false); // STOP LOADING
     }
   };
 
