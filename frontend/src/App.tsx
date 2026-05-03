@@ -14,6 +14,8 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Loading from "./pages/Loading";
+import Dashboard from "./pages/manufacturer/views/Dashboard";
+import Shipments from "./pages/manufacturer/views/Shipments";
 
 function App() {
   return (
@@ -28,14 +30,10 @@ function App() {
         }
       />
 
-      <Route
-        path="/manufacturer"
-        element={
-          <ProtectedRoute allowedRoles={["Manufacturer"]}>
-            <Manufacturer />
-          </ProtectedRoute>
-        }
-      />
+<Route path="/manufacturer" element={<Manufacturer />}>
+  <Route index element={<Dashboard />} />
+  <Route path="shipments" element={<Shipments />} />
+</Route>
 <Route
   path="/logistics"
   element={
