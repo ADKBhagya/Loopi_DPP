@@ -27,10 +27,7 @@ function Manufacturer() {
         const data = await res.json();
 
         console.log(data);
-
-        // SUCCESS FLOW
-        setMessage("Welcome to Manufacturer Dashboard");
-        setShow(true);
+        
 
         setTimeout(() => setShow(false), 2500);
         setTimeout(() => setMessage(""), 3000);
