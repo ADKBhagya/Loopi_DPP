@@ -27,9 +27,6 @@ export default function Sidebar({ view, setView, pendingCount = 5 }: any) {
 
         {/* NAVIGATION */}
         <div className="px-4 mt-6">
-          <p className="text-[10px] font-bold text-gray-400 tracking-widest mb-3">
-            NAVIGATION
-          </p>
 
           <nav className="space-y-2">
             <NavItem
