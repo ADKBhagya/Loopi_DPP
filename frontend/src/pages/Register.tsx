@@ -35,6 +35,7 @@ function Register() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [errors, setErrors] = useState<Errors>({});
+  const [step, setStep] = useState(1);
 
 const getPasswordStrength = () => {
   let score = 0;
@@ -88,6 +89,12 @@ const getPasswordStrength = () => {
     newErrors.confirmPassword = "Passwords do not match.";
   }
 
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+const validateStep = () => {
+  let newErrors: any = {};
   setErrors(newErrors);
   return Object.keys(newErrors).length === 0;
 };
