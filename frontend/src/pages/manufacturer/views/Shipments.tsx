@@ -97,19 +97,20 @@ export default function Shipments() {
   );
 }
 
-function Stat({ icon, value, label }: any) {
-  return (
-    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+function Stat({ icon, value, label, color }: any) {
+  const colors: any = {
+    blue: "bg-blue-50 text-blue-600",
+    green: "bg-green-50 text-green-600",
+    purple: "bg-purple-50 text-purple-600",
+  };
 
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gray-100 text-gray-600">
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${colors[color]}`}>
         {icon}
       </div>
-
-      <h2 className="text-2xl font-bold mt-3 text-gray-900">{value}</h2>
-
-      <p className="text-[11px] font-semibold text-gray-400 tracking-wide">
-        {label}
-      </p>
+      <h2 className="text-2xl font-bold mt-4 text-gray-900">{value}</h2>
+      <p className="text-[11px] font-semibold text-gray-400 tracking-wide">{label}</p>
     </div>
   );
 }
