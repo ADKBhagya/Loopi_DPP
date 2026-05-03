@@ -17,6 +17,7 @@ import FlightOutlinedIcon from "@mui/icons-material/FlightOutlined";
 export default function Shipments() {
 
   const [showModal, setShowModal] = useState(false); 
+  const [shipments, setShipments] = useState<any[]>([]);
   
 
   const [form, setForm] = useState({
@@ -28,6 +29,47 @@ export default function Shipments() {
     provider: "",  
     eta: "",
   });
+
+  const fetchShipments = async () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("http://localhost:5000/api/shipments", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+    setShipments(data);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+  useEffect(() => {
+  const fetchShipments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:5000/api/shipments", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      console.log("SHIPMENTS:", data);
+
+      setShipments(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchShipments();
+}, []);
 
   return (
     <>
@@ -64,38 +106,33 @@ export default function Shipments() {
             </div>
           </div>
 
-          <ShipmentCard
-            id="SHP-001"
-            status="IN TRANSIT"
-            garments="8 garments"
-            route="Stockholm, SE → Berlin, DE"
-            company="GreenWay Logistics"
-            co2="6.56kg"
-            progress={62}
-            eta="Feb 23, 2026"
-            delivered={false}
-          />
-
-          <ShipmentCard
-            id="SHP-002"
-            status="DELIVERED"
-            garments="14 garments"
-            route="Stockholm, SE → Amsterdam, NL"
-            company="EcoFreight Sweden"
-            co2="11.48kg"
-            progress={100}
-            eta="Feb 19, 2026"
-            delivered
-          />
+          {shipments.map((s) => (
+            <ShipmentCard
+              key={s._id}
+              id={s.shipmentId || s._id.slice(-4)}
+              status={s.status === "transit" ? "IN TRANSIT" : s.status.toUpperCase()}
+              garments={s.product}
+              route={`${s.from} → ${s.to}`}
+              company={s.provider}
+              co2="6.5kg" // later dynamic
+              progress={s.status === "delivered" ? 100 : s.status === "transit" ? 60 : 10}
+              eta={s.eta}
+              delivered={s.status === "delivered"}
+            />
+          ))}
         </div>
       </div>
 
       {showModal && (
-        <CreateShipmentModal onClose={() => setShowModal(false)} />
+        <CreateShipmentModal
+  onClose={() => setShowModal(false)}
+  refresh={fetchShipments}
+/>
       )}
+      
+       
     </>
   );
-}
 
 function Stat({ icon, value, label, color }: any) {
   const colors: any = {
@@ -187,7 +224,7 @@ function ShipmentCard({ id, status, garments, route, company, co2, progress, eta
   );
 }
 
-function CreateShipmentModal({ onClose }: any) {
+function CreateShipmentModal({ onClose, refresh }: any) {
   const [form, setForm] = useState({
     shipmentId: "",
     product: "",
@@ -246,17 +283,36 @@ function CreateShipmentModal({ onClose }: any) {
   };
   
 
-  const handleSave = () => {
+  const handleCreate = async () => {
     if (!validate()) {
-      showToast("Please fill all required fields");
+      showToast("Fill all fields");
       return;
     }
 
-    showToast("Shipment created successfully");
+    try {
+      const token = localStorage.getItem("token");
 
-    setTimeout(() => {
-      onClose(); // 
-    }, 1200);
+      const res = await fetch("http://localhost:5000/api/shipments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      showToast("Shipment created");
+
+      setTimeout(() => {
+        onClose();
+        window.location.reload(); // later we remove
+      }, 1200);
+
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -435,7 +491,7 @@ function CreateShipmentModal({ onClose }: any) {
             </button>
 
             <button
-              onClick={handleSave}
+              onClick={handleCreate}
               className="bg-[#1B5E20] text-white px-6 py-2 rounded-xl text-sm font-semibold hover:bg-green-800 transition"
             >
               Create Shipment
@@ -512,3 +568,5 @@ function Select({ label, icon, value, onChange, options, error }: any) {
     </div>
   );
 }
+}
+
