@@ -36,6 +36,8 @@ export default function Topbar({ onOpenExplorer }: any) {
   const [showPrefs, setShowPrefs] = useState(false);
   const [showGas, setShowGas] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+const fullName = localStorage.getItem("fullName") || "User";
+const role = localStorage.getItem("userRole") || "Role";
 
   const navigate = useNavigate();
 
@@ -98,8 +100,8 @@ export default function Topbar({ onOpenExplorer }: any) {
             className="flex items-center gap-3 border rounded-xl px-3 h-11 hover:bg-gray-50"
           >
             <div className="text-right">
-              <p className="text-xs font-bold">Kaushanibhagya9</p>
-              <p className="text-[10px] text-gray-400">ADMIN</p>
+              <p className="text-xs font-bold">{fullName}</p>
+              <p className="text-[10px] text-gray-400 uppercase">{role}</p>
             </div>
 
             <div className="w-9 h-9 bg-[#1B5E20] rounded-xl flex items-center justify-center text-white">
