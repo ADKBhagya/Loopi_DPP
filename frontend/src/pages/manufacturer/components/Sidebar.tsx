@@ -46,7 +46,7 @@ export default function Sidebar({ view, setView, onOpenGarment, pendingCount = 5
                 label="Garment Creation"
                 active={view === "garment"}
                 onClick={() => {
-                  onOpenGarment();   // ONLY THIS
+                  onOpenGarment();   
                 }}        
             />
 
