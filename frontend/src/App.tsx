@@ -30,10 +30,14 @@ function App() {
         }
       />
 
-<Route path="/manufacturer" element={<Manufacturer />}>
-  <Route index element={<Dashboard />} />
-  <Route path="shipments" element={<Shipments />} />
-</Route>
+      <Route
+        path="/manufacturer"
+        element={
+          <ProtectedRoute allowedRoles={["Manufacturer"]}>
+            <Manufacturer />
+          </ProtectedRoute>
+        }
+      />
 <Route
   path="/logistics"
   element={
