@@ -297,8 +297,6 @@ const handleRegister = async (e: React.FormEvent) => {
                       <option value="Retailer">Retailer</option>
                       <option value="Repair Center">Repair Center</option>
                       <option value="Recycler">Recycler</option>
-                      <option value="Auditor">Auditor</option>
-                      <option value="Authority">Authority</option>
                     </select>
                   </div>
 
