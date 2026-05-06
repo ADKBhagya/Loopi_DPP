@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import Dashboard from "./views/Dashboard";
-import Shipments from "./views/Shipments";
 
 const successPopup: React.CSSProperties = {
   position: "fixed",
