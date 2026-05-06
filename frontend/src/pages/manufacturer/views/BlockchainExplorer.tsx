@@ -102,7 +102,7 @@ function Stat({ icon, value, label, color }: any) {
       </div>
 
       <h2 className="text-xl font-bold mt-3">{value}</h2>
-      <p className="text-[10px] text-gray-400 font-semibold">{label}</p>
+      <p className="text-[12px] text-gray-400 font-semibold mt-2">{label}</p>
     </div>
   );
 }
