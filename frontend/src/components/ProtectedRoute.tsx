@@ -14,7 +14,12 @@ if (!token) {
   return <Navigate to="/" />;
 }
 
-if (!role || !allowedRoles.map(r => r.toLowerCase()).includes(role)) {
+if (
+  !role ||
+  !allowedRoles
+    .map((r) => r.toLowerCase())
+    .includes(role.toLowerCase())
+) {
   return <Navigate to="/" />;
 }
 
