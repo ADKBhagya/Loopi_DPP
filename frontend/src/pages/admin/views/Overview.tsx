@@ -57,7 +57,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
 
       setStats(data);
 
-      // 🔥 sync pending count everywhere
+      // sync pending count everywhere
       setPendingCountLocal(data.pendingUsers);
 
       if (setPendingCount) {
