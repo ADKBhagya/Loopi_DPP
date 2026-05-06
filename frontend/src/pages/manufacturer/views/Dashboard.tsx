@@ -356,7 +356,7 @@ function StatCard({ icon, value, label }: any) {
       </div>
 
       <h2 className="text-2xl font-bold mt-3">{value}</h2>
-      <p className="text-[10px] text-gray-400 mt-1">{label}</p>
+      <p className="text-[12px] text-gray-400 mt-1">{label}</p>
     </div>
   );
 }
