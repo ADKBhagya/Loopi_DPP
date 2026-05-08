@@ -48,7 +48,7 @@ function App() {
 />
 
 <Route
-  path="/auditor"
+  path="/auditor/*"
   element={
     <ProtectedRoute allowedRoles={["Auditor"]}>
       <Auditor />
