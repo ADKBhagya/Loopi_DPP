@@ -6,7 +6,7 @@ import Manufacturer from "./pages/manufacturer/Manufacturer";
 import Logistics from "./pages/logistics/Logistics";
 import Auditor from "./pages/auditor/Auditor";
 import Authority from "./pages/authority/Authority";
-import Retailer from "./pages/Retailer";
+import Retailer from "./pages/retailer/Retailer";
 import RepairCenter from "./pages/RepairCenter";
 import Recycler from "./pages/Recycler";
 import Admin from "./pages/admin/Admin";
@@ -66,7 +66,7 @@ function App() {
 />
 
 <Route
-  path="/retailer"
+  path="/retailer/*"
   element={
     <ProtectedRoute allowedRoles={["Retailer"]}>
       <Retailer />
