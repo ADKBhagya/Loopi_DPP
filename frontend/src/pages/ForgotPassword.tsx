@@ -149,6 +149,7 @@ export default ForgotPassword;
 
 const container: React.CSSProperties = {
   minHeight: "100vh",
+  padding: "16px",
   background: "#F5F7FA",
   display: "flex",
   justifyContent: "center",
@@ -157,7 +158,8 @@ const container: React.CSSProperties = {
 };
 
 const card: React.CSSProperties = {
-  width: "395px",
+  width: "100%",
+  maxWidth: "395px",
   background: "#ffffff",
   borderRadius: "16px",
   boxShadow: "0 15px 30px rgba(0,0,0,0.08)",
