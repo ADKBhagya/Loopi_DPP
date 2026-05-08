@@ -466,6 +466,7 @@ const handleRegister = async (e: React.FormEvent) => {
 
 const container: React.CSSProperties = {
   minHeight: "100vh",
+  padding: "16px",
   background: "#F5F7FA",
   display: "flex",
   flexDirection: "column",
@@ -475,7 +476,8 @@ const container: React.CSSProperties = {
 };
 
 const card: React.CSSProperties = {
-  width: "395px",
+  width: "100%",
+  maxWidth: "395px",
   background: "#ffffff",
   borderRadius: "16px",
   boxShadow: "0 15px 30px rgba(0,0,0,0.08)",
@@ -492,7 +494,7 @@ const content: React.CSSProperties = {
 };
 
 const passwordCol: React.CSSProperties = {
-  flex: 1,
+  flex: "1 1 100%",
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
@@ -628,6 +630,7 @@ const passwordRow: React.CSSProperties = {
   marginTop: "14px",
   alignItems: "stretch",
   width: "100%",
+  flexWrap: "wrap",
 };
 
 const button: React.CSSProperties = {
