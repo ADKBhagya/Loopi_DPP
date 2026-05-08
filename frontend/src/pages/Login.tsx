@@ -249,9 +249,11 @@ function Login() {
 /* ================= STYLES ================= */
 
 const successPopup: React.CSSProperties = {
+  left: "16px",
+  right: "16px",
+  maxWidth: "unset",
   position: "fixed",
   top: "20px",
-  right: "20px",
   background: "#EDF7ED",
   color: "#166534",
   padding: "12px 16px",
@@ -264,7 +266,6 @@ const successPopup: React.CSSProperties = {
   fontWeight: 500,
   zIndex: 999,
   border: "1px solid #CDEEDB",
-  maxWidth: "100%",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -286,10 +287,12 @@ const container: React.CSSProperties = {
   justifyContent: "center",
   alignItems: "center",
   fontFamily: "'Inter', sans-serif",
+  padding: "16px",
 };
 
 const card: React.CSSProperties = {
-  width: "380px",
+  width: "100%",
+  maxWidth: "380px",
   background: "#ffffff",
   borderRadius: "16px",
   boxShadow: "0 15px 30px rgba(0,0,0,0.08)",
