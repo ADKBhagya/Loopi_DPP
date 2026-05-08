@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PageContainer from "../../../components/ui/PageContainer";
+import TableContainer from "../../../components/ui/TableContainer";
 
 /* ICONS */
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
@@ -90,7 +92,7 @@ export default function AuditQueue() {
       <div className="space-y-6">
 
         {/* STATS */}
-        <div className="grid grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
 
           <StatCard
             title="PENDING REVIEWS"
@@ -130,7 +132,7 @@ export default function AuditQueue() {
         <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm overflow-hidden">
 
           {/* HEADER */}
-          <div className="px-6 pt-6 pb-4 flex justify-between items-start">
+          <div className="px-4 sm:px-6 pt-6 pb-4 flex flex-col xl:flex-row gap-4 justify-between xl:items-start">
 
             <div>
               <h2 className="text-[18px] font-bold text-gray-900">
@@ -143,7 +145,7 @@ export default function AuditQueue() {
             </div>
 
             {/* FILTERS */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
 
               <FilterBtn
                 label="ALL"
@@ -179,7 +181,7 @@ export default function AuditQueue() {
                 <input
                   placeholder="ID, garment, manufacturer"
                   className="
-                    w-[230px] h-10 pl-10 pr-4
+                    w-full sm:w-[230px] h-10 pl-10 pr-4
                     border rounded-xl
                     text-sm outline-none
                     bg-gray-50
@@ -191,9 +193,9 @@ export default function AuditQueue() {
           </div>
 
           {/* TABLE */}
-          <div className="overflow-x-auto">
+          <TableContainer>
 
-            <table className="w-full">
+            <table className="min-w-[1100px] w-full">
 
               <thead>
                 <tr className="border-t border-b bg-gray-50/70">
@@ -300,7 +302,7 @@ export default function AuditQueue() {
 
             </table>
 
-          </div>
+          </TableContainer>
 
           {/* FOOTER */}
           <div className="px-6 py-4 flex justify-between items-center">
@@ -321,7 +323,7 @@ export default function AuditQueue() {
       {/* REVIEW DRAWER */}
       <div
         className={`
-          fixed top-0 right-0 h-screen w-[590px]
+          fixed top-0 right-0 h-screen w-full sm:w-[590px]
           bg-white z-[90]
           shadow-[-10px_0_40px_rgba(0,0,0,0.12)]
           transition-all duration-300
