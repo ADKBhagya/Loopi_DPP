@@ -124,6 +124,8 @@ const text: React.CSSProperties = {
   fontSize: "10px",
   color: "#6B7280",
   letterSpacing: "1.5px",
+  textAlign: "center",
+  padding: "0 20px",
 };
 
 
