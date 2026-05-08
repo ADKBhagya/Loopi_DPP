@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageContainer from "../../../components/ui/PageContainer";
 
 /* ICONS */
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
@@ -96,10 +97,11 @@ export default function LifecycleReview() {
   };
 
   return (
+    <PageContainer>
     <div className="space-y-5 pb-10">
 
       {/* STATS */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
         <StatCard
           title="PENDING REVIEWS"
@@ -517,6 +519,7 @@ export default function LifecycleReview() {
       </div>
 
     </div>
+    </PageContainer>
   );
 }
 
