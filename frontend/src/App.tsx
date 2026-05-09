@@ -7,8 +7,8 @@ import Logistics from "./pages/logistics/Logistics";
 import Auditor from "./pages/auditor/Auditor";
 import Authority from "./pages/authority/Authority";
 import Retailer from "./pages/retailer/Retailer";
-import RepairCenter from "./pages/RepairCenter";
-import Recycler from "./pages/Recycler";
+import RepairCenter from "./pages/repaircenter/RepairCenter";
+import Recycler from "./pages/recycler/Recycler";
 import Admin from "./pages/admin/Admin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -75,7 +75,7 @@ function App() {
 />
 
 <Route
-  path="/repair-center"
+  path="/repair-center/*"
   element={
     <ProtectedRoute allowedRoles={["Repair Center"]}>
       <RepairCenter />
