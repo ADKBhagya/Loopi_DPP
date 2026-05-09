@@ -8,7 +8,7 @@ import Auditor from "./pages/auditor/Auditor";
 import Authority from "./pages/authority/Authority";
 import Retailer from "./pages/retailer/Retailer";
 import RepairCenter from "./pages/repaircenter/RepairCenter";
-import Recycler from "./pages/recycler/Recycler";
+import Recycler from "./pages/Recycler";
 import Admin from "./pages/admin/Admin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
