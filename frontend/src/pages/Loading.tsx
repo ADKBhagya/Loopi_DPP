@@ -24,7 +24,7 @@ function Loading() {
   };
 
   const timer = setTimeout(() => {
-    // ✅ FIRST check role
+    // FIRST check role
     const path = roleRoutes[role || ""];
 
     if (!path) {

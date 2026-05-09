@@ -39,7 +39,7 @@ export default function DashboardLayout({
         className="
           pt-[72px]
           lg:ml-[210px]
-          transition-all
+          min-h-screen
         "
       >
 
