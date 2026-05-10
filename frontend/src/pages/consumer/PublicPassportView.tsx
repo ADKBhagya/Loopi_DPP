@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import logo from "../../assets/logo.png";
+import RecyclingRequestModal from "./components/RecyclingRequestModal";
 
 /* OUTLINED ICONS */
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
@@ -44,12 +45,31 @@ export default function PublicPassportView() {
   const [showTrustSealModal, setShowTrustSealModal] = useState(false);
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showRecycleModal, setShowRecycleModal] = useState(false);
 
   const displayPassportId = passportId || "GP-9822";
 
   const requireLogin = () => {
     setShowLoginRequired(true);
   };
+
+  const handleRecycleRequest = () => {
+  const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("userRole");
+
+  const isConsumerLoggedIn =
+    Boolean(token) &&
+    userRole?.toLowerCase().replace(/\s+/g, "") === "consumer";
+
+  if (!isConsumerLoggedIn) {
+    sessionStorage.setItem("pendingConsumerAction", "recycle");
+    sessionStorage.setItem("consumerReturnPath", `/consumer/passport/${displayPassportId}`);
+    setShowLoginRequired(true);
+    return;
+  }
+
+  setShowRecycleModal(true);
+};
 
   return (
     <div className="min-h-screen bg-[#F5F8F6] text-[#102A1A]">
@@ -234,7 +254,7 @@ export default function PublicPassportView() {
               )}
 
               {activeTab === "materials" && (
-                <MaterialsTab onRecycle={requireLogin} />
+                <MaterialsTab onRecycle={handleRecycleRequest} />
               )}
 
               {activeTab === "lifecycle" && (
@@ -390,6 +410,13 @@ export default function PublicPassportView() {
           </div>
         </ModalShell>
       )}
+      
+      {showRecycleModal && (
+      <RecyclingRequestModal
+        initialPassportId={displayPassportId}
+        onClose={() => setShowRecycleModal(false)}
+      />
+    )}
 
       {/* LOGIN REQUIRED MODAL */}
       {showLoginRequired && (
@@ -696,13 +723,15 @@ function MaterialsTab({ onRecycle }: { onRecycle: () => void }) {
           </div>
         </div>
 
-        <button
-          onClick={onRecycle}
-          className="mt-5 w-full h-14 rounded-2xl bg-[#1B5E20] text-white font-black flex items-center justify-center gap-2 hover:bg-[#0F3D1E] transition"
-        >
-          <RecyclingOutlinedIcon fontSize="small" />
-          Register for Recycling
-        </button>
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={onRecycle}
+            className="h-12 px-7 rounded-xl bg-[#1B5E20] text-white font-black hover:bg-[#0F3D1E] transition flex items-center justify-center gap-2"
+          >
+            <RecyclingOutlinedIcon fontSize="small" />
+            Register for Recycling
+          </button>
+        </div>
       </section>
 
       <section>
