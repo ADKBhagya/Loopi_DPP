@@ -69,7 +69,7 @@ useEffect(() => {
   setLoading(true);
 
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/provision-user`, {
+    const res = await fetch(`https://loopidpp.online/api/admin/provision-user`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

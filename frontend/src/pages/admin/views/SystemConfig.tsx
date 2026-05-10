@@ -26,7 +26,7 @@ useEffect(() => {
 const fetchConfig = async () => {
   try {
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/admin/system-config`,
+      `https://loopidpp.online/api/admin/system-config`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -47,7 +47,7 @@ const fetchConfig = async () => {
 
 const fetchVersions = async () => {
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/admin/system-config/versions`,
+    `https://loopidpp.online/api/admin/system-config/versions`,
     {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -64,7 +64,7 @@ const handleRollback = async (versionId: string) => {
 
   try {
     await fetch(
-      `${import.meta.env.VITE_API_URL}/api/admin/system-config/rollback/${versionId}`,
+      `https://loopidpp.online/api/admin/system-config/rollback/${versionId}`,
       {
         method: "PUT",
         headers: {
@@ -95,7 +95,7 @@ const handleRollback = async (versionId: string) => {
  const handleSave = async () => {
   try {
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/admin/system-config`,
+      `https://loopidpp.online/api/admin/system-config`,
       {
         method: "PUT",
         headers: {
@@ -121,7 +121,7 @@ const handleRollback = async (versionId: string) => {
 const handleReveal = async () => {
   try {
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/admin/system-config/reveal`,
+      `https://loopidpp.online/api/admin/system-config/reveal`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
