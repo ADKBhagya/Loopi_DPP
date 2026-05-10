@@ -18,6 +18,7 @@ import Recycler from "./pages/recycler/Recycler";
 
 import ConsumerHome from "./pages/consumer/ConsumerHome";
 import PublicPassportView from "./pages/consumer/PublicPassportView";
+import ConsumerMyClothes from "./pages/consumer/components/ConsumerMyClothesModal";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
       {/* PUBLIC CONSUMER ROUTE */}
       <Route path="/consumer" element={<ConsumerHome />} />
       <Route path="/consumer/passport/:passportId" element={<PublicPassportView />} />
+      <Route path="/consumer/my-clothes" element={<ConsumerMyClothes />} />
 
       {/* PROTECTED ROLE ROUTES */}
       <Route
