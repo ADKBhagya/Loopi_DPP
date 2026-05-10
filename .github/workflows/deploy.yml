@@ -1,0 +1,35 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@master
+
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+
+          script: |
+            cd /var/www/Loopi_DPP
+
+            git reset --hard
+            git clean -fd
+            git pull origin main --rebase
+
+            cd backend
+            npm install
+            pm2 restart loopi-backend || pm2 start server.js --name loopi-backend
+
+            cd ../frontend
+            rm -rf node_modules
+            npm install
+            npm run build
