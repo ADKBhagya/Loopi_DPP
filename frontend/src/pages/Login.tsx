@@ -71,7 +71,7 @@ function Login() {
     setLoading(true); //  START LOADING
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+      const res = await fetch(`https://loopidpp.online/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

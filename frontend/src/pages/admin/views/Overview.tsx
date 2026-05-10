@@ -47,7 +47,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
   // ================= SINGLE CLEAN FETCH =================
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/dashboard`, {
+      const res = await fetch(`https://loopidpp.online/api/admin/dashboard`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -79,7 +79,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
 }, [toast]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/admin/approved-users`, {
+    fetch(`https://loopidpp.online/api/admin/approved-users`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

@@ -45,7 +45,7 @@ const pendingUsers = filteredUsers.map((u) => ({
 useEffect(() => {
   if (!token) return;
 
-  fetch(`${import.meta.env.VITE_API_URL}/api/admin/approved-users`, {
+  fetch(`https://loopidpp.online/api/admin/approved-users`, {
     headers: { Authorization: `Bearer ${token}` },
   })
     .then(res => res.json())
@@ -54,7 +54,7 @@ useEffect(() => {
 
   // ================= FETCH USERS =================
   const fetchUsers = () => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/admin/pending-users`, {
+    fetch(`https://loopidpp.online/api/admin/pending-users`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -70,7 +70,7 @@ useEffect(() => {
     // ================= APPROVE =================
 const handleApprove = async (id: string) => {
   try {
-    await fetch(`${import.meta.env.VITE_API_URL}/api/admin/approve/${id}`, {
+    await fetch(`https://loopidpp.online/api/admin/approve/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -90,7 +90,7 @@ const handleApprove = async (id: string) => {
   // ================= REJECT =================
 const handleReject = async (id: string) => {
   try {
-    await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reject/${id}`, {
+    await fetch(`https://loopidpp.online/api/admin/reject/${id}`, {
       method: "PUT", // 
       headers: {
         Authorization: `Bearer ${token}`,
