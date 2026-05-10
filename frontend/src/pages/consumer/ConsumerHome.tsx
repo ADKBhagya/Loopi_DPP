@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
+import SellClothesModal from "./components/SellClothesModal";
+import RepairRequestModal from "./components/RepairRequestModal";
+import RecyclingRequestModal from "./components/RecyclingRequestModal";
+import ReportIssueModal from "./components/ReportIssueModal";
 
 /* ICONS */
 /* OUTLINED ICONS - LOOPI DASHBOARD STYLE */
@@ -38,12 +42,24 @@ import { EnergySavingsLeafOutlined } from "@mui/icons-material";
 export default function ConsumerHome() {
   const navigate = useNavigate();
 
+  // Pending actions that require login before proceeding
+  type PendingConsumerAction = "sell" | "repair" | "recycle" | "report";
+
   const [passportId, setPassportId] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [passedHero, setPassedHero] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [showRepairModal, setShowRepairModal] = useState(false);
+  const token = localStorage.getItem("token");
+    const userRole = localStorage.getItem("userRole");
+    const [showRecycleModal, setShowRecycleModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
+
+    const isConsumerLoggedIn =
+    Boolean(token) && userRole?.toLowerCase().replace(/\s+/g, "") === "consumer";
 
   const goBack = () => {
     if (window.history.length > 1) {
@@ -62,9 +78,11 @@ const handleSearch = () => {
   navigate(`/consumer/passport/${passportId.trim()}`);
 };
 
-  const requireLogin = () => {
-    setShowLoginRequired(true);
-  };
+const requireLogin = (action: PendingConsumerAction) => {
+  sessionStorage.setItem("pendingConsumerAction", action);
+  sessionStorage.setItem("consumerReturnPath", "/consumer");
+  setShowLoginRequired(true);
+};
 
   useEffect(() => {
   const handleScroll = () => {
@@ -93,6 +111,63 @@ const handleSearch = () => {
     window.removeEventListener("scroll", handleScroll);
   };
 }, []);
+
+const handleSellClothes = () => {
+  if (!isConsumerLoggedIn) {
+    requireLogin("sell");
+    return;
+  }
+
+  setShowSellModal(true);
+};
+
+const handleRepairRequest = () => {
+  if (!isConsumerLoggedIn) {
+    requireLogin("repair");
+    return;
+  }
+
+  setShowRepairModal(true);
+};
+
+useEffect(() => {
+  if (!isConsumerLoggedIn) return;
+
+  const pendingAction = sessionStorage.getItem(
+    "pendingConsumerAction"
+  ) as PendingConsumerAction | null;
+
+  if (!pendingAction) return;
+
+  sessionStorage.removeItem("pendingConsumerAction");
+
+  if (pendingAction === "repair") {
+    setShowRepairModal(true);
+  }
+
+  if (pendingAction === "sell") {
+    setShowSellModal(true);
+  }
+
+if (pendingAction === "recycle") {
+  setShowLoginRequired(false);
+  setShowRecycleModal(true);
+}
+
+if (pendingAction === "report") {
+  setShowLoginRequired(false);
+  setShowReportModal(true);
+}
+}, [isConsumerLoggedIn]);
+
+const handleReportIssue = () => {
+  if (!isConsumerLoggedIn) {
+    requireLogin("report");
+    return;
+  }
+
+  setShowReportModal(true);
+};
 
   return (
      <div className="min-h-screen bg-[#F7FAF8] text-[#102A1A] pt-16">
@@ -591,7 +666,7 @@ const handleSearch = () => {
               </p>
 
               <button
-                onClick={requireLogin}
+                onClick={handleSellClothes}
                 className="mt-6 h-12 px-6 rounded-xl bg-white text-[#1B5E20] font-black flex items-center justify-center gap-2 hover:bg-[#F1F8F4] transition"
               >
                 <StorefrontOutlinedIcon fontSize="small" />
@@ -673,21 +748,21 @@ const handleSearch = () => {
               service="Stitching, zip repair, fabric patching"
               distance="2.4 km"
               rating="4.8"
-              onBook={requireLogin}
+              onBook={handleRepairRequest}
             />
             <RepairCard
               name="Circular Textile Care"
               service="Hoodie repair, color restoration"
               distance="4.1 km"
               rating="4.6"
-              onBook={requireLogin}
+              onBook={handleRepairRequest}
             />
             <RepairCard
               name="EcoWear Repair Point"
               service="General clothing repair"
               distance="5.8 km"
               rating="4.7"
-              onBook={requireLogin}
+              onBook={handleRepairRequest}
             />
           </div>
         </div>
@@ -775,10 +850,10 @@ const handleSearch = () => {
               Report fake product suspicion, incorrect material data, or broken QR codes.
             </p>
             <button
-              onClick={requireLogin}
-              className="mt-5 h-11 px-6 rounded-xl bg-[#F59E0B] text-white font-black"
+            onClick={handleReportIssue}
+            className="mt-5 h-11 px-6 rounded-xl bg-[#F59E0B] text-white font-black hover:bg-[#D97706] transition"
             >
-              Report Issue
+            Report Issue
             </button>
           </div>
         </div>
@@ -886,54 +961,83 @@ const handleSearch = () => {
       )}
 
       {/* LOGIN REQUIRED MODAL */}
-      {showLoginRequired && (
-        <ModalShell onClose={() => setShowLoginRequired(false)}>
-          <div className="bg-white rounded-[28px] p-7 max-w-md mx-auto shadow-2xl relative">
-            <button
-              onClick={() => setShowLoginRequired(false)}
-              className="absolute top-4 right-4 h-9 w-9 rounded-full bg-[#F1F8F4] text-[#1B5E20] flex items-center justify-center"
-            >
-              <CloseOutlinedIcon fontSize="small" />
-            </button>
+{showLoginRequired && (
+  <ModalShell onClose={() => setShowLoginRequired(false)}>
+    <div className="bg-white rounded-[28px] p-7 max-w-md mx-auto shadow-[0_28px_80px_rgba(0,0,0,0.28)] relative border border-white">
+      <button
+        onClick={() => setShowLoginRequired(false)}
+        className="absolute top-4 right-4 h-9 w-9 rounded-full bg-[#F1F8F4] text-[#1B5E20] flex items-center justify-center hover:bg-[#E8F5E9] transition"
+      >
+        <CloseOutlinedIcon fontSize="small" />
+      </button>
 
-            <button
-              onClick={() => setShowLoginRequired(false)}
-              className="mb-4 inline-flex items-center gap-2 text-sm font-black text-[#1B5E20]"
-            >
-              <ArrowBackOutlinedIcon fontSize="small" />
-              Back to Consumer Portal
-            </button>
+      <button
+        onClick={() => setShowLoginRequired(false)}
+        className="mb-4 inline-flex items-center gap-2 text-sm font-black text-[#1B5E20]"
+      >
+        <ArrowBackOutlinedIcon fontSize="small" />
+        Back to Consumer Portal
+      </button>
 
-            <div className="h-14 w-14 rounded-2xl bg-[#E8F5E9] text-[#1B5E20] flex items-center justify-center">
-              <ShieldOutlinedIcon />
-            </div>
+      <div className="h-14 w-14 rounded-2xl border border-[#1B5E20]/20 bg-white text-[#1B5E20] flex items-center justify-center shadow-sm">
+        <ShieldOutlinedIcon />
+      </div>
 
-            <h3 className="text-2xl font-black mt-5">Login Required</h3>
-            <p className="text-[#6B7280] mt-3 leading-relaxed">
-              Please login or create a Consumer account to continue this action.
-              Resale, repair requests, recycling registration, and ownership
-              tracking require authentication.
-            </p>
+      <h3 className="text-2xl font-black mt-5 text-[#102A1A]">
+        Login Required
+      </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-7">
-              <button
-                onClick={() => navigate("/")}
-                className="h-12 rounded-xl border border-[#1B5E20] text-[#1B5E20] font-black flex items-center justify-center gap-2"
-              >
-                <LoginOutlinedIcon fontSize="small" />
-                Login
-              </button>
-              <button
-                onClick={() => navigate("/register")}
-                className="h-12 rounded-xl bg-[#1B5E20] text-white font-black flex items-center justify-center gap-2"
-              >
-                <PersonAddAltOutlinedIcon fontSize="small" />
-                Register
-              </button>
-            </div>
-          </div>
-        </ModalShell>
-      )}
+      <p className="text-[#6B7280] mt-3 leading-relaxed">
+        Please login or create a Consumer account to continue this action.
+        Resale, repair requests, recycling registration, and ownership tracking
+        require authentication.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-7">
+        <button
+        onClick={() => {
+            setShowLoginRequired(false);
+            sessionStorage.setItem("consumerReturnPath", "/consumer");
+            navigate("/");
+        }}
+        className="h-12 rounded-xl border border-[#1B5E20] text-[#1B5E20] font-black flex items-center justify-center gap-2 hover:bg-[#E8F5E9] transition"
+        >
+        <LoginOutlinedIcon fontSize="small" />
+        Login
+        </button>
+
+        <button
+        onClick={() => {
+            setShowLoginRequired(false);
+            sessionStorage.setItem("consumerReturnPath", "/consumer");
+            navigate("/register");
+        }}
+        className="h-12 rounded-xl bg-[#1B5E20] text-white font-black flex items-center justify-center gap-2 hover:bg-[#0F3D1E] transition"
+        >
+        <PersonAddAltOutlinedIcon fontSize="small" />
+        Register
+        </button>
+      </div>
+    </div>
+  </ModalShell>
+)}
+
+      {showSellModal && (
+  <SellClothesModal onClose={() => setShowSellModal(false)} />
+)}
+
+{showRepairModal && (
+  <RepairRequestModal onClose={() => setShowRepairModal(false)} />
+)}
+
+{showRecycleModal && (
+  <RecyclingRequestModal onClose={() => setShowRecycleModal(false)} />
+)}
+
+{showReportModal && (
+  <ReportIssueModal onClose={() => setShowReportModal(false)} />
+)}
+
     </div>
   );
 }
@@ -1105,9 +1209,12 @@ function FooterCol({ title, items }: any) {
 
 function ModalShell({ children, onClose }: any) {
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="min-h-full flex items-center justify-center" onClick={onClose}>
-        <div className="w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[99999] bg-black/45 p-4 overflow-y-auto">
+      <div
+        className="min-h-full flex items-center justify-center"
+        onClick={onClose}
+      >
+        <div className="w-full" onClick={(e) => e.stopPropagation()}>
           {children}
         </div>
       </div>
