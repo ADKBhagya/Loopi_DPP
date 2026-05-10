@@ -78,7 +78,7 @@ useEffect(() => {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:5000/api/garments", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/garments`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -546,7 +546,7 @@ function CreateGarmentModal({ onClose }: any) {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:5000/api/garments", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/garments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
