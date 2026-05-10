@@ -27,6 +27,7 @@ import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
 interface Props {
   title?: string;
   onMenuClick?: () => void;
+  onOpenExplorer?: () => void;
 }
 
 export default function Topbar({
