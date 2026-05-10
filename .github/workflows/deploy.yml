@@ -21,7 +21,8 @@ jobs:
           script: |
             cd /var/www/Loopi_DPP
 
-            git pull origin main
+            git reset --hard
+            git pull origin main --rebase
 
             cd backend
             npm install
@@ -30,5 +31,3 @@ jobs:
             cd ../frontend
             npm install
             npm run build
-
-            systemctl restart nginx
