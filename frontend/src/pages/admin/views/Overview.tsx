@@ -47,7 +47,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
   // ================= SINGLE CLEAN FETCH =================
   const fetchStats = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/dashboard", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/dashboard`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -79,7 +79,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
 }, [toast]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/approved-users", {
+    fetch(`${import.meta.env.VITE_API_URL}/api/admin/approved-users`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

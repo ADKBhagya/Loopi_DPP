@@ -34,7 +34,7 @@ export default function Shipments() {
   try {
     const token = localStorage.getItem("token");
 
-    const res = await fetch("http://localhost:5000/api/shipments", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shipments`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -52,7 +52,7 @@ export default function Shipments() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:5000/api/shipments", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shipments`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -292,7 +292,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:5000/api/shipments", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shipments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
