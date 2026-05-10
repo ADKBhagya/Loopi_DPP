@@ -5,6 +5,7 @@ import SellClothesModal from "./components/SellClothesModal";
 import RepairRequestModal from "./components/RepairRequestModal";
 import RecyclingRequestModal from "./components/RecyclingRequestModal";
 import ReportIssueModal from "./components/ReportIssueModal";
+import ConsumerMyClothesModal from "./components/ConsumerMyClothesModal";
 
 /* ICONS */
 /* OUTLINED ICONS - LOOPI DASHBOARD STYLE */
@@ -43,7 +44,7 @@ export default function ConsumerHome() {
   const navigate = useNavigate();
 
   // Pending actions that require login before proceeding
-  type PendingConsumerAction = "sell" | "repair" | "recycle" | "report";
+  type PendingConsumerAction = "sell" | "repair" | "recycle" | "report" | "my-clothes";
 
   const [passportId, setPassportId] = useState("");
   const [showScanner, setShowScanner] = useState(false);
@@ -57,6 +58,7 @@ export default function ConsumerHome() {
     const userRole = localStorage.getItem("userRole");
     const [showRecycleModal, setShowRecycleModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
+    const [showMyClothesModal, setShowMyClothesModal] = useState(false);
 
     const isConsumerLoggedIn =
     Boolean(token) && userRole?.toLowerCase().replace(/\s+/g, "") === "consumer";
@@ -158,6 +160,12 @@ if (pendingAction === "report") {
   setShowLoginRequired(false);
   setShowReportModal(true);
 }
+
+if (pendingAction === "my-clothes") {
+  setShowLoginRequired(false);
+  setShowMyClothesModal(true);
+}
+
 }, [isConsumerLoggedIn]);
 
 const handleReportIssue = () => {
@@ -167,6 +175,15 @@ const handleReportIssue = () => {
   }
 
   setShowReportModal(true);
+};
+
+const handleViewMyClothes = () => {
+  if (!isConsumerLoggedIn) {
+    requireLogin("my-clothes");
+    return;
+  }
+
+  setShowMyClothesModal(true);
 };
 
   return (
@@ -665,13 +682,23 @@ const handleReportIssue = () => {
                 create a trusted resale listing.
               </p>
 
-              <button
-                onClick={handleSellClothes}
-                className="mt-6 h-12 px-6 rounded-xl bg-white text-[#1B5E20] font-black flex items-center justify-center gap-2 hover:bg-[#F1F8F4] transition"
-              >
-                <StorefrontOutlinedIcon fontSize="small" />
-                Sell My Clothes
-              </button>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <button
+                    onClick={handleSellClothes}
+                    className="h-12 px-6 rounded-xl bg-white text-[#1B5E20] font-black flex items-center justify-center gap-2 hover:bg-[#F1F8F4] transition"
+                >
+                    <StorefrontOutlinedIcon fontSize="small" />
+                    Sell My Clothes
+                </button>
+
+                <button
+                    onClick={handleViewMyClothes}
+                    className="h-12 px-6 rounded-xl border border-white/30 text-white font-black hover:bg-white/10 transition flex items-center justify-center gap-2"
+                >
+                    View My Clothes
+                </button>
+                </div>
+
             </div>
 
             <div className="bg-white/10 border border-white/20 rounded-2xl p-5">
@@ -1036,6 +1063,21 @@ const handleReportIssue = () => {
 
 {showReportModal && (
   <ReportIssueModal onClose={() => setShowReportModal(false)} />
+)}
+
+{showMyClothesModal && (
+  <ModalShell onClose={() => setShowMyClothesModal(false)}>
+    <div className="relative w-full max-w-7xl mx-auto bg-white rounded-[28px] overflow-hidden shadow-2xl max-h-[92vh] overflow-y-auto">
+      <button
+        onClick={() => setShowMyClothesModal(false)}
+        className="absolute top-4 right-4 z-[100] h-10 w-10 rounded-full bg-[#F1F8F4] text-[#1B5E20] flex items-center justify-center hover:bg-[#E8F5E9] transition shadow-sm"
+      >
+        <CloseOutlinedIcon />
+      </button>
+
+      <ConsumerMyClothesModal />
+    </div>
+  </ModalShell>
 )}
 
     </div>
