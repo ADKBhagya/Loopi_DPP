@@ -6,15 +6,34 @@ import crypto from "crypto";
 
 import connectDB from "./config/db.js";
 import User from "./models/User.js";
+import authRoutes from "./routes/authRoutes.js";
+import protectedRoutes from "./routes/protectedRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import garmentRoutes from "./routes/garmentRoutes.js";
+import shipmentRoutes from "./routes/shipmentRoutes.js";
+
+
 
 import { sendResetEmail } from "./utils/emailService.js";
 
 const app = express();
 
-app.use(cors());
+// FIRST
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+
+// SECOND
 app.use(express.json());
 
-// 🔥 CONNECT DB
+// THEN routes
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/protected", protectedRoutes);
+app.use("/api/garments", garmentRoutes);
+app.use("/api/shipments", shipmentRoutes);
+// CONNECT DB
 connectDB();
 
 // TEST ROUTE
@@ -44,6 +63,9 @@ app.post("/api/auth/register", async (req, res) => {
       organization,
       role,
       password: hashedPassword,
+
+      status: "pending",     
+      isApproved: false      
     });
 
     await newUser.save();
@@ -55,53 +77,7 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { email, password, role } = req.body;
 
-    // VALIDATE ROLE FIRST
-    if (!role) {
-      return res.status(400).json({
-        message: "Please select a role",
-      });
-    }
-
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    // PASSWORD CHECK
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    // ROLE VALIDATION (IMPROVED MESSAGE)
-    if (role !== user.role) {
-      return res.status(403).json({
-        message: `This account is not registered as you selected. Please select the correct role.`,
-      });
-    }
-
-    res.json({
-      message: "Login successful!",
-      user: {
-        email: user.email,
-        role: user.role,
-      },
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 
 // ================= FORGOT PASSWORD =================
@@ -161,7 +137,15 @@ app.post("/api/auth/reset-password", async (req, res) => {
   });
 });
 
-
+// ================= TEST PENDING USERS =================
+app.get("/test-pending", async (req, res) => {
+  try {
+    const users = await User.find({ status: "pending" });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 
 

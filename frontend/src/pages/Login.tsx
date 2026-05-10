@@ -1,7 +1,7 @@
-import { useState } from "react";
 import logo from "../assets/logo.png";
-import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+
 
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -24,6 +24,16 @@ function Login() {
 
   const [errors, setErrors] = useState<Errors>({});
   const [success, setSuccess] = useState(""); 
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const returnPath = sessionStorage.getItem("consumerReturnPath");
+
+  if (returnPath && role.toLowerCase() === "consumer") {
+    sessionStorage.removeItem("consumerReturnPath");
+    navigate(returnPath);
+    return;
+  }
 
   const validate = () => {
     const newErrors: Errors = {};
@@ -49,92 +59,56 @@ function Login() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  setErrors({});
-  setSuccess("");
+    if (loading) return; // prevent spam click
 
-  if (!validate()) return;
+    setErrors({});
+    setSuccess("");
 
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-     
-      body: JSON.stringify({ email, password, role }) 
-    });
+    if (!validate()) return;
 
-    const data = await res.json();
+    setLoading(true); //  START LOADING
 
-   
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, role })
+      });
+
+      const data = await res.json();
+
       if (!res.ok) {
-      setErrors({ email: data.message }); 
-      return;
+        setErrors({ email: data.message });
+        setLoading(false); // STOP LOADING
+        return;
+      }
+
+      // SAVE TOKEN
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      // SAVE MESSAGE
+      localStorage.setItem("loginSuccess", `Welcome back, ${data.user.fullName}!`);
+
+      // SAVE ROLE
+      const userRole = data.user.role.toLowerCase().replace(/\s/g, "");
+      localStorage.setItem("userRole", userRole);
+      localStorage.setItem("fullName", data.user.fullName);
+
+      // GO TO LOADING PAGE
+      navigate("/loading");
+
+    } catch (error) {
+      console.error("Login error:", error);
+      setErrors({ email: "Something went wrong. Please try again." });
+      setLoading(false); // STOP LOADING
     }
-
-    // SAVE TOKEN (if you add JWT later)
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-    }
-
-    // SAVE MESSAGE
-    localStorage.setItem("loginSuccess", `Welcome back, ${data.user.email}!`);
-
-    // CRITICAL FIX → USE BACKEND ROLE
-    const userRole = data.user.role;
-    localStorage.setItem("userRole", userRole);
-
-    // ROLE-BASED REDIRECT (SAFE)
-    switch (userRole) {
-      case "Manufacturer":
-        window.location.href = "/manufacturer";
-        break;
-      case "Logistics":
-        window.location.href = "/logistics";
-        break;
-      case "Auditor":
-        window.location.href = "/auditor";
-        break;
-      case "Authority":
-        window.location.href = "/authority";
-        break;
-      case "Retailer":
-        window.location.href = "/retailer";
-        break;
-      case "Repair Center":
-        window.location.href = "/repair-center";
-        break;
-      case "Recycler":
-        window.location.href = "/recycler";
-        break;
-      case "Admin":
-        window.location.href = "/admin";
-        break;
-      default:
-        window.location.href = "/";
-    }
-
-  } catch (error) {
-    console.error("Login error:", error);
-    setErrors({ email: "Something went wrong. Please try again." });
-  }
-};
-
-  useEffect(() => {
-  const msg = localStorage.getItem("loginSuccess");
-
-  if (msg) {
-    setSuccess(msg);
-
-    localStorage.removeItem("loginSuccess");
-
-    setTimeout(() => {
-      setSuccess("");
-    }, 2500);
-  }
-}, []);
+  };
 
   const getFieldWrapperStyle = (fieldName: string) => {
     if (errors[fieldName as keyof Errors]) {
@@ -147,7 +121,7 @@ function Login() {
 
     return inputWrapper;
   };
-
+ 
   return (
     <div style={container}>
 
@@ -242,6 +216,7 @@ function Login() {
                   onFocus={() => setFocusedField("role")}
                   onBlur={() => setFocusedField("")}
                 >
+                  <option value="">Select Role</option>
                   <option value="Manufacturer">Manufacturer</option>
                   <option value="Logistics">Logistics</option>
                   <option value="Auditor">Auditor</option>
@@ -257,8 +232,8 @@ function Login() {
             </div>
 
             {/* BUTTON */}
-            <button type="submit" style={button}>
-              Sign In
+            <button type="submit" style={button} disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
@@ -282,9 +257,11 @@ function Login() {
 /* ================= STYLES ================= */
 
 const successPopup: React.CSSProperties = {
+  left: "16px",
+  right: "16px",
+  maxWidth: "unset",
   position: "fixed",
   top: "20px",
-  right: "20px",
   background: "#EDF7ED",
   color: "#166534",
   padding: "12px 16px",
@@ -297,7 +274,6 @@ const successPopup: React.CSSProperties = {
   fontWeight: 500,
   zIndex: 999,
   border: "1px solid #CDEEDB",
-  maxWidth: "100%",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -319,10 +295,12 @@ const container: React.CSSProperties = {
   justifyContent: "center",
   alignItems: "center",
   fontFamily: "'Inter', sans-serif",
+  padding: "16px",
 };
 
 const card: React.CSSProperties = {
-  width: "380px",
+  width: "100%",
+  maxWidth: "380px",
   background: "#ffffff",
   borderRadius: "16px",
   boxShadow: "0 15px 30px rgba(0,0,0,0.08)",
