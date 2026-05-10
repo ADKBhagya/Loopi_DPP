@@ -27,6 +27,14 @@ function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  const returnPath = sessionStorage.getItem("consumerReturnPath");
+
+  if (returnPath && role.toLowerCase() === "consumer") {
+    sessionStorage.removeItem("consumerReturnPath");
+    navigate(returnPath);
+    return;
+  }
+
   const validate = () => {
     const newErrors: Errors = {};
 

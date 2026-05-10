@@ -22,6 +22,8 @@ export const registerUser = async (req, res) => {
       "Logistics",
       "Repair Center",
       "Recycler",
+      "Auditor",
+      "Authority"
     ]; 
 
     const isApprovalRequired = approvalRequiredRoles.includes(role);
