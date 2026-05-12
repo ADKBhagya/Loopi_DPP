@@ -17,6 +17,7 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import AccessTimeFilledRoundedIcon from "@mui/icons-material/AccessTimeFilledRounded";
 import MyLocationOutlinedIcon from "@mui/icons-material/MyLocationOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function ActiveShipments() {
 
@@ -175,10 +176,11 @@ function UpdateShipmentModal({ onClose }: any) {
   const [documents, setDocuments] = useState<File[]>([]);
 
   return (
+    <ModalPortal>
     <>
-      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[80]" />
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9998]" />
 
-      <div className="fixed inset-0 z-[90] flex items-center justify-center">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
 
         <div className="w-[470px] bg-white rounded-3xl shadow-2xl overflow-hidden">
 
@@ -448,6 +450,7 @@ function UpdateShipmentModal({ onClose }: any) {
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 

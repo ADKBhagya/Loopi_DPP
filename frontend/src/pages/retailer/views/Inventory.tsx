@@ -781,7 +781,7 @@ function PassportDrawer({
           fixed inset-0
           bg-black/45
           backdrop-blur-[2px]
-          z-[80]
+          z-[9998]
         "
       />
 
@@ -792,7 +792,7 @@ function PassportDrawer({
           h-screen
           w-full sm:w-[420px]
           bg-white
-          z-[90]
+          z-[9999]
           shadow-[0_0_60px_rgba(0,0,0,0.25)]
           overflow-y-auto
         "
@@ -1203,7 +1203,7 @@ function TransferOwnershipModal({
           fixed inset-0
           bg-black/45
           backdrop-blur-[2px]
-          z-[100]
+          z-[9998]
         "
       />
 
@@ -1212,7 +1212,7 @@ function TransferOwnershipModal({
         className="
           fixed inset-0
           flex items-center justify-center
-          z-[110]
+          z-[9999]
           p-4
         "
       >
@@ -1497,3 +1497,4 @@ function Input({
     </div>
   );
 }
+

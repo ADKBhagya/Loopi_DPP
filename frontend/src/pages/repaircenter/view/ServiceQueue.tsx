@@ -629,7 +629,7 @@ export default function ServiceQueue() {
 
     relative
 
-    z-[100]
+    z-[9998]
   "
 >
   <MoreVertRoundedIcon />

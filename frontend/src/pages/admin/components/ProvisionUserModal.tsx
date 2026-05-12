@@ -5,6 +5,7 @@ import MailOutlineOutlinedIcon from "@mui/icons-material/MailOutlineOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function ProvisionUserModal({
   onClose,
@@ -113,15 +114,16 @@ useEffect(() => {
 };
 
   return (
+    <ModalPortal>
     <div>
       {/* BACKDROP */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
       />
 
       {/* MODAL */}
-      <div className="fixed inset-0 flex items-center justify-center z-[60]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[560px] bg-white rounded-2xl shadow-2xl overflow-hidden">
 
           {/* HEADER */}
@@ -329,6 +331,7 @@ useEffect(() => {
       </div>
     </div>
     </div>
+    </ModalPortal>
   );
 
 }

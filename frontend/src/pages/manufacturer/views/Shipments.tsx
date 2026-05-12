@@ -13,6 +13,7 @@ import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import DirectionsBoatOutlinedIcon from "@mui/icons-material/DirectionsBoatOutlined";
 import FlightOutlinedIcon from "@mui/icons-material/FlightOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function Shipments() {
 
@@ -131,7 +132,6 @@ export default function Shipments() {
        
     </>
   );
-
 function Stat({ icon, value, label, color }: any) {
   const colors: any = {
     blue: "bg-blue-50 text-blue-600",
@@ -314,23 +314,24 @@ function CreateShipmentModal({ onClose, refresh }: any) {
   };
 
   return (
+    <ModalPortal>
     <>
       {/* BACKDROP */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80]"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
       />
 
       {/* TOAST */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[120] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
+        <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
           <CheckCircleRoundedIcon />
           <span className="text-sm font-medium">{toast}</span>
         </div>
       )}
 
       {/* MODAL */}
-      <div className="fixed inset-0 flex items-center justify-center z-[90]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[650px] bg-white rounded-2xl shadow-2xl overflow-hidden">
 
           {/* HEADER */}
@@ -499,6 +500,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 

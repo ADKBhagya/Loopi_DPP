@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
@@ -38,7 +39,7 @@ export default function QRScannerModal({
     }, 2200);
   };
 
-  return (
+  return createPortal(
     <>
       {/* OVERLAY */}
       <div
@@ -264,5 +265,7 @@ export default function QRScannerModal({
 
       </div>
     </>
+    ,
+    document.body
   );
 }

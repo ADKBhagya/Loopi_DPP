@@ -8,6 +8,7 @@ import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function SustainabilityAudit() {
   const [openTerminal, setOpenTerminal] = useState(false);
@@ -198,7 +199,8 @@ export default function SustainabilityAudit() {
 
       {/* TERMINAL */}
       {openTerminal && (
-        <div className="fixed inset-0 z-[999] bg-black/50 backdrop-blur-[3px]">
+        <ModalPortal>
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-[3px]">
           
           {/* PANEL */}
           <div className="absolute right-0 top-0 w-[590px] h-screen bg-[#F7F8FA] shadow-2xl">
@@ -438,6 +440,7 @@ export default function SustainabilityAudit() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

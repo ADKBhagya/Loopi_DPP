@@ -704,7 +704,7 @@ export default function SalesRecord() {
               fixed inset-0
               bg-black/45
               backdrop-blur-sm
-              z-[120]
+              z-[9998]
             "
           />
 
@@ -713,7 +713,7 @@ export default function SalesRecord() {
             className="
               fixed inset-0
               flex items-center justify-center
-              z-[130]
+              z-[9999]
               p-4
             "
           >

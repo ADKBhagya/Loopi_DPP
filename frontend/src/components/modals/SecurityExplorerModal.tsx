@@ -1,4 +1,5 @@
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
+import { createPortal } from "react-dom";
 
 interface Props {
   onClose: () => void;
@@ -53,7 +54,7 @@ export default function SecurityExplorerModal({
     },
   ];
 
-  return (
+  return createPortal(
     <>
       {/* BACKDROP */}
       <div
@@ -253,6 +254,8 @@ export default function SecurityExplorerModal({
 
       </div>
     </>
+    ,
+    document.body
   );
 }
 

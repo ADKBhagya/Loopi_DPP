@@ -924,7 +924,7 @@ export default function LifecycleClose() {
 
               backdrop-blur-sm
 
-              z-[120]
+              z-[9998]
             "
           />
 
@@ -938,7 +938,7 @@ export default function LifecycleClose() {
 
               p-4
 
-              z-[130]
+              z-[9999]
             "
           >
 

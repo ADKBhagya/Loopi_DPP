@@ -5,6 +5,7 @@ import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function ProofOfDelivery() {
 
@@ -89,12 +90,13 @@ export default function ProofOfDelivery() {
       {/* OVERLAY */}
 
       {openExplorer && (
+        <ModalPortal>
         <>
-          <div className="fixed inset-0 bg-black/35 backdrop-blur-[2px] z-40"></div>
+          <div className="fixed inset-0 bg-black/35 backdrop-blur-[2px] z-[9998]"></div>
 
           {/* SIDE PANEL */}
 
-          <div className="fixed right-0 top-0 h-screen w-[500px] bg-[#F9FAFB] z-50 shadow-2xl border-l border-gray-200 flex flex-col">
+          <div className="fixed right-0 top-0 h-screen w-[500px] bg-[#F9FAFB] z-[9999] shadow-2xl border-l border-gray-200 flex flex-col">
 
             {/* HEADER */}
 
@@ -279,6 +281,7 @@ export default function ProofOfDelivery() {
             </div>
           </div>
         </>
+        </ModalPortal>
       )}
     </div>
   );

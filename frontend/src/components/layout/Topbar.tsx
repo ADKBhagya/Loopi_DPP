@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import SecurityExplorerModal from "../modals/SecurityExplorerModal";
 
@@ -333,11 +334,11 @@ function DropdownItem({ icon, label, onClick }: any) {
 function IdentityControlsModal({ onClose }: any) {
   const [tab, setTab] = useState("profile");
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 bg-black/35 backdrop-blur-sm z-[80]" />
+      <div className="fixed inset-0 bg-black/35 backdrop-blur-sm z-[9998]" />
 
-      <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
         <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="px-6 py-5 border-b flex justify-between items-start">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -396,6 +397,8 @@ function IdentityControlsModal({ onClose }: any) {
         </div>
       </div>
     </>
+    ,
+    document.body
   );
 }
 
@@ -602,14 +605,14 @@ function SystemPreferencesModal({ onClose }: any) {
   const [theme, setTheme] = useState("light");
   const [density, setDensity] = useState("normal");
 
-  return (
+  return createPortal(
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-md z-[80]"
+        className="fixed inset-0 bg-black/40 backdrop-blur-md z-[9998]"
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[90] px-4">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999] px-4">
         <div className="w-full max-w-[520px] bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="px-5 py-4 border-b flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -722,6 +725,8 @@ function SystemPreferencesModal({ onClose }: any) {
         </div>
       </div>
     </>
+    ,
+    document.body
   );
 }
 
@@ -804,14 +809,14 @@ function Toggle({ title, sub, disabled }: any) {
 function GasCreditsModal({ onClose }: any) {
   const [amount, setAmount] = useState(500);
 
-  return (
+  return createPortal(
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-md z-[80]"
+        className="fixed inset-0 bg-black/40 backdrop-blur-md z-[9998]"
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[90] px-4">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999] px-4">
         <div className="w-full max-w-[480px] bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="px-5 py-3 border-b flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -926,6 +931,8 @@ function GasCreditsModal({ onClose }: any) {
         </div>
       </div>
     </>
+    ,
+    document.body
   );
 }
 
@@ -963,14 +970,14 @@ function TxItem({ title, amount, positive }: any) {
 }
 
 function LogoutConfirmModal({ onClose, onConfirm }: any) {
-  return (
+  return createPortal(
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] transition-opacity"
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[90] px-4">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999] px-4">
         <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden">
           <div className="px-6 py-4 border-b flex items-center gap-3">
             <div className="w-10 h-10 bg-red-100 text-red-500 rounded-xl flex items-center justify-center">
@@ -1012,5 +1019,9 @@ function LogoutConfirmModal({ onClose, onConfirm }: any) {
         </div>
       </div>
     </>
+    ,
+    document.body
   );
 }
+
+
