@@ -19,6 +19,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import DonutLargeRoundedIcon from "@mui/icons-material/DonutLargeRounded";
 import ForestOutlinedIcon from "@mui/icons-material/ForestOutlined";
 import WaterDropOutlinedIcon from "@mui/icons-material/WaterDropOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function AuthorityControl() {
   const [activeFilter, setActiveFilter] =
@@ -360,7 +361,8 @@ export default function AuthorityControl() {
       {/* ================= MODAL ================= */}
 
       {selectedClaim && (
-        <div className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6">
+        <ModalPortal>
+        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6">
           
           <div
             className="w-[840px] bg-white rounded-[18px] overflow-hidden shadow-2xl"
@@ -644,6 +646,7 @@ export default function AuthorityControl() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

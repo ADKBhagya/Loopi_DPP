@@ -9,6 +9,7 @@ import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function PublicRecords() {
   const [openExplorer, setOpenExplorer] =
@@ -109,7 +110,8 @@ export default function PublicRecords() {
 
       {/* EXPLORER */}
       {openExplorer && (
-        <div className="fixed inset-0 z-[999] bg-black/50 backdrop-blur-[3px]">
+        <ModalPortal>
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-[3px]">
           
           {/* LEFT PANEL */}
           <div className="absolute right-0 top-0 w-[620px] h-screen bg-[#F7F8FA] shadow-2xl">
@@ -378,6 +380,7 @@ export default function PublicRecords() {
             </div>
           )}
         </div>
+        </ModalPortal>
       )}
     </div>
   );
