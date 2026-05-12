@@ -18,16 +18,19 @@ export default function BlockchainExplorer() {
     totalTransactions: 0,
     latestBlock: "-",
     network: "LOOPI MAINNET",
+    status: "UNAVAILABLE",
   });
+  const [apiUnavailable, setApiUnavailable] = useState(false);
 
   useEffect(() => {
 
   const fetchTransactions = async () => {
     try {
-      const [transactions, blockchainStats] = await Promise.all([
-        apiFetch<any[]>("/manufacturer/transactions"),
-        apiFetch("/blockchain/stats"),
-      ]);
+      setApiUnavailable(false);
+      const blockchainStats = await apiFetch<any>("/blockchain/stats");
+      const transactions = blockchainStats.latestTransaction
+        ? [blockchainStats.latestTransaction]
+        : [];
 
       const formatted =
         transactions.map((tx: any) => ({
@@ -52,6 +55,7 @@ export default function BlockchainExplorer() {
     } catch (error) {
 
       console.error(error);
+      setApiUnavailable(true);
 
     } finally {
 
@@ -109,6 +113,10 @@ export default function BlockchainExplorer() {
         {loading ? (
           <div className="py-14 text-center text-sm text-gray-400">
             Loading blockchain transactions...
+          </div>
+        ) : apiUnavailable ? (
+          <div className="py-14 text-center text-sm text-orange-500">
+            Blockchain backend is not deployed in production yet
           </div>
         ) : data.length === 0 ? (
           <div className="py-14 text-center text-sm text-gray-400">

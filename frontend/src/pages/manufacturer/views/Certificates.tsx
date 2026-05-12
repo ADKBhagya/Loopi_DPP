@@ -21,13 +21,17 @@ export default function Certificates() {
   const [openModal, setOpenModal] = useState(false);
   const [certificates, setCertificates] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [apiUnavailable, setApiUnavailable] = useState(false);
 
   const fetchCertificates = async () => {
     try {
-      const data = await apiFetch<any[]>("/manufacturer/certificates");
+      setApiUnavailable(false);
+      const data = await apiFetch<any[]>("/certificates");
       setCertificates(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("CERTIFICATES ERROR:", err);
+      setApiUnavailable(true);
+      setCertificates([]);
     }
   };
 
@@ -132,7 +136,11 @@ export default function Certificates() {
         {/* LIST */}
         <div className="space-y-4">
 
-          {filteredCertificates.length === 0 ? (
+          {apiUnavailable ? (
+            <div className="py-16 text-center text-sm text-orange-500">
+              Certificate backend is not deployed in production yet
+            </div>
+          ) : filteredCertificates.length === 0 ? (
             <div className="py-16 text-center text-sm text-gray-400">
               No certificates found
             </div>
@@ -160,13 +168,14 @@ export default function Certificates() {
         <UploadCertificateModal
           onClose={() => setOpenModal(false)}
           onUploaded={fetchCertificates}
+          apiUnavailable={apiUnavailable}
         />
       )}
     </div>
   );
 }
 
-export function UploadCertificateModal({ onClose, onUploaded }: any) {
+export function UploadCertificateModal({ onClose, onUploaded, apiUnavailable }: any) {
   const [form, setForm] = useState({
     garment: "",
     type: "",
@@ -187,7 +196,7 @@ const [showDropdown, setShowDropdown] = useState(false);
   const fetchGarments = async () => {
     try {
 
-      const data = await apiFetch<any[]>("/manufacturer/garments");
+      const data = await apiFetch<any[]>("/garments");
       setGarments(Array.isArray(data) ? data : []);
 
     } catch (err) {
@@ -225,13 +234,18 @@ const [showDropdown, setShowDropdown] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
   const handleUpload = async () => {
+    if (apiUnavailable) {
+      showToast("Certificate backend is not deployed yet");
+      return;
+    }
+
     if (!validate()) {
       showToast("Please complete all fields");
       return;
     }
 
     try {
-      await apiFetch("/manufacturer/certificates", {
+      await apiFetch("/certificates", {
         method: "POST",
         body: JSON.stringify({
           garmentId: form.garment,

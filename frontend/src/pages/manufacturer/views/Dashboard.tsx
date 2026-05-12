@@ -63,21 +63,39 @@ function Dashboard() {
 
 });
 
-  const fetchDashboardStats = useCallback(async () => {
-    try {
-      const data = await apiFetch("/manufacturer/dashboard");
-      setStats((prev) => ({ ...prev, ...data }));
-    } catch (err) {
-      console.error("DASHBOARD ERROR:", err);
-    }
-  }, []);
-
   const fetchGarments = useCallback(async () => {
     try {
-      const data = await apiFetch<any[]>("/manufacturer/garments");
+      const data = await apiFetch<any[]>("/garments");
       setGarments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("GARMENTS ERROR:", err);
+    }
+  }, []);
+
+  const fetchDashboardStats = useCallback(async () => {
+    try {
+      const [garmentData, shipmentData] = await Promise.all([
+        apiFetch<any[]>("/garments"),
+        apiFetch<any[]>("/shipments"),
+      ]);
+
+      const garmentsList = Array.isArray(garmentData) ? garmentData : [];
+      const shipmentsList = Array.isArray(shipmentData) ? shipmentData : [];
+
+      setStats({
+        totalGarments: garmentsList.length,
+        totalShipments: shipmentsList.length,
+        totalCertificates: 0,
+        totalTransactions: 0,
+        approvedGarments: garmentsList.filter((g) => g.status === "approved").length,
+        pendingGarments: garmentsList.filter((g) => g.status === "pending").length,
+        shipmentGarments: garmentsList.filter((g) =>
+          ["shipment", "shipped", "in_transit"].includes(g.status)
+        ).length,
+        draftGarments: garmentsList.filter((g) => !g.status || g.status === "draft").length,
+      });
+    } catch (err) {
+      console.error("DASHBOARD ERROR:", err);
     }
   }, []);
 
@@ -557,7 +575,7 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
     setSavedSteps((prev: any) => ({ ...prev, 3: true }));
 
     try {
-      await apiFetch("/manufacturer/garments", {
+      await apiFetch("/garments", {
         method: "POST",
         body: JSON.stringify({
           productName: form.productName,
