@@ -20,6 +20,7 @@ import ownershipRoutes from "./routes/ownershipRoutes.js";
 import verificationRoutes from "./routes/verificationRoutes.js";
 import lifecycleRoutes from "./routes/lifecycleRoutes.js";
 import blockchainRoutes from "./routes/blockchainRoutes.js";
+import logisticsRoutes from "./routes/logisticsRoutes.js";
 
 import { sendResetEmail } from "./utils/emailService.js";
 
@@ -71,6 +72,7 @@ app.use("/api/ownership", ownershipRoutes);
 app.use("/api/verify", verificationRoutes);
 app.use("/api/lifecycle", lifecycleRoutes);
 app.use("/api/blockchain", blockchainRoutes);
+app.use("/api/logistics", logisticsRoutes);
 /* =========================
    TEST ROUTE
 ========================= */

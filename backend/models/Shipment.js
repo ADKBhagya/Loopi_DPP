@@ -14,6 +14,13 @@ const shipmentSchema = new mongoose.Schema(
     provider: String,
     eta: String,
     co2: String,
+    distance: String,
+    currentLocation: String,
+    vehicleId: String,
+    driver: String,
+    load: String,
+    actualArrivalDate: String,
+    documents: [String],
     status: {
       type: String,
       default: "in_transit",
