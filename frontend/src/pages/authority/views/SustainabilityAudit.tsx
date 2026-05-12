@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Topbar from "../components/Topbar";
 
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
@@ -149,13 +148,8 @@ export default function SustainabilityAudit() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] pl-[210px]">
-      
-      {/* TOPBAR */}
-      <Topbar />
-
-      {/* CONTENT */}
-      <div className="pt-[88px] p-8">
+    <div className="min-h-screen bg-[#F6F7F9]">
+      <div className="space-y-6">
         
         {/* HERO */}
         <div className="bg-white border border-gray-100 rounded-[28px] h-[450px] shadow-sm relative overflow-hidden flex items-center justify-center">

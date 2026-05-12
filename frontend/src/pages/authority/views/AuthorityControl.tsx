@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import Topbar from "../components/Topbar";
 
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -97,13 +96,8 @@ export default function AuthorityControl() {
   }, [activeFilter]);
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] pl-[210px]">
-      
-      {/* TOPBAR */}
-      <Topbar />
-
-      {/* CONTENT */}
-      <div className="pt-[88px] p-8">
+    <div className="min-h-screen bg-[#F6F7F9]">
+      <div className="space-y-6">
         
         {/* STATS */}
         <div className="grid grid-cols-4 gap-5">
