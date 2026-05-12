@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import ModalPortal from "../../../components/modals/ModalPortal";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -41,13 +42,44 @@ function Dashboard() {
   const [message, setMessage] = useState("");
   const [show, setShow] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [errors, setErrors] = useState<any>({});
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedQR, setSelectedQR] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [garments, setGarments] = useState<any[]>([]);
+
+  const [stats, setStats] = useState({
+
+  totalGarments: 0,
+  totalShipments: 0,
+  totalCertificates: 0,
+  totalTransactions: 0,
+
+  approvedGarments: 0,
+  pendingGarments: 0,
+  shipmentGarments: 0,
+  draftGarments: 0,
+
+});
+
+  const fetchDashboardStats = useCallback(async () => {
+    try {
+      const data = await apiFetch("/manufacturer/dashboard");
+      setStats((prev) => ({ ...prev, ...data }));
+    } catch (err) {
+      console.error("DASHBOARD ERROR:", err);
+    }
+  }, []);
+
+  const fetchGarments = useCallback(async () => {
+    try {
+      const data = await apiFetch<any[]>("/manufacturer/garments");
+      setGarments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("GARMENTS ERROR:", err);
+    }
+  }, []);
 
   /* ================= TOAST ================= */
   useEffect(() => {
@@ -64,29 +96,10 @@ function Dashboard() {
     }
   }, []);
 
-useEffect(() => {
-  const fetchGarments = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`https://loopidpp.online/api/garments`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      console.log("GARMENTS:", data);
-
-      setGarments(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  fetchGarments();
-}, []);
+  useEffect(() => {
+    fetchDashboardStats();
+    fetchGarments();
+  }, [fetchDashboardStats, fetchGarments]);
 
   useEffect(() => {
     const close = () => setMenuOpen(false);
@@ -128,11 +141,35 @@ useEffect(() => {
 
           {/* ================= STATS ================= */}
           <div className="grid grid-cols-5 gap-4 mb-6">
-            <StatCard icon="clock" value="12" label="DRAFT GARMENTS" />
-            <StatCard icon="truck" value="08" label="IN SHIPMENT" />
-            <StatCard icon="audit" value="05" label="PENDING AUDIT" />
-            <StatCard icon="success" value="142" label="APPROVED" />
-            <StatCard icon="reject" value="02" label="REJECTED" />
+            <StatCard
+                icon="clock"
+                value={stats.pendingGarments}
+                label="PENDING"
+              />
+
+              <StatCard
+                icon="truck"
+                value={stats.totalShipments}
+                label="SHIPMENTS"
+              />
+
+              <StatCard
+                icon="audit"
+                value={stats.totalCertificates}
+                label="CERTIFICATES"
+              />
+
+              <StatCard
+                icon="success"
+                value={stats.approvedGarments}
+                label="APPROVED"
+              />
+
+              <StatCard
+                icon="reject"
+                value={stats.draftGarments}
+                label="DRAFT"
+              />
           </div>
 
           {/* ================= LIFECYCLE ================= */}
@@ -236,17 +273,15 @@ useEffect(() => {
               </thead>
 
               <tbody>
-                {garments.map((g, index) => {
-                  console.log("ROW:", g);
-
+                {garments.map((g) => {
                   return (
                     <ProductRow
                       key={g._id}
                       id={`GP-${g._id.slice(-4).toUpperCase()}`}
                       name={g.productName}
-                      material={g.materials?.join(", ")}
-                      co2={`${g.carbon}kg`}
-                      water={`${g.water}L`}
+                      material={g.materials?.join(", ") || g.material}
+                      co2={g.carbon ? `${g.carbon}kg` : "N/A"}
+                      water={g.water ? `${g.water}L` : "N/A"}
                       status={g.status}
                       onQRClick={(data:any) => {
                         setSelectedQR(data);
@@ -265,7 +300,7 @@ useEffect(() => {
 
             {/* FOOTER */}
             <div className="flex justify-between items-center mt-4 text-xs text-gray-400">
-              <span>SHOWING 4 RECORDS</span>
+              <span>SHOWING {garments.length} RECORDS</span>
 
               <div className="flex items-center gap-2">
                 <button className="w-7 h-7 rounded-md border">‹</button>
@@ -280,7 +315,13 @@ useEffect(() => {
 
       {/* MODALS */}
       {showCreateModal && (
-        <CreateGarmentModal onClose={() => setShowCreateModal(false)} />
+        <CreateGarmentModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => {
+            fetchDashboardStats();
+            fetchGarments();
+          }}
+        />
       )}
 
       {showQRModal && (
@@ -331,10 +372,13 @@ function StatCard({ icon, value, label }: any) {
 }
 
 function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuClick }: any): any {
+  const normalizedStatus = status || "draft";
   const statusStyle: any = {
     approved: "bg-green-100 text-green-700",
     pending: "bg-orange-100 text-orange-600",
     shipment: "bg-blue-100 text-blue-600",
+    shipped: "bg-blue-100 text-blue-600",
+    in_transit: "bg-blue-100 text-blue-600",
     draft: "bg-gray-100 text-gray-500",
   };
 
@@ -342,6 +386,8 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
     approved: "APPROVED",
     pending: "PENDING AUDIT",
     shipment: "IN SHIPMENT",
+    shipped: "IN SHIPMENT",
+    in_transit: "IN SHIPMENT",
     draft: "DRAFT",
   };
 
@@ -372,8 +418,8 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
       </td>
 
       <td>
-        <span className={`px-3 py-1 rounded-full text-xs ${statusStyle[status]}`}>
-          {statusLabel[status]}
+        <span className={`px-3 py-1 rounded-full text-xs ${statusStyle[normalizedStatus] || statusStyle.draft}`}>
+          {statusLabel[normalizedStatus] || normalizedStatus.toUpperCase()}
         </span>
       </td>
 
@@ -414,7 +460,7 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
   );
 }
 
-function CreateGarmentModal({ onClose }: any) {
+function CreateGarmentModal({ onClose, onCreated }: any) {
   const [step, setStep] = useState(1);
   const [transport, setTransport] = useState("Road");
   const [toast, setToast] = useState("");
@@ -511,14 +557,8 @@ function CreateGarmentModal({ onClose }: any) {
     setSavedSteps((prev: any) => ({ ...prev, 3: true }));
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`https://loopidpp.online/api/garments`, {
+      await apiFetch("/manufacturer/garments", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           productName: form.productName,
           location: form.location,
@@ -529,15 +569,11 @@ function CreateGarmentModal({ onClose }: any) {
         }),
       });
 
-      const data = await res.json();
-
-      console.log("CREATED:", data);
-
       showToast("Garment created successfully");
+      onCreated?.();
 
       setTimeout(() => {
         onClose();
-        window.location.reload();
       }, 1200);
 
     } catch (err) {

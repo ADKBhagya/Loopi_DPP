@@ -4,5 +4,3 @@ export const isAdmin = (req, res, next) => {
   }
   next();
 };
-
-router.put("/system-config", isAdmin, updateConfig);

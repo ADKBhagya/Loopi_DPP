@@ -8,75 +8,50 @@ import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import TagOutlinedIcon from "@mui/icons-material/TagOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import DirectionsBoatOutlinedIcon from "@mui/icons-material/DirectionsBoatOutlined";
 import FlightOutlinedIcon from "@mui/icons-material/FlightOutlined";
 import ModalPortal from "../../../components/modals/ModalPortal";
+import { apiFetch } from "../../../lib/api";
 
 export default function Shipments() {
 
   const [showModal, setShowModal] = useState(false); 
   const [shipments, setShipments] = useState<any[]>([]);
-  const [form, setForm] = useState({
-    shipmentId: "",
-    product: "",
-    from: "",
-    to: "",
-    transport: "Road",
-    provider: "",  
-    eta: "",
-  });
+  const [search, setSearch] = useState("");
 
   const fetchShipments = async () => {
   try {
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(`https://loopidpp.online/api/shipments`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-    setShipments(data);
+    const data = await apiFetch<any[]>("/manufacturer/shipments");
+    setShipments(Array.isArray(data) ? data : []);
   } catch (err) {
-    console.error(err);
+    console.error("SHIPMENTS ERROR:", err);
   }
 };
 
   useEffect(() => {
-  const fetchShipments = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`https://loopidpp.online/api/shipments`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      console.log("SHIPMENTS:", data);
-
-      setShipments(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   fetchShipments();
 }, []);
+
+  const filteredShipments = shipments.filter((shipment) =>
+    [shipment.shipmentId, shipment.product, shipment.from, shipment.to, shipment.provider]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
+  const deliveredCount = shipments.filter((s) => s.status === "delivered").length;
+  const activeCount = shipments.filter((s) => s.status !== "delivered").length;
 
   return (
     <>
       <div>
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <Stat icon={<LocalShippingOutlinedIcon />} value="3" label="ACTIVE SHIPMENTS" color="blue" />
-          <Stat icon={<CheckCircleRoundedIcon />} value="42" label="DELIVERED" color="green" />
-          <Stat icon={<Inventory2OutlinedIcon />} value="47" label="TOTAL GARMENTS" color="purple" />
+          <Stat icon={<LocalShippingOutlinedIcon />} value={activeCount} label="ACTIVE SHIPMENTS" color="blue" />
+          <Stat icon={<CheckCircleRoundedIcon />} value={deliveredCount} label="DELIVERED" color="green" />
+          <Stat icon={<Inventory2OutlinedIcon />} value={shipments.length} label="TOTAL SHIPMENTS" color="purple" />
           <Stat icon={<EnergySavingsLeafOutlinedIcon />} value="5.8kg" label="AVG CO₂/SHIPMENT" color="green" />
         </div>
 
@@ -91,6 +66,8 @@ export default function Shipments() {
               <div className="relative">
                 <SearchOutlinedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{ fontSize: 18 }} />
                 <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search shipment..."
                   className="h-10 w-[190px] pl-10 pr-3 text-sm border border-gray-200 rounded-xl bg-gray-50 outline-none"
                 />
@@ -105,16 +82,16 @@ export default function Shipments() {
             </div>
           </div>
 
-          {shipments.map((s) => (
+          {filteredShipments.map((s) => (
             <ShipmentCard
               key={s._id}
               id={s.shipmentId || s._id.slice(-4)}
-              status={s.status === "transit" ? "IN TRANSIT" : s.status.toUpperCase()}
+              status={formatShipmentStatus(s.status)}
               garments={s.product}
               route={`${s.from} → ${s.to}`}
               company={s.provider}
-              co2="6.5kg" // later dynamic
-              progress={s.status === "delivered" ? 100 : s.status === "transit" ? 60 : 10}
+              co2={s.co2 || "6.5kg"}
+              progress={s.status === "delivered" ? 100 : s.status === "in_transit" ? 60 : 10}
               eta={s.eta}
               delivered={s.status === "delivered"}
             />
@@ -132,6 +109,10 @@ export default function Shipments() {
        
     </>
   );
+function formatShipmentStatus(status = "in_transit") {
+  return status.replace(/_/g, " ").toUpperCase();
+}
+
 function Stat({ icon, value, label, color }: any) {
   const colors: any = {
     blue: "bg-blue-50 text-blue-600",
@@ -288,28 +269,24 @@ function CreateShipmentModal({ onClose, refresh }: any) {
     }
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`https://loopidpp.online/api/shipments`, {
+      await apiFetch("/manufacturer/shipments", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          status: "in_transit",
+        }),
       });
 
-      const data = await res.json();
-
       showToast("Shipment created");
+      await refresh?.();
 
       setTimeout(() => {
         onClose();
-        window.location.reload(); // later we remove
       }, 1200);
 
     } catch (err) {
       console.error(err);
+      showToast(err instanceof Error ? err.message : "Shipment creation failed");
     }
   };
 
@@ -504,7 +481,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
   );
 }
 
-function Input({ label, icon, value, onChange, error }: any) {
+function Input({ label, icon, value, onChange, error, readOnly }: any) {
   return (
     <div>
       <p className="text-xs font-semibold mb-2 text-gray-500">
@@ -520,7 +497,8 @@ function Input({ label, icon, value, onChange, error }: any) {
 
         <input
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          readOnly={readOnly}
+          onChange={(e) => onChange?.(e.target.value)}
           className="flex-1 bg-transparent outline-none text-sm"
         />
       </div>

@@ -3,12 +3,18 @@ import crypto from "crypto";
 import Certificate from "../models/Certificate.js";
 import Garment from "../models/Garment.js";
 
+import {
+  createBlockchainTransaction,
+} from "../services/blockchainService.js";
+
 /* ======================================================
 CREATE CERTIFICATE
 ====================================================== */
 
 export const createCertificate = async (req, res) => {
+
   try {
+
     const {
       garmentId,
       certificateType,
@@ -40,7 +46,9 @@ export const createCertificate = async (req, res) => {
 
     /* ================= FIND GARMENT ================= */
 
-    const garment = await Garment.findById(garmentId);
+    const garment = await Garment.findById(
+      garmentId
+    );
 
     if (!garment) {
       return res.status(404).json({
@@ -48,7 +56,7 @@ export const createCertificate = async (req, res) => {
       });
     }
 
-    /* ================= GENERATE BLOCKCHAIN HASH ================= */
+    /* ================= GENERATE HASH ================= */
 
     const blockchainHash = crypto
       .createHash("sha256")
@@ -60,30 +68,80 @@ export const createCertificate = async (req, res) => {
     /* ================= CREATE CERTIFICATE ================= */
 
     const certificate = await Certificate.create({
+
       garmentId,
-      garmentName: garment.productName,
+
+      garmentName:
+        garment.productName,
 
       certificateType,
+
       issuer,
+
       expiryDate,
 
       fileName,
+
       fileUrl,
 
       blockchainHash,
 
-      verificationStatus: "verified",
+      verificationStatus:
+        "verified",
 
-      createdBy: req.user._id,
+      createdBy:
+        req.user._id,
+
     });
 
-    res.status(201).json(certificate);
+    /* =====================================
+       BLOCKCHAIN TRANSACTION
+    ===================================== */
+
+    await createBlockchainTransaction({
+
+      transactionType:
+        "CERTIFICATE_CREATED",
+
+      entityType:
+        "Certificate",
+
+      entityId:
+        certificate._id,
+
+      garmentId:
+        garment._id,
+
+      user:
+        req.user,
+
+      metadata: {
+
+        certificateType,
+
+        garmentName:
+          garment.productName,
+
+        issuer,
+
+      },
+
+    });
+
+    res.status(201).json(
+      certificate
+    );
 
   } catch (error) {
-    console.error("CREATE CERTIFICATE ERROR:", error);
+
+    console.error(
+      "CREATE CERTIFICATE ERROR:",
+      error
+    );
 
     res.status(500).json({
-      message: "Failed to create certificate",
+      message:
+        "Failed to create certificate",
     });
   }
 };
@@ -93,18 +151,27 @@ GET ALL CERTIFICATES
 ====================================================== */
 
 export const getCertificates = async (req, res) => {
+
   try {
 
-    const certificates = await Certificate.find()
-      .sort({ createdAt: -1 });
+    const certificates =
+      await Certificate.find()
+        .sort({ createdAt: -1 });
 
-    res.status(200).json(certificates);
+    res.status(200).json(
+      certificates
+    );
 
   } catch (error) {
-    console.error("GET CERTIFICATES ERROR:", error);
+
+    console.error(
+      "GET CERTIFICATES ERROR:",
+      error
+    );
 
     res.status(500).json({
-      message: "Failed to fetch certificates",
+      message:
+        "Failed to fetch certificates",
     });
   }
 };
@@ -114,25 +181,35 @@ GET SINGLE CERTIFICATE
 ====================================================== */
 
 export const getCertificateById = async (req, res) => {
+
   try {
 
-    const certificate = await Certificate.findById(
-      req.params.id
-    );
+    const certificate =
+      await Certificate.findById(
+        req.params.id
+      );
 
     if (!certificate) {
       return res.status(404).json({
-        message: "Certificate not found",
+        message:
+          "Certificate not found",
       });
     }
 
-    res.status(200).json(certificate);
+    res.status(200).json(
+      certificate
+    );
 
   } catch (error) {
-    console.error("GET CERTIFICATE ERROR:", error);
+
+    console.error(
+      "GET CERTIFICATE ERROR:",
+      error
+    );
 
     res.status(500).json({
-      message: "Failed to fetch certificate",
+      message:
+        "Failed to fetch certificate",
     });
   }
 };
@@ -142,29 +219,38 @@ DELETE CERTIFICATE
 ====================================================== */
 
 export const deleteCertificate = async (req, res) => {
+
   try {
 
-    const certificate = await Certificate.findById(
-      req.params.id
-    );
+    const certificate =
+      await Certificate.findById(
+        req.params.id
+      );
 
     if (!certificate) {
       return res.status(404).json({
-        message: "Certificate not found",
+        message:
+          "Certificate not found",
       });
     }
 
     await certificate.deleteOne();
 
     res.status(200).json({
-      message: "Certificate deleted successfully",
+      message:
+        "Certificate deleted successfully",
     });
 
   } catch (error) {
-    console.error("DELETE CERTIFICATE ERROR:", error);
+
+    console.error(
+      "DELETE CERTIFICATE ERROR:",
+      error
+    );
 
     res.status(500).json({
-      message: "Failed to delete certificate",
+      message:
+        "Failed to delete certificate",
     });
   }
 };
