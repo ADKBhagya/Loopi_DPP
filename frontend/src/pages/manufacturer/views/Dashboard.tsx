@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 /* ICONS */
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -568,17 +569,18 @@ function CreateGarmentModal({ onClose }: any) {
   };
 
   return (
+    <ModalPortal>
     <>
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80]" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]" />
 
       {toast && (
-        <div className="fixed top-6 right-6 z-[120] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
+        <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
           <CheckCircleRoundedIcon style={{ fontSize: 18 }} />
           <span className="text-sm font-medium">{toast}</span>
         </div>
       )}
 
-      <div className="fixed inset-0 flex items-center justify-center z-[90]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[950px] bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* HEADER */}
           <div className="flex justify-between items-center px-6 py-5 border-b">
@@ -914,6 +916,7 @@ function CreateGarmentModal({ onClose }: any) {
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 
@@ -1056,12 +1059,13 @@ function QRModal({ data, onClose }: any) {
   };
 
   return (
+    <ModalPortal>
     <>
       {/* BACKDROP */}
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80]" />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]" />
 
       {/* MODAL */}
-      <div className="fixed inset-0 flex items-center justify-center z-[90]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[300px] bg-[#F5F6F5] rounded-[28px] shadow-xl p-6 text-center">
 
           {/* HEADER */}
@@ -1142,6 +1146,7 @@ function QRModal({ data, onClose }: any) {
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 

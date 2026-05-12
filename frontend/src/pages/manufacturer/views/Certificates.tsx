@@ -11,6 +11,7 @@ import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
 import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 
 
@@ -192,20 +193,21 @@ const [showDropdown, setShowDropdown] = useState(false);
   };
 
   return (
+    <ModalPortal>
     <>
       {/* BACKDROP */}
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80]" />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]" />
 
       {/* TOAST */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[120] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
+        <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
           <CheckCircleOutlineOutlinedIcon />
           <span className="text-sm font-medium">{toast}</span>
         </div>
       )}
 
       {/* MODAL */}
-      <div className="fixed inset-0 flex items-center justify-center z-[90]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[600px] bg-white rounded-3xl shadow-2xl overflow-hidden">
 
           {/* HEADER */}
@@ -392,6 +394,7 @@ const [showDropdown, setShowDropdown] = useState(false);
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 
