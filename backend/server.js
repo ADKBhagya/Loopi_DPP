@@ -6,7 +6,7 @@ import crypto from "crypto";
 import dotenv from "dotenv";
 
 import connectDB from "./config/db.js";
-import User from "./models/User.js";
+import User from "./models/user.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import protectedRoutes from "./routes/protectedRoutes.js";
@@ -14,6 +14,12 @@ import adminRoutes from "./routes/adminRoutes.js";
 import garmentRoutes from "./routes/garmentRoutes.js";
 import shipmentRoutes from "./routes/shipmentRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
+import manufacturerRoutes from "./routes/manufacturerRoutes.js";
+import passportRoutes from "./routes/passportRoutes.js";
+import ownershipRoutes from "./routes/ownershipRoutes.js";
+import verificationRoutes from "./routes/verificationRoutes.js";
+import lifecycleRoutes from "./routes/lifecycleRoutes.js";
+import blockchainRoutes from "./routes/blockchainRoutes.js";
 
 import { sendResetEmail } from "./utils/emailService.js";
 
@@ -59,7 +65,12 @@ app.use("/api/protected", protectedRoutes);
 app.use("/api/garments", garmentRoutes);
 app.use("/api/shipments", shipmentRoutes);
 app.use("/api/certificates", certificateRoutes);
-
+app.use("/api/manufacturer",manufacturerRoutes);
+app.use("/api/passport", passportRoutes);
+app.use("/api/ownership", ownershipRoutes);
+app.use("/api/verify", verificationRoutes);
+app.use("/api/lifecycle", lifecycleRoutes);
+app.use("/api/blockchain", blockchainRoutes);
 /* =========================
    TEST ROUTE
 ========================= */
