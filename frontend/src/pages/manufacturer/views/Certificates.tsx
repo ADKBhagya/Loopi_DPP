@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
@@ -151,14 +151,42 @@ const [showDropdown, setShowDropdown] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const [toast, setToast] = useState("");
 
-  const garments = [
-    "GP-9821 Cotton Shirt",
-    "GP-9822 Denim Jacket",
-    "GP-9823 Linen Pants",
-  ];
-  const filteredGarments = garments.filter((g) =>
-  g.toLowerCase().includes(search.toLowerCase())
-);
+  const [garments, setGarments] = useState<any[]>([]);
+
+  useEffect(() => {
+
+  const fetchGarments = async () => {
+    try {
+
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `https://loopidpp.online/api/garments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      setGarments(data);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchGarments();
+
+}, []); 
+
+  const filteredGarments = garments.filter((g:any) =>
+    g.productName
+      ?.toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   const types = ["GOTS", "OEKO-TEX", "LCA", "EU Ecolabel", "RCS"];
 
@@ -179,18 +207,61 @@ const [showDropdown, setShowDropdown] = useState(false);
 
   const [dragActive, setDragActive] = useState(false);
 
-  const handleUpload = () => {
-    if (!validate()) {
-      showToast("Please complete all fields");
-      return;
-    }
+const handleUpload = async () => {
+
+  if (!validate()) {
+    showToast("Please complete all fields");
+    return;
+  }
+
+  try {
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `https://loopidpp.online/api/certificates`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          garmentId: form.garment,
+          certificateType: form.type,
+
+          issuer: "LOOPI Compliance Authority",
+
+          expiryDate: "2027-12-31",
+
+          fileName: form.file?.name,
+
+          fileUrl: "uploaded-file-url",
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    console.log("CERTIFICATE:", data);
 
     showToast("Certificate uploaded & verified");
 
     setTimeout(() => {
       onClose();
+
+      window.location.reload();
     }, 1200);
-  };
+
+  } catch (err) {
+
+    console.error(err);
+
+    showToast("Upload failed");
+  }
+};
 
   return (
     <ModalPortal>
@@ -266,14 +337,18 @@ const [showDropdown, setShowDropdown] = useState(false);
                     <div
                         key={g}
                         onClick={() => {
-                        setForm({ ...form, garment: g });
-                        setSearch(g);
+                        setForm({
+                          ...form,
+                          garment: g._id,
+                        });
+
+                        setSearch(g.productName);
                         setShowDropdown(false);
                         setErrors((prev:any) => ({ ...prev, garment: false }));
                         }}
                         className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
                     >
-                        {g}
+                        {g.productName}
                     </div>
                     ))
                 )}
