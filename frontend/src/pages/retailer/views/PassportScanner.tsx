@@ -409,7 +409,7 @@ export default function PassportScanner() {
               fixed inset-0
               bg-black/45
               backdrop-blur-sm
-              z-[120]
+              z-[9998]
             "
           />
 
@@ -418,7 +418,7 @@ export default function PassportScanner() {
             className="
               fixed inset-0
               flex items-center justify-center
-              z-[130]
+              z-[9999]
               p-4
             "
           >
