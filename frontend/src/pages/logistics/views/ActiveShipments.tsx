@@ -23,11 +23,11 @@ export default function ActiveShipments() {
   const [openModal, setOpenModal] = useState(false);
 
   return (
-    <div className="p-8 bg-[#F4F7FB] min-h-screen">
+    <div className="bg-[#F4F7FB] min-h-screen">
 
       {/* ================= TOP STATS ================= */}
 
-      <div className="grid grid-cols-4 gap-5 mt-16">
+      <div className="grid grid-cols-4 gap-5">
 
         <TopCard
           title="IN TRANSIT"

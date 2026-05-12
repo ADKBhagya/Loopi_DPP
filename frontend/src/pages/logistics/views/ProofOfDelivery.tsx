@@ -55,11 +55,11 @@ export default function ProofOfDelivery() {
   );
 
   return (
-    <div className="relative min-h-screen bg-[#F4F7FB] p-8 overflow-hidden">
+    <div className="relative min-h-screen bg-[#F4F7FB] overflow-hidden">
 
       {/* CENTER PANEL */}
 
-      <div className="mt-16 bg-white border border-gray-100 rounded-[32px] h-[410px] flex flex-col items-center justify-center shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-[32px] h-[410px] flex flex-col items-center justify-center shadow-sm">
 
         <div className="w-14 h-14 rounded-2xl border border-gray-200 flex items-center justify-center text-gray-400 mt-5">
           <ShieldOutlinedIcon style={{ fontSize: 28 }} />
