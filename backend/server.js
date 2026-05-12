@@ -13,6 +13,7 @@ import protectedRoutes from "./routes/protectedRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import garmentRoutes from "./routes/garmentRoutes.js";
 import shipmentRoutes from "./routes/shipmentRoutes.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
 
 import { sendResetEmail } from "./utils/emailService.js";
 
@@ -57,6 +58,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/protected", protectedRoutes);
 app.use("/api/garments", garmentRoutes);
 app.use("/api/shipments", shipmentRoutes);
+app.use("/api/certificates", certificateRoutes);
 
 /* =========================
    TEST ROUTE

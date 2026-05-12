@@ -475,10 +475,6 @@ function CreateGarmentModal({ onClose }: any) {
 
     setSavedSteps((prev: any) => ({ ...prev, [step]: true }));
     showToast(`Step ${step} saved successfully`);
-
-    if (step === 3) {
-      setTimeout(() => onClose(), 1200);
-    }
   };
 
   const handleContinue = () => {
@@ -507,10 +503,12 @@ function CreateGarmentModal({ onClose }: any) {
   };
 
   const handleFinalize = async () => {
-    if (!isStepValid() || !savedSteps[3]) {
-      showToast("Complete all steps before finalizing");
+    if (!isStepValid()) {
+      showToast("Complete the logistics setup before finalizing");
       return;
     }
+
+    setSavedSteps((prev: any) => ({ ...prev, 3: true }));
 
     try {
       const token = localStorage.getItem("token");
