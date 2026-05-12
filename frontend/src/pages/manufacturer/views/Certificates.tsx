@@ -12,12 +12,53 @@ import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
 import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
 import ModalPortal from "../../../components/modals/ModalPortal";
+import { apiFetch } from "../../../lib/api";
 
 
 
 
 export default function Certificates() {
   const [openModal, setOpenModal] = useState(false);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+
+  const fetchCertificates = async () => {
+    try {
+      const data = await apiFetch<any[]>("/manufacturer/certificates");
+      setCertificates(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("CERTIFICATES ERROR:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCertificates();
+  }, []);
+
+  const filteredCertificates = certificates.filter((certificate) => {
+    const haystack = [
+      certificate.certificateType,
+      certificate.garmentName,
+      certificate.issuer,
+      certificate.blockchainHash,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(search.toLowerCase());
+  });
+
+  const expiringSoon = certificates.filter((certificate) => {
+    if (!certificate.expiryDate) return false;
+
+    const expiry = new Date(certificate.expiryDate).getTime();
+    const now = Date.now();
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+    return expiry >= now && expiry <= now + thirtyDays;
+  }).length;
+
   return (
     <div>
 
@@ -25,28 +66,28 @@ export default function Certificates() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Stat 
         icon={<DescriptionOutlinedIcon />} 
-        value="5" 
+        value={certificates.length}
         label="TOTAL CERTIFICATES" 
         type="total" 
         />
 
         <Stat 
         icon={<CheckCircleOutlineOutlinedIcon />} 
-        value="4" 
+        value={certificates.filter((c) => c.verificationStatus === "verified").length}
         label="VALID" 
         type="valid" 
         />
 
         <Stat 
         icon={<WarningAmberOutlinedIcon />} 
-        value="1" 
+        value={expiringSoon}
         label="EXPIRING (30D)" 
         type="expiring" 
         />
 
         <Stat 
         icon={<GppGoodOutlinedIcon />} 
-        value="5" 
+        value={certificates.filter((c) => c.blockchainHash).length}
         label="ON-CHAIN VERIFIED" 
         type="verified" 
         />
@@ -71,6 +112,8 @@ export default function Certificates() {
             <div className="relative">
               <SearchOutlinedIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{ fontSize: 18 }} />
               <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search certificates..."
                 className="h-10 w-[200px] pl-10 pr-3 text-sm border border-gray-200 rounded-xl bg-gray-50 outline-none"
               />
@@ -89,55 +132,41 @@ export default function Certificates() {
         {/* LIST */}
         <div className="space-y-4">
 
-          <CertCard
-            title="GOTS Certification"
-            tag="ORGANIC"
-            tagColor="green"
-            garment="GP-9821"
-            issuer="GOTS Global"
-            issued="Jan 10, 2026"
-            expires="Jan 10, 2027"
-          />
-
-          <CertCard
-            title="OEKO-TEX Standard 100"
-            tag="SAFETY"
-            tagColor="blue"
-            garment="GP-9822"
-            issuer="Oeko-Tex"
-            issued="Dec 5, 2025"
-            expires="Dec 5, 2026"
-          />
-
-          <CertCard
-            title="LCA Environmental Assessment"
-            tag="LCA"
-            tagColor="purple"
-            garment="GP-9823"
-            issuer="Bureau Veritas"
-            issued="Nov 20, 2025"
-            expires="Nov 20, 2026"
-          />
-
-          <CertCard
-            title="EU Ecolabel"
-            tag="ECO"
-            tagColor="yellow"
-            garment="GP-9824"
-            issuer="EU Commission"
-            issued="Sep 1, 2025"
-            expires="Sep 1, 2026"
-            expiring
-          />
+          {filteredCertificates.length === 0 ? (
+            <div className="py-16 text-center text-sm text-gray-400">
+              No certificates found
+            </div>
+          ) : (
+            filteredCertificates.map((certificate) => (
+              <CertCard
+                key={certificate._id}
+                title={certificate.certificateType}
+                tag={certificate.verificationStatus?.toUpperCase() || "PENDING"}
+                tagColor={certificate.verificationStatus === "verified" ? "green" : "yellow"}
+                garment={certificate.garmentName}
+                issuer={certificate.issuer}
+                issued={formatDate(certificate.issuedDate || certificate.createdAt)}
+                expires={formatDate(certificate.expiryDate)}
+                hash={certificate.blockchainHash}
+                fileName={certificate.fileName}
+                expiring={isExpiringSoon(certificate.expiryDate)}
+              />
+            ))
+          )}
 
         </div>
       </div>
-      {openModal && <UploadCertificateModal onClose={() => setOpenModal(false)} />}
+      {openModal && (
+        <UploadCertificateModal
+          onClose={() => setOpenModal(false)}
+          onUploaded={fetchCertificates}
+        />
+      )}
     </div>
   );
 }
 
-export function UploadCertificateModal({ onClose }: any) {
+export function UploadCertificateModal({ onClose, onUploaded }: any) {
   const [form, setForm] = useState({
     garment: "",
     type: "",
@@ -158,20 +187,8 @@ const [showDropdown, setShowDropdown] = useState(false);
   const fetchGarments = async () => {
     try {
 
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(
-        `https://loopidpp.online/api/garments`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await res.json();
-
-      setGarments(data);
+      const data = await apiFetch<any[]>("/manufacturer/garments");
+      setGarments(Array.isArray(data) ? data : []);
 
     } catch (err) {
       console.error(err);
@@ -207,61 +224,34 @@ const [showDropdown, setShowDropdown] = useState(false);
 
   const [dragActive, setDragActive] = useState(false);
 
-const handleUpload = async () => {
+  const handleUpload = async () => {
+    if (!validate()) {
+      showToast("Please complete all fields");
+      return;
+    }
 
-  if (!validate()) {
-    showToast("Please complete all fields");
-    return;
-  }
-
-  try {
-
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(
-      `https://loopidpp.online/api/certificates`,
-      {
+    try {
+      await apiFetch("/manufacturer/certificates", {
         method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-
         body: JSON.stringify({
           garmentId: form.garment,
           certificateType: form.type,
-
-          issuer: "LOOPI Compliance Authority",
-
-          expiryDate: "2027-12-31",
-
-          fileName: form.file?.name,
-
-          fileUrl: "uploaded-file-url",
+          issuer: "LOOPI Verification Authority",
+          fileName: form.file.name,
+          fileUrl: "",
         }),
-      }
-    );
+      });
 
-    const data = await res.json();
+      showToast("Certificate uploaded & verified");
+      onUploaded?.();
 
-    console.log("CERTIFICATE:", data);
-
-    showToast("Certificate uploaded & verified");
-
-    setTimeout(() => {
-      onClose();
-
-      window.location.reload();
-    }, 1200);
-
-  } catch (err) {
-
-    console.error(err);
-
-    showToast("Upload failed");
-  }
-};
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Upload failed");
+    }
+  };
 
   return (
     <ModalPortal>
@@ -335,7 +325,7 @@ const handleUpload = async () => {
                 ) : (
                     filteredGarments.map((g) => (
                     <div
-                        key={g}
+                        key={g._id}
                         onClick={() => {
                         setForm({
                           ...form,
@@ -503,7 +493,33 @@ function Stat({ icon, value, label, type }: any) {
   );
 }
 
-function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expiring }: any) {
+function formatDate(value?: string) {
+  if (!value) return "N/A";
+
+  return new Date(value).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function isExpiringSoon(value?: string) {
+  if (!value) return false;
+
+  const expiry = new Date(value).getTime();
+  const now = Date.now();
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+  return expiry >= now && expiry <= now + thirtyDays;
+}
+
+function shortHash(value?: string) {
+  if (!value) return "Pending hash";
+  if (value.length <= 14) return value;
+  return `${value.slice(0, 8)}...${value.slice(-6)}`;
+}
+
+function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expiring, hash, fileName }: any) {
 
   const tagStyles: any = {
     green: "bg-green-100 text-green-700",
@@ -545,7 +561,7 @@ function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expi
           {/* HASH LINE (NEW 🔥) */}
           <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            <span>0xA3F9...21B8</span>
+            <span>{shortHash(hash)}</span>
           </div>
 
         </div>
@@ -556,7 +572,7 @@ function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expi
 
         <button className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs flex items-center gap-1 transition">
           <DownloadOutlinedIcon style={{ fontSize: 14 }} />
-          PDF
+          {fileName ? "PDF" : "File"}
         </button>
 
         <button className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs flex items-center gap-1 transition">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TagOutlinedIcon from "@mui/icons-material/TagOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
@@ -8,23 +8,60 @@ import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
+import { apiFetch } from "../../../lib/api";
 
 export default function BlockchainExplorer() {
   const [active, setActive] = useState(0);
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>({
+    totalTransactions: 0,
+    latestBlock: "-",
+    network: "LOOPI MAINNET",
+  });
 
-  const data = [
-    {
-      title: "DPP Minted",
-      garment: "GP-9824 · Denim Jacket",
-      time: "Feb 21 · 14:22 UTC",
-      hash: "0x4a2f...9c1d",
-    },
-    { title: "Lining Repair Recorded", garment: "GP-9824 · Denim Jacket", time: "Feb 21 · 14:22 UTC", hash: "0x4a2f...9c1d" },
-    { title: "Quality Audit Completed", garment: "GP-9824 · Denim Jacket", time: "Feb 21 · 14:22 UTC", hash: "0x4a2f...9c1d" },
-    { title: "Shipment Dispatched", garment: "GP-9824 · Denim Jacket", time: "Feb 21 · 14:22 UTC", hash: "0x4a2f...9c1d" },
-    { title: "Certificate Uploaded", garment: "GP-9824 · Denim Jacket", time: "Feb 21 · 14:22 UTC", hash: "0x4a2f...9c1d" },
-    { title: "Gov Review Passed", garment: "GP-9824 · Denim Jacket", time: "Feb 21 · 14:22 UTC", hash: "0x4a2f...9c1d" },
-  ];
+  useEffect(() => {
+
+  const fetchTransactions = async () => {
+    try {
+      const [transactions, blockchainStats] = await Promise.all([
+        apiFetch<any[]>("/manufacturer/transactions"),
+        apiFetch("/blockchain/stats"),
+      ]);
+
+      const formatted =
+        transactions.map((tx: any) => ({
+          title: tx.transactionType,
+          garment:
+            tx.metadata?.productName ||
+            tx.metadata?.garmentName ||
+            tx.metadata?.shipmentId ||
+            tx.entityType,
+
+          time: new Date(
+            tx.createdAt
+          ).toLocaleString(),
+
+          hash: tx.blockchainHash,
+          blockNumber: tx.blockNumber,
+        }));
+
+      setData(formatted);
+      setStats(blockchainStats);
+
+    } catch (error) {
+
+      console.error(error);
+
+    } finally {
+
+      setLoading(false);
+    }
+  };
+
+  fetchTransactions();
+
+}, []);
 
   return (
     <div>
@@ -32,10 +69,10 @@ export default function BlockchainExplorer() {
       {/* ================= STATS ================= */}
       <div className="grid grid-cols-4 gap-4 mb-6">
 
-        <Stat icon={<TagOutlinedIcon />} value="1,284" label="TOTAL TRANSACTIONS" color="blue" />
-        <Stat icon={<Inventory2OutlinedIcon />} value="169" label="DPPS MINTED" color="green" />
-        <Stat icon={<StorageOutlinedIcon />} value="#5,413k" label="LAST BLOCK" color="purple" />
-        <Stat icon={<PublicOutlinedIcon />} value="MAINNET" label="NETWORK" color="green" />
+        <Stat icon={<TagOutlinedIcon />} value={stats.totalTransactions} label="TOTAL TRANSACTIONS" color="blue" />
+        <Stat icon={<Inventory2OutlinedIcon />} value={data.length} label="VISIBLE EVENTS" color="green" />
+        <Stat icon={<StorageOutlinedIcon />} value={`#${stats.latestBlock}`} label="LAST BLOCK" color="purple" />
+        <Stat icon={<PublicOutlinedIcon />} value={stats.network} label="NETWORK" color="green" />
 
       </div>
 
@@ -69,7 +106,15 @@ export default function BlockchainExplorer() {
         </div>
 
         {/* ================= LIST ================= */}
-        {data.map((item, i) =>
+        {loading ? (
+          <div className="py-14 text-center text-sm text-gray-400">
+            Loading blockchain transactions...
+          </div>
+        ) : data.length === 0 ? (
+          <div className="py-14 text-center text-sm text-gray-400">
+            No transactions found
+          </div>
+        ) : data.map((item, i) =>
           i === active ? (
             <ActiveCard key={i} {...item} onClick={() => setActive(i)} />
           ) : (
@@ -107,7 +152,7 @@ function Stat({ icon, value, label, color }: any) {
   );
 }
 
-function ActiveCard({ title, garment, time, hash, onClick }: any) {
+function ActiveCard({ title, garment, time, hash, blockNumber, onClick }: any) {
   return (
     <div
       onClick={onClick}
@@ -148,7 +193,7 @@ function ActiveCard({ title, garment, time, hash, onClick }: any) {
 
       {/* DETAILS */}
       <div className="grid grid-cols-2 gap-4 mt-4">
-        <Info label="BLOCK HEIGHT" value="5,413,001" />
+        <Info label="BLOCK HEIGHT" value={blockNumber ? `#${blockNumber}` : "Pending"} />
         <Info label="TIMESTAMP" value={time} />
         <Info label="EVENT TYPE" value={title} />
         <Info label="RECORD" value={garment} />
@@ -172,7 +217,7 @@ function ActiveCard({ title, garment, time, hash, onClick }: any) {
   );
 }
 
-function CollapsedItem({ title, onClick }: any) {
+function CollapsedItem({ title, time, onClick }: any) {
   return (
     <div
       onClick={onClick}
