@@ -10,7 +10,7 @@ const ProvisionUserModalComponent =
 
 /* ================= MAIN ================= */
 
-export default function UserManagement({ setPendingCount }: any){
+export default function UserManagement({ setPendingCount }: any = {}){
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [reviewUser, setReviewUser] = useState<any>(null);
   const [approveUser, setApproveUser] = useState<any>(null);
@@ -62,7 +62,7 @@ useEffect(() => {
       .then((res) => res.json())
       .then((data) => {
         setUsers(data);
-        setPendingCount(data.length); // update sidebar
+        setPendingCount?.(data.length); // update sidebar when parent provides it
       })
       .catch((err) => console.error(err));
   };

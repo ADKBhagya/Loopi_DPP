@@ -17,7 +17,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 
-export default function Overview({ setView, onOpenExplorer, setPendingCount }: any) {
+export default function Overview() {
   const navigate = useNavigate();
   const ProvisionUserModalComponent = ProvisionUserModal as any;
 
@@ -27,8 +27,9 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
   const [showToast, setShowToast] = useState(false);
   const [showChartDropdown, setShowChartDropdown] = useState(false);
 
-  const [pendingCount, setPendingCountLocal] = useState(0);
+  const [pendingCountLocal, setPendingCountLocal] = useState(0);
   const [toast, setToast] = useState<any>(null);
+  const [showExplorer, setShowExplorer] = useState(false);
 
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -59,10 +60,6 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
 
       // sync pending count everywhere
       setPendingCountLocal(data.pendingUsers);
-
-      if (setPendingCount) {
-        setPendingCount(data.pendingUsers);
-      }
 
     } catch (err) {
       console.error("Stats fetch error:", err);
@@ -176,7 +173,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
       </div>
 
       {/* ================= ALERT ================= */}
-      {pendingCount > 0 && (
+      {pendingCountLocal > 0 && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-5 py-4 flex justify-between items-center shadow-sm">
 
           <div className="flex gap-3 items-start">
@@ -186,7 +183,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
 
             <div>
               <p className="text-sm font-semibold text-yellow-800">
-                {pendingCount} self-registrations awaiting your approval
+                {pendingCountLocal} self-registrations awaiting your approval
               </p>
               <p className="text-xs text-yellow-600">
                 Manufacturer • Logistics • Retailer • Repair Center • Recycler accounts pending
@@ -195,7 +192,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
           </div>
 
           <button
-            onClick={() => setView("users")}
+            onClick={() => navigate("/admin/users")}
             className="bg-yellow-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium"
           >
             Review Now →
@@ -347,7 +344,7 @@ export default function Overview({ setView, onOpenExplorer, setPendingCount }: a
             </div>
 
             <button
-              onClick={onOpenExplorer}
+              onClick={() => setShowExplorer(true)}
               className="mt-4 w-full border rounded-lg py-2 text-xs text-gray-500 hover:bg-gray-50 transition"
             >
               VIEW SECURITY EXPLORER
