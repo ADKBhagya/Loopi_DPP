@@ -6,6 +6,7 @@ import TrendingDownOutlinedIcon from "@mui/icons-material/TrendingDownOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function EmissionsData() {
   const [showDetails, setShowDetails] = useState(false);
@@ -210,12 +211,13 @@ export default function EmissionsData() {
       {/* ================= EXPORT MODAL ================= */}
 
         {openExport && (
+        <ModalPortal>
         <>
             {/* OVERLAY */}
-            <div className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-40"></div>
+            <div className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[9998]"></div>
 
             {/* MODAL */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center">
 
             <div className="w-[430px] rounded-[26px] bg-white shadow-2xl border border-gray-100 overflow-hidden">
 
@@ -277,6 +279,7 @@ export default function EmissionsData() {
             </div>
             </div>
         </>
+        </ModalPortal>
         )} 
     </div>
   );
