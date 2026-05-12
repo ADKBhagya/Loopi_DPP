@@ -14,6 +14,7 @@ import ApartmentOutlinedIcon from "@mui/icons-material/ApartmentOutlined";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import FingerprintOutlinedIcon from "@mui/icons-material/FingerprintOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function UserModal({ user, onClose }: any) {
   const [tab, setTab] = useState("profile");
@@ -24,15 +25,16 @@ export default function UserModal({ user, onClose }: any) {
   const isActive = status === "ACTIVE";
 
   return (
+    <ModalPortal>
     <>
       {/* BACKDROP */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
       />
 
       {/* MODAL */}
-      <div className="fixed inset-0 flex items-center justify-center z-[60]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[680px] bg-white rounded-2xl shadow-2xl overflow-hidden">
 
           {/* HEADER */}
@@ -361,6 +363,7 @@ export default function UserModal({ user, onClose }: any) {
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 

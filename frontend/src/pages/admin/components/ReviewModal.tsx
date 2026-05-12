@@ -4,6 +4,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import { useState } from "react";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 export default function ReviewModal({ user, onClose, onApprove, onReject }: any) {
 
@@ -19,7 +20,8 @@ export default function ReviewModal({ user, onClose, onApprove, onReject }: any)
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <ModalPortal>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
 
       <div className="bg-white w-[560px] rounded-2xl shadow-xl overflow-hidden">
 
@@ -234,5 +236,6 @@ export default function ReviewModal({ user, onClose, onApprove, onReject }: any)
 
       </div>
     </div>
+    </ModalPortal>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, type ReactElement } from "react";
 import ReviewModal from "../components/ReviewModal";
 import UserModal from "../components/UserModal";
 import ProvisionUserModal from "../components/ProvisionUserModal";
+import ModalPortal from "../../../components/modals/ModalPortal";
 
 const ProvisionUserModalComponent =
   ProvisionUserModal as unknown as (props: any) => ReactElement;
@@ -449,13 +450,14 @@ function StatusBadge({ status }: any) {
 
 function ApproveConfirmModal({ user, onClose, onConfirm }: any) {
   return (
+    <ModalPortal>
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[60]">
+      <div className="fixed inset-0 flex items-center justify-center z-[9999]">
         <div className="w-[420px] bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div className="px-6 py-4 border-b">
             <p className="text-sm font-semibold text-gray-800">
@@ -495,6 +497,7 @@ function ApproveConfirmModal({ user, onClose, onConfirm }: any) {
         </div>
       </div>
     </>
+    </ModalPortal>
   );
 }
 
