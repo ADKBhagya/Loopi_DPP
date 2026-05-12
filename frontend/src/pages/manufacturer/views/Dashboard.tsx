@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-import Sidebar from "../../manufacturer/components/Sidebar";
-import Topbar from "../../manufacturer/components/Topbar";
 import { createPortal } from "react-dom";
-import Shipments from "./Shipments";
-import Certificates from "./Certificates";
-import BlockchainExplorer from "./BlockchainExplorer";
 
 /* ICONS */
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -42,7 +37,6 @@ import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined
 
 
 function Dashboard() {
-  const [view, setView] = useState("overview");
   const [message, setMessage] = useState("");
   const [show, setShow] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -53,10 +47,6 @@ function Dashboard() {
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [garments, setGarments] = useState<any[]>([]);
-
-  const handleOpenGarment = () => {
-    setShowCreateModal(true);
-  };
 
   /* ================= TOAST ================= */
   useEffect(() => {
@@ -113,14 +103,7 @@ useEffect(() => {
 
 
   return (
-    <div className="flex bg-[#F5F7FA] min-h-screen">
-
-      <Sidebar 
-        view={view} 
-        setView={setView} 
-        onOpenGarment={handleOpenGarment}
-      />
-
+    <>
       {/* TOAST */}
       {message && (
         <div
@@ -140,15 +123,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* MAIN */}
-      <div className="flex-1 ml-[210px] relative">
-        <Topbar />
-
-        <div className="pt-[90px] px-6">
-
-                    {view === "overview" && (
-             <>
-          
+      <div className="space-y-6">
 
           {/* ================= STATS ================= */}
           <div className="grid grid-cols-5 gap-4 mb-6">
@@ -298,15 +273,9 @@ useEffect(() => {
                 <button className="w-7 h-7 rounded-md border">›</button>
               </div>
             </div>
-
           </div>
-                        </>
-  )}
-          {view === "shipments" && <Shipments />}
-          {view === "certificates" && <Certificates />}
-          {view === "explorer" && <BlockchainExplorer />}
 
-        </div>
+      </div>
 
       {/* MODALS */}
       {showCreateModal && (
@@ -333,8 +302,7 @@ useEffect(() => {
         />
       )}
 
-      </div>
-    </div>
+    </>
   );
 }
 

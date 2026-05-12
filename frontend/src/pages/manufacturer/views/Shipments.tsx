@@ -18,8 +18,6 @@ export default function Shipments() {
 
   const [showModal, setShowModal] = useState(false); 
   const [shipments, setShipments] = useState<any[]>([]);
-  const [view, setView] = useState("overview");
-
   const [form, setForm] = useState({
     shipmentId: "",
     product: "",
