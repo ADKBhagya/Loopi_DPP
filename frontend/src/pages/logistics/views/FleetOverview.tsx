@@ -15,11 +15,11 @@ export default function FleetOverview() {
 
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   return (
-    <div className="p-8 bg-[#F4F7FB] min-h-screen">
+    <div className="bg-[#F4F7FB] min-h-screen">
 
       {/* ================= STATS ================= */}
 
-      <div className="grid grid-cols-4 gap-5 mt-16">
+      <div className="grid grid-cols-4 gap-5">
 
         <StatCard
           title="ACTIVE VEHICLES"

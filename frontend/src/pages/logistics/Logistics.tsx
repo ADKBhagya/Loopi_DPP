@@ -1,88 +1,46 @@
-import { useEffect, useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 
-import Sidebar from "./components/Sidebar";
-import Topbar from "./components/Topbar";
+import DashboardLayout from "../../components/layout/DashboardLayout";
+
+import logisticsMenu from "./menu";
+
 import FleetOverview from "./views/FleetOverview";
 import ActiveShipments from "./views/ActiveShipments";
 import ProofOfDelivery from "./views/ProofOfDelivery";
 import EmissionsData from "./views/EmissionsData";
 
-function Logistics() {
-  const [message, setMessage] = useState("");
-  const [view, setView] = useState("overview");
-
-  useEffect(() => {
-    const msg = localStorage.getItem("loginSuccess");
-
-    if (msg) {
-      setMessage(msg);
-      localStorage.removeItem("loginSuccess");
-
-      setTimeout(() => setMessage(""), 3000);
-    }
-  }, []);
-
+export default function Logistics() {
   return (
-    <div style={page}>
+    <DashboardLayout
+      menuItems={logisticsMenu}
+      title="Logistics Dashboard"
+    >
+      <Routes>
+        <Route
+          path="/"
+          element={<Navigate to="overview" />}
+        />
 
-      <Sidebar view={view} setView={setView} />
+        <Route
+          path="overview"
+          element={<FleetOverview />}
+        />
 
-      <div style={main}>
+        <Route
+          path="shipments"
+          element={<ActiveShipments />}
+        />
 
-        <Topbar />
+        <Route
+          path="proof-of-delivery"
+          element={<ProofOfDelivery />}
+        />
 
-        {message && (
-          <div style={successPopup}>
-            <span style={icon}>✔</span>
-            {message}
-          </div>
-        )}
-
-        {/* CONTENT */}
-{view === "overview" && <FleetOverview />}
-{view === "shipments" && <ActiveShipments />}
-{view === "delivery" && <ProofOfDelivery />}
-{view === "emissions" && <EmissionsData />}
-
-      </div>
-    </div>
+        <Route
+          path="emissions"
+          element={<EmissionsData />}
+        />
+      </Routes>
+    </DashboardLayout>
   );
 }
-
-export default Logistics;
-
-/* ================= STYLES ================= */
-
-const page: React.CSSProperties = {
-  display: "flex",
-  minHeight: "100vh",
-  background: "#F4F7FB",
-  fontFamily: "'Inter', sans-serif",
-};
-
-const main: React.CSSProperties = {
-  flex: 1,
-  marginLeft: "260px",
-};
-
-const successPopup: React.CSSProperties = {
-  position: "fixed",
-  top: "20px",
-  right: "20px",
-  background: "#EDF7ED",
-  color: "#166534",
-  padding: "12px 16px",
-  borderRadius: "12px",
-  boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  fontSize: "13px",
-  fontWeight: 500,
-  zIndex: 999,
-};
-
-const icon: React.CSSProperties = {
-  color: "#16a34a",
-  fontSize: "18px",
-};

@@ -37,7 +37,7 @@ function App() {
 
       {/* PROTECTED ROLE ROUTES */}
       <Route
-        path="/admin"
+        path="/admin/*"
         element={
           <ProtectedRoute allowedRoles={["Admin"]}>
             <Admin />
@@ -46,7 +46,7 @@ function App() {
       />
 
       <Route
-        path="/manufacturer"
+        path="/manufacturer/*"
         element={
           <ProtectedRoute allowedRoles={["Manufacturer"]}>
             <Manufacturer />
@@ -55,7 +55,7 @@ function App() {
       />
 
       <Route
-        path="/logistics"
+        path="/logistics/*"
         element={
           <ProtectedRoute allowedRoles={["Logistics"]}>
             <Logistics />
@@ -73,7 +73,7 @@ function App() {
       />
 
       <Route
-        path="/authority"
+        path="/authority/*"
         element={
           <ProtectedRoute allowedRoles={["Authority"]}>
             <Authority />

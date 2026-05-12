@@ -1,110 +1,46 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
-import AuthoritySidebar from "./components/Sidebar";
+import DashboardLayout from "../../components/layout/DashboardLayout";
+
+import authorityMenu from "./menu";
+
 import AuthorityControl from "./views/AuthorityControl";
 import ComplianceReview from "./views/ComplianceReview";
 import SustainabilityAudit from "./views/SustainabilityAudit";
-import PublicRecord from "./views/PublicRecords";
+import PublicRecords from "./views/PublicRecords";
 
-function Authority() {
-  const [message, setMessage] = useState("");
-  const [view, setView] = useState("control");
-
-  const role = localStorage.getItem("userRole");
-
-  // ROLE PROTECTION
-  if (role?.toLowerCase() !== "authority") {
-    return <Navigate to="/" />;
-  }
-
-  // LOGIN SUCCESS POPUP
-  useEffect(() => {
-    const msg = localStorage.getItem("loginSuccess");
-
-    if (msg) {
-      setMessage(msg);
-
-      localStorage.removeItem("loginSuccess");
-
-      setTimeout(() => {
-        setMessage("");
-      }, 3000);
-    }
-  }, []);
-
-  // VIEW RENDER
-  const renderView = () => {
-    switch (view) {
-      case "control":
-        return <AuthorityControl />;
-
-      case "review":
-        return <ComplianceReview />;
-
-      case "audit":
-        return <SustainabilityAudit />;
-
-      case "records":
-        return <PublicRecord />;
-
-      default:
-        return <AuthorityControl />;
-    }
-  };
-
+export default function Authority() {
   return (
-    <div className="bg-[#F6F7F9] min-h-screen">
-      {/* SUCCESS POPUP */}
-      {message && (
-        <div style={successPopup}>
-          <span style={icon}>✔</span>
-          {message}
-        </div>
-      )}
+    <DashboardLayout
+      menuItems={authorityMenu}
+      title="Authority Dashboard"
+    >
+      <Routes>
+        <Route
+          path="/"
+          element={<Navigate to="control" />}
+        />
 
-      {/* SIDEBAR */}
-      <AuthoritySidebar
-        view={view}
-        setView={setView}
-      />
+        <Route
+          path="control"
+          element={<AuthorityControl />}
+        />
 
-      {/* MAIN CONTENT */}
-      {renderView()}
-    </div>
+        <Route
+          path="compliance-review"
+          element={<ComplianceReview />}
+        />
+
+        <Route
+          path="sustainability-audit"
+          element={<SustainabilityAudit />}
+        />
+
+        <Route
+          path="public-records"
+          element={<PublicRecords />}
+        />
+      </Routes>
+    </DashboardLayout>
   );
 }
-
-/* ================= SUCCESS POPUP ================= */
-
-const successPopup: React.CSSProperties = {
-  position: "fixed",
-  top: "20px",
-  right: "20px",
-  background: "#E6F4EA",
-  color: "#1B5E20",
-  padding: "14px 20px",
-  borderRadius: "12px",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  fontSize: "13px",
-  fontWeight: 600,
-  zIndex: 9999,
-};
-
-const icon: React.CSSProperties = {
-  background: "#1B5E20",
-  color: "white",
-  width: "20px",
-  height: "20px",
-  borderRadius: "50%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "11px",
-  fontWeight: 700,
-};
-
-export default Authority;

@@ -71,9 +71,8 @@ export default function Sidebar({
             <nav className="space-y-1">
 
               {menuItems.map((item, index) => {
-
-                const active =
-                  location.pathname === item.path;
+              const active =
+                location.pathname.startsWith(item.path);
 
                 return (
                   <NavItem
