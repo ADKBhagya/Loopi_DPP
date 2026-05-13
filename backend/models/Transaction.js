@@ -62,7 +62,22 @@ const transactionSchema = new mongoose.Schema(
 
     network: {
       type: String,
-      default: "LOOPI MAINNET",
+      default: "Polygon Amoy Testnet",
+    },
+
+    chainId: {
+      type: Number,
+      default: 80002,
+    },
+
+    contractAddress: {
+      type: String,
+      default: "",
+    },
+
+    explorerUrl: {
+      type: String,
+      default: "",
     },
 
     smartContractVersion: {
