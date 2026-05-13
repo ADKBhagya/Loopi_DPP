@@ -1,6 +1,7 @@
 import { useState } from "react";
 import logo from "../assets/logo.png";
 import { Link } from "react-router-dom";
+import { apiUrl } from "../lib/api";
 
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
@@ -116,7 +117,7 @@ const handleRegister = async (e: React.FormEvent) => {
   setLoading(true);
 
   try {
-    const res = await fetch(`https://loopidpp.online/api/auth/register`, {
+    const res = await fetch(apiUrl("/auth/register"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

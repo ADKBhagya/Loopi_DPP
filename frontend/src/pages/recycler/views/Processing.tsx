@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRScannerModal from "../../../components/qr/QRScannerModal";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
@@ -37,65 +38,98 @@ export default function Processing() {
 
   const [selectedItem, setSelectedItem] =
     useState<any>(null);
+  const [createForm, setCreateForm] = useState({
+    passport: "",
+    garment: "",
+    material: "",
+    weight: "0.60 kg",
+    stage: "SORTING",
+  });
+  const [creating, setCreating] = useState(false);
+  const [stats, setStats] = useState({
+    materialRecovery: "0 Items",
+    credits: 0,
+  });
+  const [apiError, setApiError] = useState("");
 
   const menuRef = useRef<any>(null);
 
-  const [items, setItems] = useState([
-    {
-      id: "RCY-8801",
-      passport: "GP-9811",
-      garment: "Eco Denim Jacket",
-      material: "Cotton (100%)",
-      stage: "SORTING",
-      credits: "+24",
-      weight: "0.82 kg",
-      date: "2026-03-20",
-    },
+  const [items, setItems] = useState<any[]>([]);
 
-    {
-      id: "RCY-8802",
-      passport: "GP-9855",
-      garment: "Linen Shirt",
-      material: "Linen / Poly Blend",
-      stage: "FIBER RECOVERY",
-      credits: "+18",
-      weight: "0.45 kg",
-      date: "2026-03-22",
-    },
+  const loadProcessing = () => {
+    apiFetch<any>("/recycler/processing")
+      .then((data) => {
+        setApiError("");
+        setItems(data.items || []);
+        setStats({
+          materialRecovery: data.stats?.materialRecovery || "0 Items",
+          credits: data.stats?.credits || 0,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load recycling queue", error);
+        setApiError(error instanceof Error ? error.message : "Failed to load recycling queue");
+      });
+  };
 
-    {
-      id: "RCY-8803",
-      passport: "GP-9777",
-      garment: "Wool Blend Coat",
-      material: "Wool 60%, PET 40%",
-      stage: "CHEMICAL SORT",
-      credits: "+40",
-      weight: "1.20 kg",
-      date: "2026-03-24",
-    },
+  useEffect(() => {
+    loadProcessing();
+  }, []);
 
-    {
-      id: "RCY-8804",
-      passport: "GP-9762",
-      garment: "Bamboo Sweatshirt",
-      material: "Bamboo 80%, Cotton 20%",
-      stage: "COMPLETED",
-      credits: "+21",
-      weight: "0.60 kg",
-      date: "2026-03-15",
-    },
+  const updateProcess = async (itemId: string, stage: string) => {
+    try {
+      const endpoint =
+        stage === "CLOSED"
+          ? `/recycler/processing/${itemId}/close`
+          : `/recycler/processing/${itemId}`;
+      const data = await apiFetch<any>(endpoint, {
+        method: stage === "CLOSED" ? "POST" : "PATCH",
+        body: JSON.stringify({ stage }),
+      });
 
-    {
-      id: "RCY-8805",
-      passport: "GP-9801",
-      garment: "Recycled Down Vest",
-      material: "rPET, Down Feathers",
-      stage: "HARDWARE STRIP",
-      credits: "+27",
-      weight: "0.70 kg",
-      date: "2026-03-26",
-    },
-  ]);
+      if (stage === "CLOSED") {
+        setItems((prev) => prev.filter((row) => row.id !== itemId));
+        setSelectedItem(null);
+      } else {
+        setItems((prev) =>
+          prev.map((row) => (row.id === itemId ? data.item : row))
+        );
+      }
+
+      setShowMenu("");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update recycling process");
+    }
+  };
+
+  const createProcess = async () => {
+    if (!createForm.passport.trim()) {
+      alert("Enter a passport ID before creating the recycling record");
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const data = await apiFetch<any>("/recycler/processing", {
+        method: "POST",
+        body: JSON.stringify(createForm),
+      });
+      setItems((prev) => [data.item, ...prev]);
+      setShowCreateModal(false);
+      setCreateForm({
+        passport: "",
+        garment: "",
+        material: "",
+        weight: "0.60 kg",
+        stage: "SORTING",
+      });
+      loadProcessing();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to create recycling process");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   useEffect(() => {
 
@@ -152,6 +186,11 @@ export default function Processing() {
 
   return (
     <div className="space-y-5 pb-10">
+      {apiError && (
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+          {apiError}
+        </div>
+      )}
 
       {/* TOP STATS */}
       <div
@@ -301,7 +340,7 @@ export default function Processing() {
             />
           }
           title="MATERIAL RECOVERY"
-          value="420 Tons"
+          value={stats.materialRecovery}
           valueColor="#2563EB"
           iconBg="#EEF4FF"
           iconColor="#2563EB"
@@ -315,7 +354,7 @@ export default function Processing() {
             />
           }
           title="ECO CREDITS EARNED"
-          value="12,480"
+          value={String(stats.credits)}
           valueColor="#EA8A00"
           iconBg="#FFF5E8"
           iconColor="#EA8A00"
@@ -713,20 +752,7 @@ export default function Processing() {
                         }
                         label="Move To Recovery"
                         onClick={() => {
-
-                          setItems((prev) =>
-                            prev.map((row) =>
-                              row.id === item.id
-                                ? {
-                                    ...row,
-                                    stage:
-                                      "FIBER RECOVERY",
-                                  }
-                                : row
-                            )
-                          );
-
-                          setShowMenu("");
+                          updateProcess(item.id, "FIBER RECOVERY");
 
                         }}
                       />
@@ -737,20 +763,7 @@ export default function Processing() {
                         }
                         label="Mark Completed"
                         onClick={() => {
-
-                          setItems((prev) =>
-                            prev.map((row) =>
-                              row.id === item.id
-                                ? {
-                                    ...row,
-                                    stage:
-                                      "COMPLETED",
-                                  }
-                                : row
-                            )
-                          );
-
-                          setShowMenu("");
+                          updateProcess(item.id, "COMPLETED");
 
                         }}
                       />
@@ -761,15 +774,7 @@ export default function Processing() {
                         }
                         label="Terminate Lifecycle"
                         onClick={() => {
-
-                          setItems((prev) =>
-                            prev.filter(
-                              (row) =>
-                                row.id !== item.id
-                            )
-                          );
-
-                          setShowMenu("");
+                          updateProcess(item.id, "CLOSED");
 
                         }}
                       />
@@ -1632,6 +1637,9 @@ export default function Processing() {
             </button>
 
             <button
+            onClick={() =>
+                selectedItem && updateProcess(selectedItem.id, "CLOSED")
+            }
             className="
                 flex-[2]
 
@@ -1824,50 +1832,73 @@ export default function Processing() {
 
                 <div
                   className="
-                    h-[200px]
-
-                    rounded-[28px]
-
-                    border-2 border-dashed
-                    border-[#D7DCE2]
-
-                    bg-[#FAFAFA]
-
-                    flex flex-col
-                    items-center justify-center
+                    grid
+                    grid-cols-1
+                    md:grid-cols-2
+                    gap-4
                   "
                 >
 
-                  <ScienceRoundedIcon
-                    style={{
-                      fontSize: 42,
-                      color: "#9CA3AF",
-                    }}
+                  <CreateField
+                    label="Passport ID"
+                    value={createForm.passport}
+                    onChange={(value: string) =>
+                      setCreateForm((prev) => ({ ...prev, passport: value }))
+                    }
+                    placeholder="GP-9811 or SKU"
+                  />
+                  <CreateField
+                    label="Weight"
+                    value={createForm.weight}
+                    onChange={(value: string) =>
+                      setCreateForm((prev) => ({ ...prev, weight: value }))
+                    }
+                    placeholder="0.60 kg"
+                  />
+                  <CreateField
+                    label="Garment"
+                    value={createForm.garment}
+                    onChange={(value: string) =>
+                      setCreateForm((prev) => ({ ...prev, garment: value }))
+                    }
+                    placeholder="Optional override"
+                  />
+                  <CreateField
+                    label="Material"
+                    value={createForm.material}
+                    onChange={(value: string) =>
+                      setCreateForm((prev) => ({ ...prev, material: value }))
+                    }
+                    placeholder="Optional override"
                   />
 
-                  <p
-                    className="
-                      mt-5
-
-                      text-sm
-                      font-black
-                      text-[#374151]
-                    "
-                  >
-                    Recycling Workflow Initialized
-                  </p>
-
-                  <p
-                    className="
-                      mt-2
-                      text-xs
-                      text-[#9CA3AF]
-                    "
-                  >
-                    Material extraction process ready
-                  </p>
+                  <label className="md:col-span-2">
+                    <span className="text-[10px] font-black tracking-[0.12em] text-[#6B7280]">
+                      INITIAL STAGE
+                    </span>
+                    <select
+                      value={createForm.stage}
+                      onChange={(event) =>
+                        setCreateForm((prev) => ({ ...prev, stage: event.target.value }))
+                      }
+                      className="mt-2 h-[46px] w-full rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] px-4 text-sm font-bold outline-none focus:border-[#166B2D]"
+                    >
+                      <option value="SORTING">SORTING</option>
+                      <option value="FIBER RECOVERY">FIBER RECOVERY</option>
+                      <option value="CHEMICAL SORT">CHEMICAL SORT</option>
+                      <option value="HARDWARE STRIP">HARDWARE STRIP</option>
+                    </select>
+                  </label>
 
                 </div>
+
+                <button
+                  onClick={createProcess}
+                  disabled={creating}
+                  className="mt-5 h-[50px] w-full rounded-2xl bg-[#166B2D] text-sm font-black tracking-[0.12em] text-white shadow-[0_12px_30px_rgba(22,107,45,0.18)] disabled:opacity-60"
+                >
+                  {creating ? "CREATING..." : "CREATE RECYCLING RECORD"}
+                </button>
 
               </div>
 
@@ -1880,6 +1911,34 @@ export default function Processing() {
       )}
 
     </div>
+  );
+}
+
+/* ======================================================= */
+
+function CreateField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <label>
+      <span className="text-[10px] font-black tracking-[0.12em] text-[#6B7280]">
+        {label.toUpperCase()}
+      </span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="mt-2 h-[46px] w-full rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] px-4 text-sm font-bold outline-none focus:border-[#166B2D]"
+      />
+    </label>
   );
 }
 

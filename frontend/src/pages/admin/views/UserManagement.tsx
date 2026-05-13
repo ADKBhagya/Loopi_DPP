@@ -5,6 +5,7 @@ import ReviewModal from "../components/ReviewModal";
 import UserModal from "../components/UserModal";
 import ProvisionUserModal from "../components/ProvisionUserModal";
 import ModalPortal from "../../../components/modals/ModalPortal";
+import { apiFetch } from "../../../lib/api";
 
 const ProvisionUserModalComponent =
   ProvisionUserModal as unknown as (props: any) => ReactElement;
@@ -17,7 +18,6 @@ export default function UserManagement({ setPendingCount }: any = {}){
   const [approveUser, setApproveUser] = useState<any>(null);
   const [showProvisionModal, setShowProvisionModal] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
-  const token = localStorage.getItem("token");
   const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
   const [filterRole, setFilterRole] = useState("ALL");
   const [approvedUsers, setApprovedUsers] = useState<any[]>([]);
@@ -44,23 +44,13 @@ const pendingUsers = filteredUsers.map((u) => ({
 
 
 useEffect(() => {
-  if (!token) return;
-
-  fetch(`https://loopidpp.online/api/admin/approved-users`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then(res => res.json())
+  apiFetch<any[]>("/admin/approved-users")
     .then(data => setApprovedUsers(data));
-}, [token]);
+}, []);
 
   // ================= FETCH USERS =================
   const fetchUsers = () => {
-    fetch(`https://loopidpp.online/api/admin/pending-users`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
+    apiFetch<any[]>("/admin/pending-users")
       .then((data) => {
         setUsers(data);
         setPendingCount?.(data.length); // update sidebar when parent provides it
@@ -71,11 +61,8 @@ useEffect(() => {
     // ================= APPROVE =================
 const handleApprove = async (id: string) => {
   try {
-    await fetch(`https://loopidpp.online/api/admin/approve/${id}`, {
+    await apiFetch(`/admin/approve/${id}`, {
       method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     });
 
     setApprovedCount(prev => prev + 1); 
@@ -91,11 +78,8 @@ const handleApprove = async (id: string) => {
   // ================= REJECT =================
 const handleReject = async (id: string) => {
   try {
-    await fetch(`https://loopidpp.online/api/admin/reject/${id}`, {
-      method: "PUT", // 
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    await apiFetch(`/admin/reject/${id}`, {
+      method: "PUT",
     });
 
     setRejectedCount(prev => prev + 1);

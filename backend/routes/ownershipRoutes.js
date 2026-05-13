@@ -19,7 +19,7 @@ TRANSFER OWNERSHIP
 router.post(
   "/transfer",
   verifyToken,
-  allowRoles("Manufacturer"),
+  allowRoles("Manufacturer", "Retailer", "Admin"),
   transferOwnership
 );
 

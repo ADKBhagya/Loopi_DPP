@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -17,8 +18,11 @@ export default function PublicRecords() {
 
   const [selectedRecord, setSelectedRecord] =
     useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [apiError, setApiError] = useState("");
 
-  const records = [
+  const fallbackRecords = [
     {
       id: "GP-9822",
       type: "GOLD SEAL",
@@ -60,10 +64,42 @@ export default function PublicRecords() {
       color: "#16A34A",
     },
   ];
+  void fallbackRecords;
+  const [records, setRecords] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiFetch<any>("/authority/public-records")
+      .then((data) => {
+        setApiError("");
+        setRecords(data.records || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load public records", error);
+        setApiError(error instanceof Error ? error.message : "Failed to load public records");
+      });
+  }, []);
+
+  const filteredRecords = useMemo(() => {
+    const query = search.toLowerCase();
+    return records.filter((item) => {
+      const matchesSearch = [item.id, item.garment, item.factory, item.country]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+      const matchesFilter =
+        activeFilter === "All" || String(item.type || "").toLowerCase().includes(activeFilter.toLowerCase());
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [activeFilter, records, search]);
 
   return (
     <div className="min-h-screen bg-[#F6F7F9]">
       <div className="space-y-6">
+        {apiError && (
+          <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+            {apiError}
+          </div>
+        )}
         
         {/* HERO */}
         <div className="bg-white border border-gray-100 rounded-[28px] h-[430px] shadow-sm flex items-center justify-center relative overflow-hidden">
@@ -165,6 +201,8 @@ export default function PublicRecords() {
                 />
 
                 <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search garment passport..."
                   className="w-full h-[48px] rounded-2xl border border-gray-200 bg-[#F9FAFB] pl-11 pr-4 text-sm outline-none focus:border-[#16641E]"
                 />
@@ -173,17 +211,21 @@ export default function PublicRecords() {
               {/* FILTERS */}
               <div className="flex items-center gap-2 mt-4">
                 
-                <FilterButton active label="All" />
-                <FilterButton label="Gold" />
-                <FilterButton label="Silver" />
-                <FilterButton label="Bronze" />
+                {["All", "Gold", "Silver", "Bronze"].map((label) => (
+                  <FilterButton
+                    key={label}
+                    active={activeFilter === label}
+                    label={label}
+                    onClick={() => setActiveFilter(label)}
+                  />
+                ))}
               </div>
             </div>
 
             {/* RECORDS */}
             <div className="p-4 space-y-3 overflow-y-auto h-[calc(100vh-180px)]">
               
-              {records.map((item, index) => (
+              {filteredRecords.map((item, index) => (
                 <button
                   key={index}
                   onClick={() =>
@@ -391,9 +433,11 @@ export default function PublicRecords() {
 function FilterButton({
   label,
   active,
+  onClick,
 }: any) {
   return (
     <button
+      onClick={onClick}
       className={`h-[34px] px-4 rounded-xl text-[11px] font-black tracking-[0.12em] transition-all ${
         active
           ? "bg-[#111827] text-white"

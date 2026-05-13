@@ -13,6 +13,23 @@ const garmentSchema = new mongoose.Schema({
   carbon: String,
   water: String,
   logisticsProvider: String,
+  currentOwner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  currentOwnerName: String,
+  currentOwnerRole: String,
+  retailStatus: {
+    type: String,
+    enum: ["in_store", "in_transit", "sold", "returned"],
+    default: "in_store",
+  },
+  retailPrice: Number,
+  currency: {
+    type: String,
+    default: "EUR",
+  },
+  sku: String,
   status: {
     type: String,
     default: "draft",

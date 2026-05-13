@@ -23,7 +23,7 @@ export default function Shipments() {
 
   const fetchShipments = async () => {
   try {
-    const data = await apiFetch<any[]>("/manufacturer/shipments");
+    const data = await apiFetch<any[]>("/shipments");
     setShipments(Array.isArray(data) ? data : []);
   } catch (err) {
     console.error("SHIPMENTS ERROR:", err);
@@ -269,7 +269,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
     }
 
     try {
-      await apiFetch("/manufacturer/shipments", {
+      await apiFetch("/shipments", {
         method: "POST",
         body: JSON.stringify({
           ...form,

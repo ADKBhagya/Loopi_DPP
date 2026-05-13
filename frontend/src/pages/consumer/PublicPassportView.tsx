@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import logo from "../../assets/logo.png";
 import RecyclingRequestModal from "./components/RecyclingRequestModal";
+import { apiFetch } from "../../lib/api";
+import { downloadJsonFile, downloadTextFile, openPrintableReport, qrSvgDataUrl } from "../../lib/download";
 
 /* OUTLINED ICONS */
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
@@ -36,6 +38,25 @@ import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
 
 type ActiveTab = "overview" | "materials" | "lifecycle";
 
+type ConsumerPassport = {
+  passportId: string;
+  productName: string;
+  brand?: string;
+  material?: string;
+  materials?: string[];
+  carbon?: string;
+  water?: string;
+  verification?: { status?: string; hash?: string };
+  transactions?: Array<{
+    transactionType?: string;
+    status?: string;
+    createdAt?: string;
+    blockNumber?: number;
+    gasUsed?: number;
+    blockchainHash?: string;
+  }>;
+};
+
 export default function PublicPassportView() {
   const navigate = useNavigate();
   const { passportId } = useParams();
@@ -46,8 +67,51 @@ export default function PublicPassportView() {
   const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRecycleModal, setShowRecycleModal] = useState(false);
+  const [passport, setPassport] = useState<ConsumerPassport | null>(null);
+  const [loadingPassport, setLoadingPassport] = useState(false);
 
   const displayPassportId = passportId || "GP-9822";
+  const productName = passport?.productName || "Recycled Wool Blazer";
+  const brand = passport?.brand || "LOOPI HERITAGE";
+  const carbon = passport?.carbon || "4.2 kg";
+  const water = passport?.water || "15.0 L";
+  const material = passport?.material || "Recycled Wool";
+  const dynamicBlockchainRecords = useMemo(() => {
+    if (!passport?.transactions?.length) return blockchainRecords;
+
+    return passport.transactions.map((record) => ({
+      type: record.transactionType || "Passport Event",
+      status: record.status || "CONFIRMED",
+      timestamp: record.createdAt
+        ? new Date(record.createdAt).toLocaleString()
+        : "Timestamp pending",
+      block: record.blockNumber ? `#${record.blockNumber}` : "N/A",
+      gas: record.gasUsed ? String(record.gasUsed) : "N/A",
+      hash: record.blockchainHash || passport.verification?.hash || "N/A",
+    }));
+  }, [passport]);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoadingPassport(true);
+
+    apiFetch<ConsumerPassport>(`/consumer/passport/${displayPassportId}`, {
+      auth: false,
+    })
+      .then((data) => {
+        if (mounted) setPassport(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load consumer passport", error);
+      })
+      .finally(() => {
+        if (mounted) setLoadingPassport(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [displayPassportId]);
 
   const requireLogin = () => {
     setShowLoginRequired(true);
@@ -70,6 +134,36 @@ export default function PublicPassportView() {
 
   setShowRecycleModal(true);
 };
+
+  const passportUrl = `${window.location.origin}/consumer/passport/${displayPassportId}`;
+
+  const downloadPassportReport = () => {
+    openPrintableReport(
+      `LOOPI Passport ${displayPassportId}`,
+      [
+        `Passport ID: ${displayPassportId}`,
+        `Product: ${productName}`,
+        `Brand: ${brand}`,
+        `Material: ${material}`,
+        `Carbon Footprint: ${carbon}`,
+        `Water Used: ${water}`,
+        `Verification: ${passport?.verification?.status || "Public verified"}`,
+        `Transactions: ${dynamicBlockchainRecords.length}`,
+      ].join("\n")
+    );
+  };
+
+  const downloadQrCode = () => {
+    downloadTextFile(
+      `${displayPassportId}-qr.svg`,
+      decodeURIComponent(qrSvgDataUrl(passportUrl).replace("data:image/svg+xml;charset=utf-8,", "")),
+      "image/svg+xml"
+    );
+  };
+
+  const downloadBlockchainJson = () => {
+    downloadJsonFile(`${displayPassportId}-blockchain.json`, dynamicBlockchainRecords);
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F8F6] text-[#102A1A]">
@@ -160,12 +254,12 @@ export default function PublicPassportView() {
           {/* PRODUCT TITLE */}
           <div className="absolute bottom-8 left-6 right-6 z-20 text-white">
             <h1 className="text-2xl sm:text-3xl font-black">
-              Recycled Wool Blazer
+              {productName}
             </h1>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <span className="px-3 py-1 rounded-md bg-white text-[#1B5E20] text-xs font-black tracking-wide">
-                LOOPI HERITAGE
+                {brand}
               </span>
 
               <span className="flex items-center gap-1 text-white/80 text-sm font-semibold">
@@ -195,6 +289,11 @@ export default function PublicPassportView() {
                   <p className="text-sm text-[#6B7280]">
                     Passport ID: {displayPassportId}
                   </p>
+                  {loadingPassport && (
+                    <p className="text-xs text-[#94A3B8] font-bold">
+                      Loading live passport data...
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -211,14 +310,14 @@ export default function PublicPassportView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TopMetric
                 icon={<EnergySavingsLeafOutlined />}
-                value="4.2 kg"
+                value={carbon}
                 label="Carbon Footprint"
                 color="green"
               />
 
               <TopMetric
                 icon={<WaterDropOutlinedIcon />}
-                value="15.0 L"
+                value={water}
                 label="Water Used"
                 color="blue"
               />
@@ -289,13 +388,19 @@ export default function PublicPassportView() {
             </div>
 
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {blockchainRecords.map((record, index) => (
+              {dynamicBlockchainRecords.map((record, index) => (
                 <BlockchainRecord key={index} {...record} />
               ))}
             </div>
 
-            <div className="p-5 bg-[#F8FAFC] text-center text-xs text-[#6B7280] font-semibold">
-              All records are immutable and publicly verifiable in the LOOPI demo ledger.
+            <div className="p-5 bg-[#F8FAFC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B7280] font-semibold">
+              <span>All records are immutable and publicly verifiable in the LOOPI demo ledger.</span>
+              <button
+                onClick={downloadBlockchainJson}
+                className="px-4 py-2 rounded-xl bg-white border border-[#DDE8DF] text-[#1B5E20] font-black"
+              >
+                Download JSON
+              </button>
             </div>
           </div>
         </ModalShell>
@@ -330,7 +435,7 @@ export default function PublicPassportView() {
                 text="Share via messaging or social media"
                 onClick={() => {
                     navigator.clipboard?.writeText(
-                    `https://loopi.io/passport/${displayPassportId}`
+                    passportUrl
                     );
                     alert("Passport link copied");
                 }}
@@ -340,14 +445,14 @@ export default function PublicPassportView() {
                 icon={<FileDownloadOutlinedIcon />}
                 title="Download PDF"
                 text="Save a complete passport report"
-                onClick={() => alert("Demo: PDF download will be connected later")}
+                onClick={downloadPassportReport}
                 />
 
                 <ShareOption
                 icon={<QrCode2OutlinedIcon />}
                 title="Generate QR Code"
                 text="Create scannable code"
-                onClick={() => alert("Demo: QR generation will be connected later")}
+                onClick={downloadQrCode}
                 />
 
                 <ShareOption
@@ -355,9 +460,7 @@ export default function PublicPassportView() {
                 title="EU DPP Portal"
                 text="View on official EU platform"
                 highlight
-                onClick={() =>
-                    alert("Demo: External DPP portal link will be connected later")
-                }
+                onClick={() => window.open(passportUrl, "_blank", "noopener,noreferrer")}
                 />
 
                 <div className="mt-5 rounded-2xl border border-[#EEF2F0] bg-white p-4">
@@ -365,7 +468,7 @@ export default function PublicPassportView() {
                     Link
                 </p>
                 <p className="text-sm font-black text-[#475569] mt-1 break-all">
-                    https://loopi.io/passport/{displayPassportId}
+                    {passportUrl}
                 </p>
                 </div>
             </div>
@@ -1182,7 +1285,10 @@ function BlockchainRecord({
         <InfoLine label="Tx Hash" value={hash} />
       </div>
 
-      <button className="mt-4 text-sm text-[#1B5E20] font-black flex items-center gap-2">
+      <button
+        onClick={() => downloadJsonFile(`${type}-transaction.json`, { type, status, timestamp, block, gas, hash })}
+        className="mt-4 text-sm text-[#1B5E20] font-black flex items-center gap-2"
+      >
         <OpenInNewOutlinedIcon fontSize="small" />
         View on LOOPI Explorer
       </button>

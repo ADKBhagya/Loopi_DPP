@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
@@ -67,7 +68,7 @@ const [recycleStarted, setRecycleStarted] =
   const [selectedPassport, setSelectedPassport] =
     useState<any>(null);
 
-  const passports = [
+  const [passports, setPassports] = useState([
     {
       id: "GP-9821",
       garment: "Recycled Wool Blazer",
@@ -123,12 +124,12 @@ const [recycleStarted, setRecycleStarted] =
       repairCount: 0,
       verified: false,
     },
-  ];
+  ]);
 
 /* DIRECTORY SHOULD ALWAYS SHOW ALL */
 const filteredPassports = passports;
 
-const handleSearch = () => {
+const handleSearch = async () => {
 
   if (!search.trim()) {
     setSelectedPassport(null);
@@ -137,11 +138,10 @@ const handleSearch = () => {
 
   setLoading(true);
 
-  setTimeout(() => {
-
+  try {
     const value = search.toLowerCase().trim();
 
-    const found = passports.find((item) => {
+    const localMatch = passports.find((item) => {
 
       return (
         item.id.toLowerCase().includes(value) ||
@@ -151,11 +151,23 @@ const handleSearch = () => {
 
     });
 
-    setSelectedPassport(found || null);
+    if (localMatch) {
+      setSelectedPassport(localMatch);
+      return;
+    }
 
+    const found = await apiFetch<any>(`/repair-center/passport/${search.trim()}`);
+    setPassports((prev) =>
+      prev.some((item) => item.id === found.id) ? prev : [found, ...prev]
+    );
+    setSelectedPassport(found);
+  } catch (error) {
+    alert(error instanceof Error ? error.message : "Passport lookup failed");
+    setSelectedPassport(null);
+  } finally {
     setLoading(false);
+  }
 
-  }, 800);
 
 };
 

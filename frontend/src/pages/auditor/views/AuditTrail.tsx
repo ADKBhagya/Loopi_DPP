@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import PageContainer from "../../../components/ui/PageContainer";
-import TableContainer from "../../../components/ui/TableContainer";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
+import { downloadJsonFile } from "../../../lib/download";
 
 /* ICONS */
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -17,6 +17,8 @@ export default function AuditTrail() {
   const [selectedFilter, setSelectedFilter] = useState("ALL");
   const [selectedDate, setSelectedDate] = useState("ALL_DATES");
   const [search, setSearch] = useState("");
+  const [remoteLogs, setRemoteLogs] = useState<any[]>([]);
+  const [apiError, setApiError] = useState("");
 
   const logs = [
     {
@@ -100,8 +102,21 @@ export default function AuditTrail() {
     },
   ];
 
+  useEffect(() => {
+    apiFetch<any>("/auditor/audit-trail")
+      .then((data) => {
+        setRemoteLogs(data.logs || []);
+        setApiError("");
+      })
+      .catch((error) => {
+        setApiError(error instanceof Error ? error.message : "Failed to load audit trail");
+      });
+  }, []);
+
+  const sourceLogs = remoteLogs.length ? remoteLogs : logs;
+
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
+    return sourceLogs.filter((log) => {
       const matchesFilter =
         selectedFilter === "ALL" ||
         log.status === selectedFilter;
@@ -121,10 +136,15 @@ export default function AuditTrail() {
         matchesSearch
       );
     });
-  }, [selectedFilter, selectedDate, search]);
+  }, [sourceLogs, selectedFilter, selectedDate, search]);
 
   return (
     <div className="space-y-5 pb-10">
+      {apiError && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-600">
+          {apiError}
+        </div>
+      )}
 
       {/* STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -199,6 +219,7 @@ export default function AuditTrail() {
           </div>
 
           <button
+            onClick={() => downloadJsonFile("auditor-audit-trail.json", filteredLogs)}
             className="
               h-11 px-5 rounded-xl
               text-[#166534]

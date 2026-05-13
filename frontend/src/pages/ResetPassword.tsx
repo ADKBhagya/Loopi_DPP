@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
+import { apiUrl } from "../lib/api";
 
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import LockResetOutlinedIcon from "@mui/icons-material/LockResetOutlined";
@@ -65,7 +66,7 @@ function ResetPassword() {
     setLoading(true);
 
     try {
-      const res = await fetch(`https://loopidpp.online/api/auth/reset-password`, {
+      const res = await fetch(apiUrl("/auth/reset-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

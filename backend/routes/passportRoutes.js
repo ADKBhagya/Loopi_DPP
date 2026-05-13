@@ -19,7 +19,7 @@ GET PASSPORT BY GARMENT ID
 router.get(
   "/:id",
   verifyToken,
-  allowRoles("Manufacturer"),
+  allowRoles("Manufacturer", "Retailer", "Logistics", "Admin"),
   getPassportByGarmentId
 );
 

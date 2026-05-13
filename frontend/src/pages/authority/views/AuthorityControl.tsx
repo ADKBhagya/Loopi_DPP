@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -27,85 +28,82 @@ export default function AuthorityControl() {
 
   const [selectedClaim, setSelectedClaim] =
     useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [stats, setStats] = useState({
+    passportsIssued: 0,
+    activeManufacturers: 0,
+    pendingApproval: 0,
+    complianceRate: "0.0%",
+  });
 
-  const complianceData = [
-    {
-      id: "COMP-8812",
-      garment: "GP-9821",
-      auditor: "EcoChain Auditor #9",
-      date: "2026-03-20",
-      type: "Sustainability Claim",
-      region: "EU-NORTH",
-      status: "AUDITOR APPROVED",
-      statusColor: "blue",
-      hash: "0x98c1_F221",
-    },
-    {
-      id: "COMP-8813",
-      garment: "GP-9822",
-      auditor: "Sthlm Audit Lab",
-      date: "2026-03-21",
-      type: "Material Verification",
-      region: "EU-WEST",
-      status: "UNDER REVIEW",
-      statusColor: "orange",
-      hash: "0x3d4b_9A01",
-    },
-    {
-      id: "COMP-8814",
-      garment: "GP-9811",
-      auditor: "Global Trust Auditor",
-      date: "2026-03-15",
-      type: "Full Compliance",
-      region: "EU-SOUTH",
-      status: "FINAL APPROVED",
-      statusColor: "green",
-      hash: "0x77fa_B430",
-    },
-    {
-      id: "COMP-8815",
-      garment: "GP-9877",
-      auditor: "EcoWeave NL Auditors",
-      date: "2026-03-22",
-      type: "Lifecycle Assessment",
-      region: "EU-WEST",
-      status: "AUDITOR APPROVED",
-      statusColor: "blue",
-      hash: "0xC1e0_4421",
-    },
-    {
-      id: "COMP-8816",
-      garment: "GP-9890",
-      auditor: "Berlin Compliance Hub",
-      date: "2026-03-23",
-      type: "Certificate Verify",
-      region: "EU-EAST",
-      status: "UNDER REVIEW",
-      statusColor: "orange",
-      hash: "0xA9b3_22F0",
-    },
-  ];
+  const [complianceData, setComplianceData] = useState<any[]>([]);
+
+  const loadControl = () => {
+    apiFetch<any>("/authority/control")
+      .then((data) => {
+        setApiError("");
+        setStats(data.stats || stats);
+        setComplianceData(data.records || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load authority control", error);
+        setApiError(error instanceof Error ? error.message : "Failed to load authority control");
+      });
+  };
+
+  useEffect(() => {
+    loadControl();
+  }, []);
+
+  const updateCompliance = async (id: string, status: string) => {
+    try {
+      const data = await apiFetch<any>(`/authority/compliance/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setComplianceData((prev) =>
+        prev.map((item) => (item.id === id ? data.record : item))
+      );
+      setSelectedClaim(null);
+      loadControl();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update compliance record");
+    }
+  };
 
   /* FILTER LOGIC */
   const filteredData = useMemo(() => {
-    if (activeFilter === "ALL")
-      return complianceData;
+    const query = search.toLowerCase();
+    const filtered = complianceData.filter((item) =>
+      [item.id, item.garment, item.garmentName, item.auditor, item.type]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query))
+    );
 
-    return complianceData.filter(
+    if (activeFilter === "ALL")
+      return filtered;
+
+    return filtered.filter(
       (item) => item.status === activeFilter
     );
-  }, [activeFilter]);
+  }, [activeFilter, complianceData, search]);
 
   return (
     <div className="min-h-screen bg-[#F6F7F9]">
       <div className="space-y-6">
+        {apiError && (
+          <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+            {apiError}
+          </div>
+        )}
         
         {/* STATS */}
         <div className="grid grid-cols-4 gap-5">
           
           <StatsCard
             title="TOTAL PASSPORTS ISSUED"
-            value="4,812"
+            value={String(stats.passportsIssued)}
             icon={
               <ShieldOutlinedIcon
                 style={{ fontSize: 30 }}
@@ -116,7 +114,7 @@ export default function AuthorityControl() {
 
           <StatsCard
             title="ACTIVE MANUFACTURERS"
-            value="124"
+            value={String(stats.activeManufacturers)}
             icon={
               <GroupsOutlinedIcon
                 style={{ fontSize: 30 }}
@@ -127,7 +125,7 @@ export default function AuthorityControl() {
 
           <StatsCard
             title="PENDING APPROVAL"
-            value="18"
+            value={String(stats.pendingApproval)}
             icon={
               <AccessTimeOutlinedIcon
                 style={{ fontSize: 30 }}
@@ -138,7 +136,7 @@ export default function AuthorityControl() {
 
           <StatsCard
             title="COMPLIANCE RATE"
-            value="98.2%"
+            value={stats.complianceRate}
             icon={
               <BarChartOutlinedIcon
                 style={{ fontSize: 30 }}
@@ -228,6 +226,8 @@ export default function AuthorityControl() {
                 />
 
                 <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="ID, garment, auditor..."
                   className="w-[220px] h-[38px] rounded-xl border border-gray-200 bg-[#F9FAFB] pl-9 pr-4 text-sm outline-none"
                 />
@@ -432,7 +432,7 @@ export default function AuthorityControl() {
                   <div className="flex items-center gap-4">
                     
                     <div className="w-[72px] h-[72px] rounded-full border-[5px] border-[#16641E] flex items-center justify-center text-[18px] font-black text-gray-900">
-                      92%
+                      {selectedClaim.score || "0%"}
                     </div>
 
                     <div>
@@ -458,19 +458,19 @@ export default function AuthorityControl() {
 
                   <EmissionCard
                     title="Manufacturing Emissions"
-                    value="4.2 kg"
+                    value={selectedClaim.emissions?.manufacturing || "N/A"}
                     threshold="Threshold: < 4.5 kg"
                   />
 
                   <EmissionCard
                     title="Shipment Emissions"
-                    value="0.82 kg"
+                    value={selectedClaim.emissions?.shipment || "Pending"}
                     threshold="Threshold: < 1.2 kg"
                   />
 
                   <EmissionCard
                     title="Recycling Capability"
-                    value="A+"
+                    value={selectedClaim.emissions?.recycling || "Pending"}
                     threshold="Threshold: ≥ Grade B"
                   />
                 </div>
@@ -482,8 +482,11 @@ export default function AuthorityControl() {
                     COMPLIANCE CERTIFICATES
                   </p>
 
-                  <CertificateCard title="GOTS 6.0" />
-                  <CertificateCard title="LCA Report" />
+                  {(selectedClaim.certificates?.length
+                    ? selectedClaim.certificates
+                    : ["Pending certificate"]).map((title: string) => (
+                    <CertificateCard key={title} title={title} />
+                  ))}
                 </div>
               </div>
 
@@ -625,7 +628,10 @@ export default function AuthorityControl() {
 
               <div className="flex items-center gap-3">
                 
-                <button className="h-[40px] px-6 rounded-2xl border border-red-200 bg-white text-red-500 text-[11px] font-black tracking-[0.16em] hover:bg-red-50 transition-all flex items-center gap-2">
+                <button
+                  onClick={() => updateCompliance(selectedClaim.id, "FLAGGED")}
+                  className="h-[40px] px-6 rounded-2xl border border-red-200 bg-white text-red-500 text-[11px] font-black tracking-[0.16em] hover:bg-red-50 transition-all flex items-center gap-2"
+                >
                   
                   <FlagOutlinedIcon
                     style={{ fontSize: 16 }}
@@ -634,7 +640,10 @@ export default function AuthorityControl() {
                   FLAG FOR RE-AUDIT
                 </button>
 
-                <button className="h-[40px] px-7 rounded-2xl bg-[#16641E] text-white text-[11px] font-black tracking-[0.16em] shadow-lg shadow-green-900/20 hover:bg-[#0F4E16] transition-all flex items-center gap-2">
+                <button
+                  onClick={() => updateCompliance(selectedClaim.id, "FINAL APPROVED")}
+                  className="h-[40px] px-7 rounded-2xl bg-[#16641E] text-white text-[11px] font-black tracking-[0.16em] shadow-lg shadow-green-900/20 hover:bg-[#0F4E16] transition-all flex items-center gap-2"
+                >
                   
                   <CheckCircleOutlineRoundedIcon
                     style={{ fontSize: 16 }}

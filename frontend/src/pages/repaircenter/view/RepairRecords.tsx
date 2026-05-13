@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -101,6 +102,16 @@ export default function RepairRecords() {
         "Repair scheduled for tomorrow morning.",
     },
   ]);
+
+  useEffect(() => {
+    apiFetch<any>("/repair-center/records")
+      .then((data) => {
+        setRecords(data.records || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load repair records", error);
+      });
+  }, []);
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {

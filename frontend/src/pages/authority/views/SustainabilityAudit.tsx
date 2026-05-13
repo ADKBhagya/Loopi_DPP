@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
@@ -14,8 +15,9 @@ export default function SustainabilityAudit() {
   const [openTerminal, setOpenTerminal] = useState(false);
   const [running, setRunning] = useState(false);
   const [completed, setCompleted] = useState(false);
-
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [auditPassport, setAuditPassport] = useState("GP-9822");
+  const [auditScore, setAuditScore] = useState(0);
+  const [apiError, setApiError] = useState("");
 
   const [logs, setLogs] = useState<string[]>([
     "> LOOPI Authority Audit Terminal v2.4.1",
@@ -54,14 +56,9 @@ export default function SustainabilityAudit() {
     },
   ]);
 
-  const addLog = (text: string) => {
-    setLogs((prev) => [...prev, text]);
-  };
-
   const resetAudit = () => {
     setCompleted(false);
     setRunning(false);
-    setActiveIndex(null);
 
     setLogs([
       "> LOOPI Authority Audit Terminal v2.4.1",
@@ -77,9 +74,14 @@ export default function SustainabilityAudit() {
 
   const runAudit = async () => {
     if (running) return;
+    if (!auditPassport.trim()) {
+      setApiError("Enter a passport ID before running an audit");
+      return;
+    }
 
     setRunning(true);
     setCompleted(false);
+    setApiError("");
     setLogs([
       "> LOOPI Authority Audit Terminal v2.4.1",
     ]);
@@ -91,66 +93,33 @@ export default function SustainabilityAudit() {
 
     setAuditItems(reset);
 
-    addLog("");
-    addLog(
-      "[10:47:08 PM] Initialising audit session for GP-9822…"
-    );
+    try {
+      const data = await apiFetch<any>("/authority/sustainability-audit/run", {
+        method: "POST",
+        body: JSON.stringify({ passportId: auditPassport.trim() }),
+      });
 
-    await wait(1000);
-
-    const updated = [...reset];
-
-    for (let i = 0; i < updated.length; i++) {
-      setActiveIndex(i);
-
-      addLog("");
-      addLog(
-        `[10:47:${10 + i} PM] Checking: ${updated[i].name}…`
-      );
-
-      updated[i].status = "running";
-      setAuditItems([...updated]);
-
-      await wait(1200);
-
-      /* WARNING ITEM */
-      if (
-        updated[i].name ===
-        "Recycling End-of-Life Score"
-      ) {
-        updated[i].status = "warning";
-
-        setAuditItems([...updated]);
-
-        addLog(
-          `[10:47:${11 + i} PM] ⚠ WARNING: Recycling End-of-Life Score — below optimal threshold`
-        );
-
-        continue;
-      }
-
-      updated[i].status = "pass";
-
-      setAuditItems([...updated]);
-
-      addLog(
-        `[10:47:${10 + i} PM] ✓ PASSED: ${updated[i].name}`
-      );
+      setAuditItems(data.items || []);
+      setLogs(data.logs || []);
+      setAuditScore(data.score || 0);
+      setCompleted(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to run sustainability audit";
+      setApiError(message);
+      setLogs((prev) => [...prev, `[ERROR] ${message}`]);
+    } finally {
+      setRunning(false);
     }
-
-    addLog("");
-    addLog(
-      "[10:47:15 PM] ── Audit Complete ── Score: 88/100"
-    );
-
-    setRunning(false);
-    setCompleted(true);
-    setActiveIndex(null);
   };
 
   return (
     <div className="min-h-screen bg-[#F6F7F9]">
       <div className="space-y-6">
+        {apiError && (
+          <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+            {apiError}
+          </div>
+        )}
         
         {/* HERO */}
         <div className="bg-white border border-gray-100 rounded-[28px] h-[450px] shadow-sm relative overflow-hidden flex items-center justify-center">
@@ -246,8 +215,8 @@ export default function SustainabilityAudit() {
                   </span>
 
                   <input
-                    value="GP-9822"
-                    readOnly
+                    value={auditPassport}
+                    onChange={(event) => setAuditPassport(event.target.value)}
                     className="flex-1 bg-transparent outline-none text-sm font-bold"
                   />
                 </div>
@@ -298,11 +267,14 @@ export default function SustainabilityAudit() {
 
                       <div>
                         <h2 className="text-[17px] font-black text-gray-900">
-                          Audit Score: 88/100
+                          Audit Score: {auditScore}/100
                         </h2>
 
                         <div className="mt-3 w-[320px] h-[8px] rounded-full bg-[#E5E7EB] overflow-hidden">
-                          <div className="w-[88%] h-full bg-[#F59E0B] rounded-full" />
+                          <div
+                            className="h-full bg-[#F59E0B] rounded-full"
+                            style={{ width: `${auditScore}%` }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -446,8 +418,3 @@ export default function SustainabilityAudit() {
   );
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) =>
-    setTimeout(resolve, ms)
-  );
-}

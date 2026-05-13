@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRScannerModal from "../../../components/qr/QRScannerModal";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
@@ -21,6 +22,7 @@ export default function ServiceQueue() {
   const [search, setSearch] = useState("");
 
   const [repairPhotos, setRepairPhotos] = useState<any[]>([]);
+  const [totalServices, setTotalServices] = useState(0);
 
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -133,6 +135,17 @@ export default function ServiceQueue() {
   });
 
   useEffect(() => {
+    apiFetch<any>("/repair-center/queue")
+      .then((data) => {
+        setJobs(data.jobs || []);
+        setTotalServices(data.stats?.totalServices || data.jobs?.length || 0);
+      })
+      .catch((error) => {
+        console.error("Failed to load repair queue", error);
+      });
+  }, []);
+
+  useEffect(() => {
     const closeMenu = (e: any) => {
       if (
         menuRef.current &&
@@ -165,50 +178,49 @@ export default function ServiceQueue() {
     });
   }, [jobs, search]);
 
-  const createJob = () => {
-    const newEntry = {
-      id: `REP-${Math.floor(
-        5000 + Math.random() * 1000
-      )}`,
+  const createJob = async () => {
+    try {
+      const data = await apiFetch<any>("/repair-center/queue", {
+        method: "POST",
+        body: JSON.stringify({
+          ...newJob,
+          service: newJob.type,
+          status: "QUEUED",
+        }),
+      });
 
-      passport: newJob.passport,
+      setJobs((prev) => [data.job, ...prev]);
+      setTotalServices((value) => value + 1);
+      setShowCreateModal(false);
+      setRepairPhotos([]);
+      setNewJob({
+        passport: "GP-9821",
+        garment: "Recycled Wool Blazer",
+        type: "Mending",
+        technician: "Erik Lund",
+        duration: "2h",
+        price: "€20",
+        note: "",
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to create repair job");
+    }
+  };
 
-      garment: newJob.garment,
+  const updateJob = async (jobId: string, updates: any) => {
+    try {
+      const data = await apiFetch<any>(`/repair-center/queue/${jobId}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      });
 
-      type: newJob.type,
-
-      technician: newJob.technician,
-
-      duration: newJob.duration,
-
-      price: newJob.price,
-
-      status: "QUEUED",
-
-      note:
-        newJob.note ||
-        "Repair record created successfully.",
-
-      date: "2026-03-25",
-
-      color: "#2563EB",
-    };
-
-    setJobs((prev) => [newEntry, ...prev]);
-
-    setShowCreateModal(false);
-
-    setRepairPhotos([]);
-
-    setNewJob({
-      passport: "GP-9821",
-      garment: "Recycled Wool Blazer",
-      type: "Mending",
-      technician: "Erik Lund",
-      duration: "2h",
-      price: "€20",
-      note: "",
-    });
+      setJobs((prev) =>
+        prev.map((item) => (item.id === jobId ? data.job : item))
+      );
+      setShowMenu("");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update repair job");
+    }
   };
 
   const removeFromQueue = (jobId: string) => {
@@ -368,7 +380,7 @@ export default function ServiceQueue() {
               leading-none
             "
           >
-            1,248
+            {totalServices || jobs.length}
           </h1>
 
           <p
@@ -680,19 +692,7 @@ export default function ServiceQueue() {
       label="Mark In Progress"
       onClick={() => {
 
-        setJobs((prev) =>
-          prev.map((item) =>
-            item.id === job.id
-              ? {
-                  ...item,
-                  status: "IN PROGRESS",
-                  color: "#EA8A00",
-                }
-              : item
-          )
-        );
-
-        setShowMenu("");
+        updateJob(job.id, { status: "IN PROGRESS" });
       }}
     />
 
@@ -703,19 +703,7 @@ export default function ServiceQueue() {
       label="Mark Complete"
       onClick={() => {
 
-        setJobs((prev) =>
-          prev.map((item) =>
-            item.id === job.id
-              ? {
-                  ...item,
-                  status: "COMPLETED",
-                  color: "#16A34A",
-                }
-              : item
-          )
-        );
-
-        setShowMenu("");
+        updateJob(job.id, { status: "COMPLETED" });
       }}
     />
 

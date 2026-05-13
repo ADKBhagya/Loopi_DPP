@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* OUTLINED ICONS */
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
@@ -81,15 +82,21 @@ export default function RepairRequestModal({
   const [selectedCenter, setSelectedCenter] = useState("Green Stitch Repair Hub");
   const [preferredDate, setPreferredDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const verifyPassport = () => {
+  const verifyPassport = async () => {
     if (!passportId.trim()) {
       alert("Please enter Product Passport ID");
       return;
     }
 
-    setVerified(true);
-    setStep(2);
+    try {
+      await apiFetch<any>(`/consumer/verify/${passportId.trim()}`);
+      setVerified(true);
+      setStep(2);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Product verification failed");
+    }
   };
 
   const continueToReview = () => {
@@ -101,9 +108,27 @@ export default function RepairRequestModal({
     setStep(3);
   };
 
-  const submitRepairRequest = () => {
-    alert("Demo: Repair request submitted successfully");
-    onClose();
+  const submitRepairRequest = async () => {
+    setSubmitting(true);
+
+    try {
+      await apiFetch("/consumer/repair-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          passportId: passportId.trim(),
+          repairType,
+          selectedCenter,
+          preferredDate,
+          notes,
+        }),
+      });
+      alert("Repair request submitted successfully");
+      onClose();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to submit repair request");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -148,6 +173,7 @@ export default function RepairRequestModal({
                 passportId={passportId}
                 setPassportId={setPassportId}
                 verifyPassport={verifyPassport}
+                simulateQrScan={() => setPassportId("GP-9822")}
                 onClose={onClose}
               />
             )}
@@ -178,6 +204,7 @@ export default function RepairRequestModal({
                 verified={verified}
                 onBack={() => setStep(2)}
                 onSubmit={submitRepairRequest}
+                submitting={submitting}
               />
             )}
           </div>
@@ -193,11 +220,13 @@ function StepVerify({
   passportId,
   setPassportId,
   verifyPassport,
+  simulateQrScan,
   onClose,
 }: {
   passportId: string;
   setPassportId: (value: string) => void;
   verifyPassport: () => void;
+  simulateQrScan: () => void;
   onClose: () => void;
 }) {
   return (
@@ -243,7 +272,7 @@ function StepVerify({
       </div>
 
       <button
-        onClick={() => alert("Demo: QR scan will be connected later")}
+        onClick={simulateQrScan}
         className="w-full h-16 rounded-2xl bg-[#EFF6FF] border border-[#2563EB] text-[#2563EB] font-black flex items-center justify-center gap-3 hover:bg-[#DBEAFE] transition"
       >
         <QrCodeScannerOutlinedIcon />
@@ -308,6 +337,8 @@ function StepRepairDetails({
   onBack: () => void;
   onContinue: () => void;
 }) {
+  const [photoCount, setPhotoCount] = useState(0);
+
   return (
     <div>
       <div className="rounded-2xl bg-[#E8F5E9] border border-[#1B5E20]/30 p-4 flex items-center gap-3">
@@ -414,13 +445,21 @@ function StepRepairDetails({
         <label className="text-sm font-black">Damage Photos Optional</label>
 
         <button
-          onClick={() => alert("Demo: photo upload will be connected later")}
+          onClick={() => document.getElementById("repair-photo-input")?.click()}
           className="mt-3 w-full h-28 rounded-2xl border border-dashed border-[#CBD5E1] bg-white hover:bg-[#F8FAFC] transition flex flex-col items-center justify-center text-[#64748B]"
         >
           <CameraAltOutlinedIcon />
-          <p className="font-black mt-2">Upload Photos</p>
+          <p className="font-black mt-2">{photoCount ? `${photoCount} photo(s) selected` : "Upload Photos"}</p>
           <p className="text-xs">Add photos to help the repair center inspect damage</p>
         </button>
+        <input
+          id="repair-photo-input"
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(event) => setPhotoCount(event.target.files?.length || 0)}
+        />
       </div>
 
       <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -454,6 +493,7 @@ function StepReview({
   verified,
   onBack,
   onSubmit,
+  submitting,
 }: {
   passportId: string;
   repairType: string;
@@ -463,6 +503,7 @@ function StepReview({
   verified: boolean;
   onBack: () => void;
   onSubmit: () => void;
+  submitting: boolean;
 }) {
   return (
     <div>
@@ -528,10 +569,11 @@ function StepReview({
 
         <button
           onClick={onSubmit}
+          disabled={submitting}
           className="h-12 rounded-xl bg-[#1B5E20] text-white font-black hover:bg-[#0F3D1E] transition flex items-center justify-center gap-2"
         >
           <PublishOutlinedIcon fontSize="small" />
-          Submit Request
+          {submitting ? "Submitting..." : "Submit Request"}
         </button>
       </div>
     </div>

@@ -28,7 +28,16 @@ const ownershipTransferSchema =
     toUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+    },
+    toName: String,
+    amount: Number,
+    currency: {
+      type: String,
+      default: "EUR",
+    },
+    transferType: {
+      type: String,
+      default: "ownership",
     },
 
     transactionHash: {

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -33,7 +34,7 @@ export default function ServiceLogs() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"All" | LogType>("All");
 
-  const logs: ServiceLog[] = [
+  const [logs, setLogs] = useState<ServiceLog[]>([
     {
       hash: "0xAF3c...2190",
       description: "Repair REP-4401 signed & committed · GP-9821",
@@ -106,7 +107,17 @@ export default function ServiceLogs() {
       date: "Mar 20, 2026",
       dot: "#EC4899",
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    apiFetch<{ logs: ServiceLog[] }>("/repair-center/logs")
+      .then((data) => {
+        setLogs(data.logs || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load repair service logs", error);
+      });
+  }, []);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {

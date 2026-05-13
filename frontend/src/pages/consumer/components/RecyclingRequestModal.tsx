@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* OUTLINED ICONS */
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
@@ -70,15 +71,21 @@ export default function RecyclingRequestModal({
   const [selectedCenter, setSelectedCenter] = useState("LOOPI Circular Hub");
   const [preferredDate, setPreferredDate] = useState("");
   const [location, setLocation] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const verifyProduct = () => {
+  const verifyProduct = async () => {
     if (!passportId.trim()) {
       alert("Please enter Product Passport ID");
       return;
     }
 
-    setVerified(true);
-    setStep(2);
+    try {
+      await apiFetch<any>(`/consumer/verify/${passportId.trim()}`);
+      setVerified(true);
+      setStep(2);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Product verification failed");
+    }
   };
 
   const continueToReview = () => {
@@ -95,9 +102,27 @@ export default function RecyclingRequestModal({
     setStep(3);
   };
 
-  const submitRecyclingRequest = () => {
-    alert("Demo: Recycling request submitted successfully");
-    onClose();
+  const submitRecyclingRequest = async () => {
+    setSubmitting(true);
+
+    try {
+      await apiFetch("/consumer/recycling-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          passportId: passportId.trim(),
+          method,
+          selectedCenter,
+          preferredDate,
+          location,
+        }),
+      });
+      alert("Recycling request submitted successfully");
+      onClose();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to submit recycling request");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -142,6 +167,7 @@ export default function RecyclingRequestModal({
                 passportId={passportId}
                 setPassportId={setPassportId}
                 verifyProduct={verifyProduct}
+                simulateQrScan={() => setPassportId("GP-9822")}
                 onClose={onClose}
               />
             )}
@@ -172,6 +198,7 @@ export default function RecyclingRequestModal({
                 verified={verified}
                 onBack={() => setStep(2)}
                 onSubmit={submitRecyclingRequest}
+                submitting={submitting}
               />
             )}
           </div>
@@ -187,11 +214,13 @@ function StepVerify({
   passportId,
   setPassportId,
   verifyProduct,
+  simulateQrScan,
   onClose,
 }: {
   passportId: string;
   setPassportId: (value: string) => void;
   verifyProduct: () => void;
+  simulateQrScan: () => void;
   onClose: () => void;
 }) {
   return (
@@ -237,7 +266,7 @@ function StepVerify({
       </div>
 
       <button
-        onClick={() => alert("Demo: QR scan will be connected later")}
+        onClick={simulateQrScan}
         className="w-full h-16 rounded-2xl bg-[#EFF6FF] border border-[#2563EB] text-[#2563EB] font-black flex items-center justify-center gap-3 hover:bg-[#DBEAFE] transition"
       >
         <QrCodeScannerOutlinedIcon />
@@ -448,6 +477,7 @@ function StepReview({
   verified,
   onBack,
   onSubmit,
+  submitting,
 }: {
   passportId: string;
   method: string;
@@ -457,6 +487,7 @@ function StepReview({
   verified: boolean;
   onBack: () => void;
   onSubmit: () => void;
+  submitting: boolean;
 }) {
   return (
     <div>
@@ -514,10 +545,11 @@ function StepReview({
 
         <button
           onClick={onSubmit}
+          disabled={submitting}
           className="h-12 rounded-xl bg-[#1B5E20] text-white font-black hover:bg-[#0F3D1E] transition flex items-center justify-center gap-2"
         >
           <PublishOutlinedIcon fontSize="small" />
-          Submit Request
+          {submitting ? "Submitting..." : "Submit Request"}
         </button>
       </div>
     </div>
