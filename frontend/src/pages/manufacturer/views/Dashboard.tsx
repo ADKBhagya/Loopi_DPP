@@ -466,6 +466,7 @@ function Dashboard() {
             fetchGarments();
             fetchCertificates();
           }}
+          onNotify={showToast}
         />
       )}
 
@@ -627,7 +628,7 @@ function ProductRow({ id, rawId, name, material, co2, water, status, imageUrl, a
   );
 }
 
-function CreateGarmentModal({ onClose, onCreated }: any) {
+function CreateGarmentModal({ onClose, onCreated, onNotify }: any) {
   const [step, setStep] = useState(1);
   const [transport, setTransport] = useState("Road");
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
@@ -774,6 +775,7 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
       );
 
       showToast("Garment created successfully", "success");
+      onNotify?.("Garment created successfully", "success");
       onCreated?.();
 
       setTimeout(() => {
@@ -783,6 +785,7 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
     } catch (err) {
       console.error(err);
       showToast("Error creating garment", "error");
+      onNotify?.(err instanceof Error ? err.message : "Error creating garment", "error");
     }
   };
 
@@ -1355,8 +1358,11 @@ function Card({ type, icon, title, value, unit }: any) {
 function QRModal({ data, onClose, onNotify }: any) {
   const [downloading, setDownloading] = useState(false);
   const qrRef = useRef<HTMLDivElement | null>(null);
-  const passportUrl =
-    data?.id ? `${window.location.origin}/consumer/passport/${data.id}` : "";
+  // Prefer rawId (db _id) for passport URLs when available, fall back to display id
+  const passportIdentifier = data?.rawId || data?.id || "";
+  const passportUrl = passportIdentifier
+    ? `${window.location.origin}/consumer/passport/${passportIdentifier}`
+    : "";
 
   const handleDownload = () => {
     setDownloading(true);

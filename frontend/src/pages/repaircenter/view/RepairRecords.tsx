@@ -19,6 +19,8 @@ export default function RepairRecords() {
   const [search, setSearch] = useState("");
 
   const [filter, setFilter] = useState("ALL");
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  const [recordsError, setRecordsError] = useState("");
 
   const [selectedRecord, setSelectedRecord] =
     useState<any>(null);
@@ -26,90 +28,23 @@ export default function RepairRecords() {
   const [showCreateModal, setShowCreateModal] =
     useState(false);
 
-  const [records, setRecords] = useState([
-    {
-      id: "REP-4401",
-      passport: "GP-9821",
-      garment: "Recycled Wool Blazer",
-      service: "Lining",
-      type: "Mending",
-      technician: "Erik Lund",
-      duration: "2h",
-      cost: "€28",
-      date: "2026-03-20",
-      status: "COMPLETED",
-      note:
-        "Inner lining replaced using organic cotton materials.",
-    },
-
-    {
-      id: "REP-4403",
-      passport: "GP-9831",
-      garment: "Eco Denim Jacket",
-      service: "Zipper Repair",
-      type: "Hardware",
-      technician: "Erik Lund",
-      duration: "1.5h",
-      cost: "€18",
-      date: "2026-03-18",
-      status: "COMPLETED",
-      note:
-        "Premium zipper installed and stress tested.",
-    },
-
-    {
-      id: "REP-4405",
-      passport: "GP-9877",
-      garment: "Organic Hoodie",
-      service: "Stain Removal",
-      type: "Cleaning",
-      technician: "Sara Voss",
-      duration: "3h",
-      cost: "€35",
-      date: "2026-03-15",
-      status: "COMPLETED",
-      note:
-        "Eco-safe chemical cleaning performed successfully.",
-    },
-
-    {
-      id: "REP-4410",
-      passport: "GP-9888",
-      garment: "Cotton Shirt",
-      service: "Button Replacement",
-      type: "Hardware",
-      technician: "Emma Fischer",
-      duration: "1h",
-      cost: "€12",
-      date: "2026-03-21",
-      status: "IN PROGRESS",
-      note:
-        "Awaiting final quality inspection before closure.",
-    },
-
-    {
-      id: "REP-4412",
-      passport: "GP-9900",
-      garment: "Winter Coat",
-      service: "Sleeve Repair",
-      type: "Mending",
-      technician: "Jonas Keller",
-      duration: "2.5h",
-      cost: "€42",
-      date: "2026-03-22",
-      status: "QUEUED",
-      note:
-        "Repair scheduled for tomorrow morning.",
-    },
-  ]);
+  const [records, setRecords] = useState<any[]>([]);
 
   useEffect(() => {
+    setRecordsLoading(true);
+    setRecordsError("");
+
     apiFetch<any>("/repair-center/records")
       .then((data) => {
         setRecords(data.records || []);
       })
       .catch((error) => {
         console.error("Failed to load repair records", error);
+        setRecords([]);
+        setRecordsError("Failed to load repair records");
+      })
+      .finally(() => {
+        setRecordsLoading(false);
       });
   }, []);
 
@@ -378,7 +313,40 @@ export default function RepairRecords() {
 
             <tbody>
 
-              {filteredRecords.map((record) => (
+              {recordsLoading && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-10 text-center text-sm font-semibold text-[#9CA3AF]"
+                  >
+                    Loading repair records...
+                  </td>
+                </tr>
+              )}
+
+              {!recordsLoading && recordsError && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-10 text-center text-sm font-semibold text-[#DC2626]"
+                  >
+                    {recordsError}
+                  </td>
+                </tr>
+              )}
+
+              {!recordsLoading && !recordsError && filteredRecords.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-10 text-center text-sm font-semibold text-[#9CA3AF]"
+                  >
+                    No repair records found
+                  </td>
+                </tr>
+              )}
+
+              {!recordsLoading && !recordsError && filteredRecords.map((record) => (
 
                 <tr
                   key={record.id}
@@ -487,7 +455,25 @@ export default function RepairRecords() {
         {/* MOBILE CARDS */}
         <div className="xl:hidden p-4 space-y-4">
 
-          {filteredRecords.map((record) => (
+          {recordsLoading && (
+            <div className="rounded-[24px] border border-[#ECECEC] bg-[#FAFAFA] p-6 text-center text-sm font-semibold text-[#9CA3AF]">
+              Loading repair records...
+            </div>
+          )}
+
+          {!recordsLoading && recordsError && (
+            <div className="rounded-[24px] border border-red-100 bg-red-50 p-6 text-center text-sm font-semibold text-[#DC2626]">
+              {recordsError}
+            </div>
+          )}
+
+          {!recordsLoading && !recordsError && filteredRecords.length === 0 && (
+            <div className="rounded-[24px] border border-[#ECECEC] bg-[#FAFAFA] p-6 text-center text-sm font-semibold text-[#9CA3AF]">
+              No repair records found
+            </div>
+          )}
+
+          {!recordsLoading && !recordsError && filteredRecords.map((record) => (
 
             <div
               key={record.id}
@@ -846,11 +832,29 @@ export default function RepairRecords() {
           />
 
           <InfoRow
-            last
             label="Date"
             value={
               <span className="font-black text-[#111827]">
                 {selectedRecord.date}
+              </span>
+            }
+          />
+
+          <InfoRow
+            label="Photos"
+            value={
+              <span className="font-black text-[#111827]">
+                {selectedRecord.photos?.length || 0}
+              </span>
+            }
+          />
+
+          <InfoRow
+            last
+            label="Certificates"
+            value={
+              <span className="font-black text-[#111827]">
+                {selectedRecord.certificates?.length || 0}
               </span>
             }
           />
