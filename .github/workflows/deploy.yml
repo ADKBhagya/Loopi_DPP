@@ -19,17 +19,26 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
 
           script: |
+            set -e
+
             cd /var/www/Loopi_DPP
 
             git reset --hard
             git clean -fd
-            git pull origin main --rebase
+            git pull origin main
 
             cd backend
-            npm install
-            pm2 restart loopi-backend || pm2 start server.js --name loopi-backend
+            npm ci || npm install
+            pm2 restart loopi-backend --update-env || pm2 start server.js --name loopi-backend
+            pm2 save
 
             cd ../frontend
             rm -rf node_modules
-            npm install
+            npm ci || npm install
             npm run build
+
+            echo "Frontend build:"
+            ls -la dist
+            grep -o "assets/index-[^\"]*\.js" dist/index.html || true
+
+            curl -fsS http://127.0.0.1:5000/ || true

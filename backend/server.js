@@ -22,6 +22,11 @@ import lifecycleRoutes from "./routes/lifecycleRoutes.js";
 import blockchainRoutes from "./routes/blockchainRoutes.js";
 import logisticsRoutes from "./routes/logisticsRoutes.js";
 import retailerRoutes from "./routes/retailerRoutes.js";
+import consumerRoutes from "./routes/consumerRoutes.js";
+import repairCenterRoutes from "./routes/repairCenterRoutes.js";
+import recyclerRoutes from "./routes/recyclerRoutes.js";
+import authorityRoutes from "./routes/authorityRoutes.js";
+import auditorRoutes from "./routes/auditorRoutes.js";
 
 import { sendResetEmail } from "./utils/emailService.js";
 
@@ -50,6 +55,7 @@ connectDB();
 app.use(cors({
   origin: [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "https://loopidpp.online"
   ],
   credentials: true
@@ -75,6 +81,11 @@ app.use("/api/lifecycle", lifecycleRoutes);
 app.use("/api/blockchain", blockchainRoutes);
 app.use("/api/logistics", logisticsRoutes);
 app.use("/api/retailer", retailerRoutes);
+app.use("/api/consumer", consumerRoutes);
+app.use("/api/repair-center", repairCenterRoutes);
+app.use("/api/recycler", recyclerRoutes);
+app.use("/api/authority", authorityRoutes);
+app.use("/api/auditor", auditorRoutes);
 /* =========================
    TEST ROUTE
 ========================= */
