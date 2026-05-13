@@ -7,6 +7,10 @@ const shipmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Garment",
     },
+    retailerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     product: String,
     from: String,
     to: String,

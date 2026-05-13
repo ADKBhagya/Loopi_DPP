@@ -1,4 +1,5 @@
 import Garment from "../models/Garment.js";
+import { saveUploadedFile } from "../services/fileStorageService.js";
 
 import {
   createBlockchainTransaction,
@@ -38,9 +39,26 @@ export const createGarment = async (req, res) => {
       });
     }
 
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Garment image is required",
+      });
+    }
+
     /* =========================================
     CREATE GARMENT
     ========================================= */
+
+    let parsedMaterials = materials;
+    if (typeof materials === "string") {
+      try {
+        parsedMaterials = JSON.parse(materials || "[]");
+      } catch {
+        parsedMaterials = materials.split(",").map((item) => item.trim()).filter(Boolean);
+      }
+    }
+
+    const image = await saveUploadedFile(req.file, "garments");
 
     const garment = await Garment.create({
 
@@ -52,10 +70,13 @@ export const createGarment = async (req, res) => {
       batchNumber,
       quantity,
       location,
-      materials,
+      materials: parsedMaterials,
       carbon,
       water,
       logisticsProvider,
+      imageUrl: image?.url,
+      imageKey: image?.key,
+      imageStorageProvider: image?.provider,
       status: status || "draft",
 
       createdBy: req.user._id,
@@ -111,6 +132,9 @@ export const createGarment = async (req, res) => {
 
         water:
           garment.water,
+
+        imageUrl:
+          garment.imageUrl,
 
       },
 
