@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { apiUrl } from "../lib/api";
 
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import MarkEmailReadRoundedIcon from "@mui/icons-material/MarkEmailReadRounded";
@@ -41,7 +42,7 @@ function ForgotPassword() {
     setMessage("");
 
     try {
-      const res = await fetch(`https://loopidpp.online/api/auth/forgot-password`, {
+      const res = await fetch(apiUrl("/auth/forgot-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

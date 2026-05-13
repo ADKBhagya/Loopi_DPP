@@ -1,6 +1,7 @@
 import logo from "../assets/logo.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { apiUrl } from "../lib/api";
 
 
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
@@ -71,7 +72,7 @@ function Login() {
     setLoading(true); //  START LOADING
 
     try {
-      const res = await fetch(`https://loopidpp.online/api/auth/login`, {
+      const res = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
