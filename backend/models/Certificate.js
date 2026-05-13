@@ -41,6 +41,12 @@ const certificateSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    fileKey: {
+      type: String,
+    },
+    fileStorageProvider: {
+      type: String,
+    },
 
     blockchainHash: {
       type: String,

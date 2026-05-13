@@ -14,6 +14,17 @@ import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
 import ModalPortal from "../../../components/modals/ModalPortal";
 import { apiFetch } from "../../../lib/api";
 
+type ToastType = "success" | "error";
+
+function assetUrl(value?: string) {
+  if (!value) return "";
+  if (/^(https?:|data:|blob:)/.test(value)) return value;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const origin = apiBase.replace(/\/api\/?$/, "") || window.location.origin;
+  return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
 
 
 
@@ -137,7 +148,7 @@ export default function Certificates() {
         <div className="space-y-4">
 
           {apiUnavailable ? (
-            <div className="py-16 text-center text-sm text-orange-500">
+            <div className="py-16 text-center text-sm text-red-500">
               Certificate backend is not deployed in production yet
             </div>
           ) : filteredCertificates.length === 0 ? (
@@ -157,6 +168,7 @@ export default function Certificates() {
                 expires={formatDate(certificate.expiryDate)}
                 hash={certificate.blockchainHash}
                 fileName={certificate.fileName}
+                fileUrl={certificate.fileUrl}
                 expiring={isExpiringSoon(certificate.expiryDate)}
               />
             ))
@@ -168,14 +180,13 @@ export default function Certificates() {
         <UploadCertificateModal
           onClose={() => setOpenModal(false)}
           onUploaded={fetchCertificates}
-          apiUnavailable={apiUnavailable}
         />
       )}
     </div>
   );
 }
 
-export function UploadCertificateModal({ onClose, onUploaded, apiUnavailable }: any) {
+export function UploadCertificateModal({ onClose, onUploaded }: any) {
   const [form, setForm] = useState({
     garment: "",
     type: "",
@@ -187,7 +198,7 @@ const [showDropdown, setShowDropdown] = useState(false);
 
 
   const [errors, setErrors] = useState<any>({});
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
 
   const [garments, setGarments] = useState<any[]>([]);
 
@@ -216,9 +227,9 @@ const [showDropdown, setShowDropdown] = useState(false);
 
   const types = ["GOTS", "OEKO-TEX", "LCA", "EU Ecolabel", "RCS"];
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
   };
 
   const validate = () => {
@@ -234,36 +245,36 @@ const [showDropdown, setShowDropdown] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
   const handleUpload = async () => {
-    if (apiUnavailable) {
-      showToast("Certificate backend is not deployed yet");
-      return;
-    }
-
     if (!validate()) {
-      showToast("Please complete all fields");
+      showToast("Please complete all fields", "error");
       return;
     }
 
     try {
+      const payload = new FormData();
+      payload.append("garmentId", form.garment);
+      payload.append("certificateType", form.type);
+      payload.append("issuer", "LOOPI Verification Authority");
+      payload.append("file", form.file);
+
       await apiFetch("/certificates", {
         method: "POST",
-        body: JSON.stringify({
-          garmentId: form.garment,
-          certificateType: form.type,
-          issuer: "LOOPI Verification Authority",
-          fileName: form.file.name,
-          fileUrl: "",
-        }),
+        body: payload,
       });
 
-      showToast("Certificate uploaded & verified");
+      showToast("Certificate uploaded & verified", "success");
       onUploaded?.();
 
       setTimeout(() => {
         onClose();
       }, 1200);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Upload failed");
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Certificate backend is not deployed in production yet",
+        "error"
+      );
     }
   };
 
@@ -275,9 +286,15 @@ const [showDropdown, setShowDropdown] = useState(false);
 
       {/* TOAST */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
-          <CheckCircleOutlineOutlinedIcon />
-          <span className="text-sm font-medium">{toast}</span>
+        <div
+          className={`fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-red-50 border-red-200 text-red-700"
+          }`}
+        >
+          {toast.type === "success" ? <CheckCircleOutlineOutlinedIcon /> : <CloseOutlinedIcon />}
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
 
@@ -404,7 +421,7 @@ const [showDropdown, setShowDropdown] = useState(false);
                     setForm({ ...form, file });
                     setErrors((prev:any) => ({ ...prev, file: false }));
                     } else {
-                    showToast("Only PDF allowed");
+                    showToast("Only PDF allowed", "error");
                     }
                 }}
                 onClick={() => document.getElementById("fileInput")?.click()}
@@ -447,7 +464,7 @@ const [showDropdown, setShowDropdown] = useState(false);
                         setForm({ ...form, file });
                         setErrors((prev:any) => ({ ...prev, file: false }));
                         } else {
-                        showToast("Only PDF allowed");
+                        showToast("Only PDF allowed", "error");
                         }
                     }}
                     />
@@ -533,7 +550,7 @@ function shortHash(value?: string) {
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
-function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expiring, hash, fileName }: any) {
+function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expiring, hash, fileName, fileUrl }: any) {
 
   const tagStyles: any = {
     green: "bg-green-100 text-green-700",
@@ -584,12 +601,27 @@ function CertCard({ title, tag, tagColor, garment, issuer, issued, expires, expi
       {/* ACTION BUTTONS (FIX STYLE) */}
       <div className="flex gap-2">
 
-        <button className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs flex items-center gap-1 transition">
+        <button
+          onClick={() => {
+            const url = assetUrl(fileUrl);
+            if (!url) return;
+            window.open(url, "_blank", "noopener,noreferrer");
+          }}
+          disabled={!fileUrl}
+          className={`px-3 py-2 rounded-lg text-xs flex items-center gap-1 transition ${
+            fileUrl
+              ? "bg-gray-100 hover:bg-gray-200 text-gray-600"
+              : "bg-gray-50 text-gray-300 cursor-not-allowed"
+          }`}
+        >
           <DownloadOutlinedIcon style={{ fontSize: 14 }} />
           {fileName ? "PDF" : "File"}
         </button>
 
-        <button className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs flex items-center gap-1 transition">
+        <button
+          onClick={() => navigator.clipboard?.writeText(hash || "")}
+          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs flex items-center gap-1 transition"
+        >
           <ContentCopyOutlinedIcon style={{ fontSize: 14 }} />
           Hash
         </button>
