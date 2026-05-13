@@ -14,12 +14,17 @@ import DirectionsBoatOutlinedIcon from "@mui/icons-material/DirectionsBoatOutlin
 import FlightOutlinedIcon from "@mui/icons-material/FlightOutlined";
 import ModalPortal from "../../../components/modals/ModalPortal";
 import { apiFetch } from "../../../lib/api";
+import { downloadTextFile } from "../../../lib/download";
+
+type ToastType = "success" | "error";
 
 export default function Shipments() {
 
   const [showModal, setShowModal] = useState(false); 
+  const [trackingShipment, setTrackingShipment] = useState<any>(null);
   const [shipments, setShipments] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
 
   const fetchShipments = async () => {
   try {
@@ -45,8 +50,49 @@ export default function Shipments() {
   const deliveredCount = shipments.filter((s) => s.status === "delivered").length;
   const activeCount = shipments.filter((s) => s.status !== "delivered").length;
 
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleExportPod = (shipment: any) => {
+    if (shipment.status !== "delivered") {
+      showToast("Proof of delivery is only available after delivery", "error");
+      return;
+    }
+
+    const body = [
+      "LOOPI Proof of Delivery",
+      `Shipment: ${shipment.shipmentId || shipment._id}`,
+      `Product: ${shipment.product || "N/A"}`,
+      `Route: ${shipment.from || "N/A"} -> ${shipment.to || "N/A"}`,
+      `Provider: ${shipment.provider || "N/A"}`,
+      `Delivered: ${shipment.actualArrivalDate || shipment.updatedAt || "Recorded on chain"}`,
+    ].join("\n");
+
+    downloadTextFile(`${shipment.shipmentId || shipment._id}-pod.txt`, body);
+    showToast("Proof of delivery exported", "success");
+  };
+
   return (
     <>
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-red-50 border-red-200 text-red-700"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircleRoundedIcon style={{ fontSize: 18 }} />
+          ) : (
+            <CloseOutlinedIcon style={{ fontSize: 18 }} />
+          )}
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
+      )}
+
       <div>
         <div className="grid grid-cols-4 gap-4 mb-6">
           <Stat icon={<LocalShippingOutlinedIcon />} value={activeCount} label="ACTIVE SHIPMENTS" color="blue" />
@@ -94,6 +140,11 @@ export default function Shipments() {
               progress={s.status === "delivered" ? 100 : s.status === "in_transit" ? 60 : 10}
               eta={s.eta}
               delivered={s.status === "delivered"}
+              onTrack={() => setTrackingShipment(s)}
+              onExportPod={() => handleExportPod(s)}
+              onViewChain={() => {
+                window.location.href = "/manufacturer/explorer";
+              }}
             />
           ))}
         </div>
@@ -104,6 +155,13 @@ export default function Shipments() {
   onClose={() => setShowModal(false)}
   refresh={fetchShipments}
 />
+      )}
+
+      {trackingShipment && (
+        <TrackingModal
+          shipment={trackingShipment}
+          onClose={() => setTrackingShipment(null)}
+        />
       )}
       
        
@@ -131,7 +189,7 @@ function Stat({ icon, value, label, color }: any) {
   );
 }
 
-function ShipmentCard({ id, status, garments, route, company, co2, progress, eta, delivered }: any) {
+function ShipmentCard({ id, status, garments, route, company, co2, progress, eta, delivered, onTrack, onExportPod, onViewChain }: any) {
   return (
     <div className="border-b border-gray-100 last:border-b-0 py-6">
       <div className="flex justify-between items-start">
@@ -183,17 +241,26 @@ function ShipmentCard({ id, status, garments, route, company, co2, progress, eta
         </div>
 
         <div className="flex gap-3 mt-4">
-          <button className="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold flex items-center gap-2">
+          <button
+            onClick={onTrack}
+            className="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold flex items-center gap-2 hover:bg-blue-100 transition"
+          >
             <PublicOutlinedIcon style={{ fontSize: 15 }} />
             Track Live
           </button>
 
-          <button className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold flex items-center gap-2">
+          <button
+            onClick={onExportPod}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold flex items-center gap-2 hover:bg-gray-200 transition"
+          >
             <DownloadOutlinedIcon style={{ fontSize: 15 }} />
             Export PoD
           </button>
 
-          <button className="px-4 py-2 rounded-lg bg-green-50 text-green-700 text-xs font-bold flex items-center gap-2">
+          <button
+            onClick={onViewChain}
+            className="px-4 py-2 rounded-lg bg-green-50 text-green-700 text-xs font-bold flex items-center gap-2 hover:bg-green-100 transition"
+          >
             <TagOutlinedIcon style={{ fontSize: 15 }} />
             View on Chain
           </button>
@@ -203,16 +270,87 @@ function ShipmentCard({ id, status, garments, route, company, co2, progress, eta
   );
 }
 
+function TrackingModal({ shipment, onClose }: any) {
+  const route = `${shipment.from || "Origin pending"} -> ${shipment.to || "Destination pending"}`;
+  const progress = shipment.status === "delivered" ? 100 : shipment.status === "in_transit" ? 60 : 15;
+
+  return (
+    <ModalPortal>
+      <>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]" onClick={onClose} />
+        <div className="fixed inset-0 flex items-center justify-center z-[9999]">
+          <div className="w-[520px] bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-5 border-b">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                  <PublicOutlinedIcon />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">Live Shipment Tracking</h2>
+                  <p className="text-sm text-gray-400">{shipment.shipmentId || shipment._id}</p>
+                </div>
+              </div>
+              <button onClick={onClose}>
+                <CloseOutlinedIcon />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+                <p className="text-xs text-blue-600 font-bold">CURRENT ROUTE</p>
+                <p className="font-semibold text-gray-800 mt-1">{route}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  {shipment.currentLocation || shipment.from || "Location signal pending"}
+                </p>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] font-bold text-gray-400 mb-2">
+                  <span>DELIVERY PROGRESS</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-blue-500" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Info label="PROVIDER" value={shipment.provider || "N/A"} />
+                <Info label="ETA" value={shipment.eta || "N/A"} />
+                <Info label="TRANSPORT" value={shipment.transport || "N/A"} />
+                <Info label="STATUS" value={(shipment.status || "in_transit").replace(/_/g, " ").toUpperCase()} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    </ModalPortal>
+  );
+}
+
+function Info({ label, value }: any) {
+  return (
+    <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+      <p className="text-[10px] text-gray-400 font-semibold">{label}</p>
+      <p className="font-semibold text-gray-800">{value}</p>
+    </div>
+  );
+}
+
 function CreateShipmentModal({ onClose, refresh }: any) {
   const [form, setForm] = useState({
     shipmentId: "",
+    garmentId: "",
     product: "",
     from: "",
     to: "",
     transport: "Road",
     provider: "",
     eta: "",
+    retailerId: "",
   });
+  const [retailers, setRetailers] = useState<any[]>([]);
+  const [garments, setGarments] = useState<any[]>([]);
   
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -226,6 +364,18 @@ function CreateShipmentModal({ onClose, refresh }: any) {
     setForm((prev) => ({ ...prev, shipmentId: id }));
   }, []);
 
+  useEffect(() => {
+    apiFetch<any[]>("/manufacturer/retailers")
+      .then((data) => setRetailers(Array.isArray(data) ? data : []))
+      .catch(() => setRetailers([]));
+  }, []);
+
+  useEffect(() => {
+    apiFetch<any[]>("/manufacturer/garments")
+      .then((data) => setGarments(Array.isArray(data) ? data : []))
+      .catch(() => setGarments([]));
+  }, []);
+
   const providerOptions: any = {
     Road: ["DHL Road Freight", "DB Schenker Trucking", "LOOPI Road Partner"],
     Ship: ["Maersk Line", "MSC Shipping", "Ocean DPP Logistics"],
@@ -233,11 +383,11 @@ function CreateShipmentModal({ onClose, refresh }: any) {
   };
 
   const [errors, setErrors] = useState<any>({});
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
   };
 
   const validate = () => {
@@ -264,7 +414,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
 
   const handleCreate = async () => {
     if (!validate()) {
-      showToast("Fill all fields");
+      showToast("Fill all fields", "error");
       return;
     }
 
@@ -277,7 +427,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
         }),
       });
 
-      showToast("Shipment created");
+      showToast("Shipment created", "success");
       await refresh?.();
 
       setTimeout(() => {
@@ -286,7 +436,7 @@ function CreateShipmentModal({ onClose, refresh }: any) {
 
     } catch (err) {
       console.error(err);
-      showToast(err instanceof Error ? err.message : "Shipment creation failed");
+      showToast(err instanceof Error ? err.message : "Shipment creation failed", "error");
     }
   };
 
@@ -301,9 +451,15 @@ function CreateShipmentModal({ onClose, refresh }: any) {
 
       {/* TOAST */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
-          <CheckCircleRoundedIcon />
-          <span className="text-sm font-medium">{toast}</span>
+        <div
+          className={`fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-red-50 border-red-200 text-red-700"
+          }`}
+        >
+          {toast.type === "success" ? <CheckCircleRoundedIcon /> : <CloseOutlinedIcon />}
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
 
@@ -342,12 +498,21 @@ function CreateShipmentModal({ onClose, refresh }: any) {
               className="flex-1 bg-transparent outline-none text-sm text-gray-500"
             />
 
-            <Input
+            <Select
               label="Product Name"
               icon={<Inventory2OutlinedIcon />}
               value={form.product}
               error={errors.product}
-              onChange={(v:any) => setForm({ ...form, product: v })}
+              options={
+                garments.length > 0
+                  ? garments.map((garment) => garment.productName || garment.sku || garment._id)
+                  : []
+              }
+              onChange={(v:any) => {
+                const garment = garments.find((item) => (item.productName || item.sku || item._id) === v);
+                setForm({ ...form, product: v, garmentId: garment?._id || "" });
+                setErrors((prev:any) => ({ ...prev, product: false }));
+              }}
             />
 
             <Select
@@ -372,14 +537,19 @@ function CreateShipmentModal({ onClose, refresh }: any) {
               icon={<PublicOutlinedIcon style={{ fontSize: 18 }} />}
               value={form.to}
               error={errors.to}
-              options={[
-                "Berlin, DE",
-                "Paris, FR",
-                "London, UK",
-                "Tokyo, JP",
-              ]}
+              options={
+                retailers.length > 0
+                  ? retailers.map((retailer) => retailer.destination)
+                  : [
+                    "Berlin, DE",
+                    "Paris, FR",
+                    "London, UK",
+                    "Tokyo, JP",
+                  ]
+              }
               onChange={(v:any) => {
-                setForm({ ...form, to: v });
+                const retailer = retailers.find((item) => item.destination === v);
+                setForm({ ...form, to: v, retailerId: retailer?.id || "" });
                 setErrors((prev:any) => ({ ...prev, to: false }));
               }}
             />

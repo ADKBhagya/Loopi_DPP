@@ -13,6 +13,9 @@ const garmentSchema = new mongoose.Schema({
   carbon: String,
   water: String,
   logisticsProvider: String,
+  imageUrl: String,
+  imageKey: String,
+  imageStorageProvider: String,
   currentOwner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 import Certificate from "../models/Certificate.js";
 import Garment from "../models/Garment.js";
+import { saveUploadedFile } from "../services/fileStorageService.js";
 
 import {
   createBlockchainTransaction,
@@ -38,7 +39,7 @@ export const createCertificate = async (req, res) => {
       });
     }
 
-    if (!fileName) {
+    if (!fileName && !req.file) {
       return res.status(400).json({
         message: "Certificate file is required",
       });
@@ -67,6 +68,8 @@ export const createCertificate = async (req, res) => {
 
     /* ================= CREATE CERTIFICATE ================= */
 
+    const storedFile = await saveUploadedFile(req.file, "certificates");
+
     const certificate = await Certificate.create({
 
       garmentId,
@@ -80,9 +83,17 @@ export const createCertificate = async (req, res) => {
 
       expiryDate,
 
-      fileName,
+      fileName:
+        storedFile?.fileName || fileName,
 
-      fileUrl,
+      fileUrl:
+        storedFile?.url || fileUrl,
+
+      fileKey:
+        storedFile?.key,
+
+      fileStorageProvider:
+        storedFile?.provider,
 
       blockchainHash,
 

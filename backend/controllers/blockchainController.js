@@ -11,8 +11,12 @@ export const getTransactions = async (req, res) => {
     const transactions =
       await Transaction.find()
         .populate(
-          "createdBy",
+          "performedBy",
           "fullName email role"
+        )
+        .populate(
+          "garmentId",
+          "productName sku batchNumber category"
         )
         .sort({ createdAt: -1 });
 
@@ -51,7 +55,7 @@ export const getBlockchainStats =
           .sort({ createdAt: -1 });
 
       const latestBlock =
-        8442109;
+        latestTransaction?.blockNumber || 8442109;
 
       const activeNodes =
         4;
@@ -67,7 +71,13 @@ export const getBlockchainStats =
         latestTransaction,
 
         network:
-          "LOOPI MAINNET",
+          process.env.BLOCKCHAIN_NETWORK || "Polygon Amoy Testnet",
+
+        chainId:
+          Number(process.env.BLOCKCHAIN_CHAIN_ID || 80002),
+
+        contractAddress:
+          process.env.DPP_CONTRACT_ADDRESS || "",
 
         smartContract:
           "v3.2.1",
@@ -107,6 +117,14 @@ export const getGarmentTransactions =
         await Transaction.find({
           garmentId,
         })
+          .populate(
+            "performedBy",
+            "fullName email role"
+          )
+          .populate(
+            "garmentId",
+            "productName sku batchNumber category"
+          )
           .sort({ createdAt: -1 });
 
       res.status(200).json(

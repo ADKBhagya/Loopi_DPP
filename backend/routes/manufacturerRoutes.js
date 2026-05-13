@@ -12,6 +12,8 @@ import {
 
   getTransactions,
 
+  getManufacturerRetailers,
+
 } from "../controllers/manufacturerController.js";
 
 import {
@@ -57,6 +59,13 @@ router.get(
   verifyToken,
   allowRoles("Manufacturer"),
   getTransactions
+);
+
+router.get(
+  "/retailers",
+  verifyToken,
+  allowRoles("Manufacturer"),
+  getManufacturerRetailers
 );
 
 /* ====================================

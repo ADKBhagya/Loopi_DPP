@@ -1,4 +1,6 @@
 import Shipment from "../models/Shipment.js";
+import Garment from "../models/Garment.js";
+import User from "../models/user.js";
 
 import {
   createBlockchainTransaction,
@@ -11,16 +13,41 @@ CREATE SHIPMENT
 export const createShipment = async (req, res) => {
 
   try {
+    const retailer =
+      req.body.retailerId
+        ? await User.findById(req.body.retailerId)
+        : null;
 
     const shipment =
       await Shipment.create({
 
         ...req.body,
+        to:
+          retailer?.organization ||
+          retailer?.fullName ||
+          req.body.to,
 
         createdBy:
           req.user._id,
 
       });
+
+    if (shipment.garmentId) {
+      const garment = await Garment.findById(shipment.garmentId);
+
+      if (garment) {
+        garment.retailStatus = "in_transit";
+        garment.status = "in_transit";
+
+        if (retailer) {
+          garment.currentOwner = retailer._id;
+          garment.currentOwnerName = retailer.organization || retailer.fullName;
+          garment.currentOwnerRole = "Retailer";
+        }
+
+        await garment.save();
+      }
+    }
 
     /* =====================================
        BLOCKCHAIN TRANSACTION

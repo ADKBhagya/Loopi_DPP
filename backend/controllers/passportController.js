@@ -2,6 +2,7 @@ import Garment from "../models/Garment.js";
 import Certificate from "../models/Certificate.js";
 import Shipment from "../models/Shipment.js";
 import Transaction from "../models/Transaction.js";
+import OwnershipTransfer from "../models/OwnershipTransfer.js";
 
 /* ======================================================
 GET COMPLETE DIGITAL PRODUCT PASSPORT
@@ -52,6 +53,11 @@ export const getPassportByGarmentId = async (req, res) => {
         garmentId: garment._id,
       }).sort({ createdAt: -1 });
 
+    const ownershipTransfers =
+      await OwnershipTransfer.find({
+        garmentId: garment._id,
+      }).sort({ createdAt: 1 });
+
     /* ===============================
        PASSPORT SUMMARY
     =============================== */
@@ -76,12 +82,28 @@ export const getPassportByGarmentId = async (req, res) => {
       },
 
       ...shipments.map((shipment) => ({
-        owner: shipment.destination || "Unknown",
-        organization: shipment.destination || "Distribution Center",
+        owner: shipment.to || shipment.destination || "Unknown",
+        organization: shipment.to || shipment.destination || "Distribution Center",
         date: shipment.createdAt,
         status: "TRANSFERRED",
       })),
+
+      ...ownershipTransfers.map((transfer) => ({
+        owner: transfer.toName || transfer.toRole || "Unknown",
+        organization: transfer.toRole || "Owner",
+        date: transfer.createdAt,
+        status: String(transfer.transferType || "ownership").toUpperCase(),
+      })),
     ];
+
+    if (garment.currentOwnerName || garment.currentOwnerRole) {
+      ownershipHistory.push({
+        owner: garment.currentOwnerName || garment.currentOwnerRole,
+        organization: garment.currentOwnerRole || "Current Owner",
+        date: garment.updatedAt,
+        status: "CURRENT_OWNER",
+      });
+    }
 
     /* ===============================
        LIFECYCLE TRACKING
@@ -106,12 +128,12 @@ export const getPassportByGarmentId = async (req, res) => {
 
       {
         stage: "Retail",
-        completed: false,
+        completed: ["in_store", "sold"].includes(garment.retailStatus),
       },
 
       {
         stage: "Consumer Usage",
-        completed: false,
+        completed: garment.retailStatus === "sold" || garment.currentOwnerRole === "Consumer",
       },
 
       {

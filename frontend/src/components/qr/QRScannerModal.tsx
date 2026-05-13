@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -10,7 +10,7 @@ interface Props {
   open: boolean;
   loading?: boolean;
   onClose: () => void;
-  onScan: () => void;
+  onScan: (value?: string) => void | Promise<void>;
 }
 
 export default function QRScannerModal({
@@ -21,22 +21,122 @@ export default function QRScannerModal({
 
   const [scanning, setScanning] =
     useState(false);
+  const [cameraError, setCameraError] =
+    useState("");
+  const [manualValue, setManualValue] =
+    useState("");
+  const [cameraReady, setCameraReady] =
+    useState(false);
+  const videoRef =
+    useRef<HTMLVideoElement | null>(null);
+  const streamRef =
+    useRef<MediaStream | null>(null);
+  const scannedRef =
+    useRef(false);
+  const onScanRef =
+    useRef(onScan);
+
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let stopped = false;
+    let frame = 0;
+
+    const stopCamera = () => {
+      stopped = true;
+      if (frame) cancelAnimationFrame(frame);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setCameraReady(false);
+    };
+
+    const startCamera = async () => {
+      try {
+        setCameraError("");
+        scannedRef.current = false;
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setCameraError("Camera scanning is not available in this browser");
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+          },
+          audio: false,
+        });
+
+        if (stopped) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          setCameraReady(true);
+        }
+
+        const Detector = (window as any).BarcodeDetector;
+
+        if (!Detector) {
+          setCameraError("Camera opened. Use manual entry if QR is not detected automatically.");
+          return;
+        }
+
+        const detector = new Detector({ formats: ["qr_code"] });
+
+        const detect = async () => {
+          if (stopped || scannedRef.current || !videoRef.current) return;
+
+          try {
+            const codes = await detector.detect(videoRef.current);
+            const value = codes?.[0]?.rawValue;
+
+            if (value) {
+              scannedRef.current = true;
+              setScanning(true);
+              stopCamera();
+              Promise.resolve(onScanRef.current(value)).finally(() => setScanning(false));
+              return;
+            }
+          } catch {
+            // Keep scanning; camera frames can briefly fail while focusing.
+          }
+
+          frame = requestAnimationFrame(detect);
+        };
+
+        frame = requestAnimationFrame(detect);
+      } catch (error) {
+        setCameraError(
+          error instanceof Error
+            ? error.message
+            : "Camera permission denied or unavailable"
+        );
+      }
+    };
+
+    startCamera();
+
+    return stopCamera;
+  }, [open]);
 
   if (!open) return null;
 
-  const handleSimulateScan = () => {
+  const handleManualScan = () => {
 
     if (scanning) return;
 
     setScanning(true);
-
-    setTimeout(() => {
-
-      setScanning(false);
-
-      onScan();
-
-    }, 2200);
+    Promise.resolve(onScanRef.current(manualValue.trim() || undefined)).finally(() => setScanning(false));
   };
 
   return createPortal(
@@ -144,7 +244,14 @@ export default function QRScannerModal({
               {/* GLOW */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.18),transparent_65%)]" />
 
-              <QRScanOverlay loading={scanning} />
+              <video
+                ref={videoRef}
+                muted
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+
+              <QRScanOverlay loading={scanning || !cameraReady} />
 
               {!scanning && (
                 <div className="absolute bottom-7 left-0 right-0 flex justify-center">
@@ -167,7 +274,7 @@ export default function QRScannerModal({
                         text-white/75
                       "
                     >
-                      READY TO VERIFY PASSPORT
+                      {cameraError || "POINT CAMERA AT PASSPORT QR"}
                     </p>
 
                   </div>
@@ -210,9 +317,19 @@ export default function QRScannerModal({
           {/* BUTTON */}
           <div className="p-5">
 
+            <input
+              value={manualValue}
+              onChange={(event) => setManualValue(event.target.value)}
+              placeholder="Manual passport ID fallback"
+              className="
+                mb-3 w-full h-11 rounded-2xl border border-white/10
+                bg-white/95 px-4 text-sm outline-none
+              "
+            />
+
             <button
-              onClick={handleSimulateScan}
-              disabled={scanning}
+              onClick={handleManualScan}
+              disabled={scanning || !manualValue.trim()}
               className="
                 w-full h-[58px]
                 rounded-2xl
@@ -253,7 +370,7 @@ export default function QRScannerModal({
                     }}
                   />
 
-                  SIMULATE SCAN
+                  VERIFY PASSPORT
                 </>
               )}
 

@@ -13,6 +13,7 @@ import {
   getRetailerSales,
   scanRetailerPassport,
   transferRetailerOwnership,
+  updateRetailerInventoryStatus,
 } from "../controllers/retailerController.js";
 
 const router = express.Router();
@@ -24,6 +25,7 @@ const retailerAccess = [
 
 router.get("/overview", retailerAccess, getRetailerOverview);
 router.get("/inventory", retailerAccess, getRetailerInventory);
+router.patch("/inventory/:id/status", retailerAccess, updateRetailerInventoryStatus);
 router.get("/passport/:id", retailerAccess, getRetailerPassport);
 router.post("/passport/scan", retailerAccess, scanRetailerPassport);
 router.post("/passport/:id/scan", retailerAccess, scanRetailerPassport);

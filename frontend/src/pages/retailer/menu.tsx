@@ -1,6 +1,5 @@
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import QrCodeScannerOutlinedIcon from "@mui/icons-material/QrCodeScannerOutlined";
-import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 
@@ -15,12 +14,6 @@ const retailerMenu = [
     label: "Passport Scanner",
     path: "/retailer/passport-scanner",
     icon: <QrCodeScannerOutlinedIcon />,
-  },
-
-  {
-    label: "Ownership",
-    path: "/retailer/ownership",
-    icon: <VerifiedUserOutlinedIcon />,
   },
 
   {

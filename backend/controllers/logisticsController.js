@@ -27,6 +27,11 @@ const formatShipment = (shipment) => ({
   eta: shipment.eta || "TBD",
   status: shipment.status || "in_transit",
   provider: shipment.provider || "Unassigned",
+  currentLocation: shipment.currentLocation || shipment.from || "Location pending",
+  vehicleId: shipment.vehicleId || `FL-${String(shipment._id).slice(-4).toUpperCase()}`,
+  driver: shipment.driver || "Unassigned",
+  actualArrivalDate: shipment.actualArrivalDate || "",
+  documents: shipment.documents || [],
   createdAt: shipment.createdAt,
   updatedAt: shipment.updatedAt,
 });
@@ -105,14 +110,31 @@ export const updateLogisticsShipment = async (req, res) => {
       return res.status(404).json({ message: "Shipment not found" });
     }
 
-    shipment.status = statusMap[status] || status || shipment.status;
+    const nextStatus = statusMap[status] || status || shipment.status;
+    const numericEmission = Number.parseFloat(String(emission || ""));
+
+    if (nextStatus === "delivered") {
+      if (!arrivalDate) {
+        return res.status(400).json({ message: "Actual arrival date is required before marking a shipment arrived" });
+      }
+
+      if (!Number.isFinite(numericEmission) || numericEmission < 0) {
+        return res.status(400).json({ message: "Valid emissions data is required before marking a shipment arrived" });
+      }
+
+      if (!Array.isArray(documents) || documents.length === 0) {
+        return res.status(400).json({ message: "Shipping documents are required before marking a shipment arrived" });
+      }
+    }
+
+    shipment.status = nextStatus;
 
     if (arrivalDate) {
       shipment.actualArrivalDate = arrivalDate;
     }
 
-    if (emission) {
-      shipment.co2 = `${emission} kg`;
+    if (Number.isFinite(numericEmission)) {
+      shipment.co2 = `${numericEmission.toFixed(2)} kg`;
     }
 
     if (documents.length > 0) {
@@ -131,7 +153,8 @@ export const updateLogisticsShipment = async (req, res) => {
         shipmentId: shipment.shipmentId,
         status: shipment.status,
         arrivalDate,
-        emission,
+        emission: Number.isFinite(numericEmission) ? numericEmission : emission,
+        documents,
       },
     });
 
@@ -162,8 +185,12 @@ export const getProofOfDelivery = async (req, res) => {
         shipment: shipment.shipmentId || `SHP-${String(shipment._id).slice(-4).toUpperCase()}`,
         garment: shipment.product || "Unassigned garment",
         hash,
+        signature: hash,
         recipient: shipment.to || "Recipient pending",
         signedAt: shipment.updatedAt || shipment.createdAt,
+        arrivalDate: shipment.actualArrivalDate || "",
+        emissions: shipment.co2 || "0.00 kg",
+        documents: shipment.documents || [],
       };
     });
 

@@ -73,9 +73,14 @@ const buildInventoryItem = ({
 
   const latestShipment = garmentShipments[0];
   const latestSale = garmentSales[0];
+  const verifiedCertificates = garmentCertificates.filter(
+    (item) => item.verificationStatus === "verified"
+  );
 
   const retailStatus = latestSale
     ? "SOLD"
+    : garment.retailStatus === "sold"
+      ? "SOLD"
     : garment.retailStatus === "in_transit" ||
       latestShipment?.status === "in_transit"
         ? "IN TRANSIT"
@@ -90,9 +95,14 @@ const buildInventoryItem = ({
       garment.material ||
       garment.materials?.join(", ") ||
       "Material pending",
-    grade: garmentCertificates.some((item) => item.verificationStatus === "verified")
-      ? "A"
-      : "Pending",
+    grade:
+      verifiedCertificates.length >= 2
+        ? "A+"
+        : verifiedCertificates.length === 1
+          ? "A"
+          : garmentCertificates.length > 0
+            ? "B+"
+            : "Pending",
     price: formatCurrency(garment.retailPrice || latestSale?.salePrice || 0, garment.currency),
     rawPrice: garment.retailPrice || latestSale?.salePrice || 0,
     status: retailStatus,
@@ -159,7 +169,25 @@ export const getRetailerInventory = async (req, res) => {
         OwnershipTransfer.find().sort({ createdAt: -1 }),
       ]);
 
-    const inventory = garments.map((garment) =>
+    const retailerShipmentGarmentIds = new Set(
+      shipments
+        .filter((shipment) => String(shipment.retailerId || "") === String(req.user._id))
+        .map((shipment) => String(shipment.garmentId || ""))
+        .filter(Boolean)
+    );
+
+    const retailerGarments = garments.filter((garment) => {
+      if (retailerShipmentGarmentIds.size === 0) {
+        return true;
+      }
+
+      return (
+        retailerShipmentGarmentIds.has(String(garment._id)) ||
+        String(garment.currentOwner || "") === String(req.user._id)
+      );
+    });
+
+    const inventory = retailerGarments.map((garment) =>
       buildInventoryItem({ garment, certificates, shipments, sales, ownership })
     );
 
@@ -176,6 +204,80 @@ export const getRetailerInventory = async (req, res) => {
   } catch (error) {
     console.error("RETAILER INVENTORY ERROR:", error);
     res.status(500).json({ message: "Failed to fetch retailer inventory" });
+  }
+};
+
+export const updateRetailerInventoryStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const statusMap = {
+      "IN STORE": "in_store",
+      "IN TRANSIT": "in_transit",
+      SOLD: "sold",
+      in_store: "in_store",
+      in_transit: "in_transit",
+      sold: "sold",
+    };
+    const nextStatus = statusMap[status];
+
+    if (!nextStatus) {
+      return res.status(400).json({ message: "Select a valid inventory status" });
+    }
+
+    const garment = await findGarmentByIdentifier(id);
+
+    if (!garment) {
+      return res.status(404).json({ message: "Garment not found" });
+    }
+
+    garment.retailStatus = nextStatus;
+
+    if (nextStatus === "sold") {
+      garment.currentOwnerRole = "Consumer";
+      garment.currentOwnerName = garment.currentOwnerName || "Consumer";
+    } else {
+      garment.currentOwnerRole = "Retailer";
+      garment.currentOwnerName = req.user.organization || req.user.fullName || "Retailer";
+    }
+
+    await garment.save();
+
+    await createBlockchainTransaction({
+      transactionType: "RETAIL_INVENTORY_STATUS_UPDATED",
+      entityType: "Garment",
+      entityId: garment._id,
+      garmentId: garment._id,
+      user: req.user,
+      metadata: {
+        passportId: passportIdFor(garment),
+        retailStatus: nextStatus,
+      },
+    });
+
+    await LifecycleEvent.create({
+      garmentId: garment._id,
+      stage: nextStatus === "sold" ? "CONSUMER_OWNED" : nextStatus === "in_transit" ? "SHIPPED" : "RETAIL_RECEIVED",
+      description: `Retail inventory status changed to ${nextStatus.replace(/_/g, " ")}`,
+      actorRole: req.user.role,
+      actorId: req.user._id,
+      blockchainHash: hashFor(garment._id, nextStatus, Date.now()),
+      metadata: {
+        retailStatus: nextStatus,
+      },
+    });
+
+    res.status(200).json({
+      message: "Inventory status updated",
+      garment: {
+        id: garment._id,
+        passport: passportIdFor(garment),
+        retailStatus: nextStatus,
+      },
+    });
+  } catch (error) {
+    console.error("RETAILER INVENTORY STATUS ERROR:", error);
+    res.status(500).json({ message: "Failed to update inventory status" });
   }
 };
 
@@ -253,8 +355,13 @@ export const scanRetailerPassport = async (req, res) => {
     res.status(200).json({
       message: "Passport verified successfully",
       scan: {
+        garmentId: garment._id,
         passport: passportIdFor(garment),
         productName: garment.productName,
+        material: garment.material || garment.materials?.join(", "),
+        brand: garment.manufacturingCountry || garment.location || "LOOPI",
+        price: garment.retailPrice || 0,
+        owner: garment.currentOwnerName || garment.currentOwnerRole || "Retail inventory",
         status: "VERIFIED",
         blockchainHash: transaction.blockchainHash,
         scannedAt: transaction.createdAt,
@@ -287,20 +394,22 @@ export const getRetailerOwnership = async (req, res) => {
       hash: sale.blockchainHash,
     }));
 
-    const transferEntries = transfers.map((transfer) => ({
-      id: `TRX-${String(transfer._id).slice(-6).toUpperCase()}`,
-      passport: passportIdFor(transfer.garmentId),
-      item: transfer.garmentId?.productName || "Garment",
-      from: transfer.fromRole,
-      to: transfer.toName || transfer.toRole,
-      type: String(transfer.transferType || transfer.toRole || "ownership").toUpperCase(),
-      date: transfer.createdAt,
-      amount: transfer.amount
-        ? formatCurrency(transfer.amount, transfer.currency)
-        : "N/A",
-      icon: "transfer",
-      hash: transfer.transactionHash,
-    }));
+    const transferEntries = transfers
+      .filter((transfer) => transfer.transferType !== "sale")
+      .map((transfer) => ({
+        id: `TRX-${String(transfer._id).slice(-6).toUpperCase()}`,
+        passport: passportIdFor(transfer.garmentId),
+        item: transfer.garmentId?.productName || "Garment",
+        from: transfer.fromRole,
+        to: transfer.toName || transfer.toRole,
+        type: String(transfer.transferType || transfer.toRole || "ownership").toUpperCase(),
+        date: transfer.createdAt,
+        amount: transfer.amount
+          ? formatCurrency(transfer.amount, transfer.currency)
+          : "N/A",
+        icon: "transfer",
+        hash: transfer.transactionHash,
+      }));
 
     const shipmentEntries = shipments.map((shipment) => ({
       id: shipment.shipmentId || `SHP-${String(shipment._id).slice(-6).toUpperCase()}`,
@@ -339,6 +448,7 @@ export const transferRetailerOwnership = async (req, res) => {
       toUser,
       toRole = "Consumer",
       toName = "Consumer",
+      toPhone,
       notes,
       amount,
       currency = "EUR",
@@ -351,7 +461,7 @@ export const transferRetailerOwnership = async (req, res) => {
       return res.status(404).json({ message: "Garment not found" });
     }
 
-    const transactionHash = hashFor(garment._id, toUser || toName, Date.now());
+    const transactionHash = hashFor(garment._id, toUser || toName, toPhone, Date.now());
 
     const transfer = await OwnershipTransfer.create({
       garmentId: garment._id,
@@ -360,6 +470,7 @@ export const transferRetailerOwnership = async (req, res) => {
       fromUser: req.user._id,
       toUser: isObjectId(toUser) ? toUser : undefined,
       toName,
+      toPhone,
       amount,
       currency,
       transferType,
@@ -383,6 +494,7 @@ export const transferRetailerOwnership = async (req, res) => {
         passportId: passportIdFor(garment),
         toRole,
         toName,
+        toPhone,
         transferType,
       },
     });
@@ -394,7 +506,7 @@ export const transferRetailerOwnership = async (req, res) => {
       actorRole: req.user.role,
       actorId: req.user._id,
       blockchainHash: transactionHash,
-      metadata: { transferType, toRole, toName },
+      metadata: { transferType, toRole, toName, toPhone },
     });
 
     res.status(201).json({
@@ -409,12 +521,13 @@ export const transferRetailerOwnership = async (req, res) => {
 
 export const getRetailerSales = async (req, res) => {
   try {
-    const sales = await RetailSale.find()
-      .populate("garmentId")
-      .sort({ createdAt: -1 });
+    const [sales, saleTransfers] = await Promise.all([
+      RetailSale.find().populate("garmentId").sort({ createdAt: -1 }),
+      OwnershipTransfer.find({ transferType: "sale" }).populate("garmentId").sort({ createdAt: -1 }),
+    ]);
 
-    const formatted = sales.map((sale) => ({
-      id: sale._id,
+    const retailSaleEntries = sales.map((sale) => ({
+      id: String(sale._id),
       saleId: sale.saleId,
       receipt: sale.receiptId,
       passport: sale.passportId,
@@ -427,18 +540,61 @@ export const getRetailerSales = async (req, res) => {
       date: sale.createdAt,
       status: sale.status,
       hash: sale.blockchainHash,
+      source: "Retail Sale",
+      revenueValue: Number(sale.salePrice) || 0,
+      netValue: Number(sale.netAmount) || 0,
+      taxValue: Number(sale.taxAmount) || 0,
     }));
 
-    const revenue = sales.reduce(
-      (sum, sale) => sum + (Number(sale.salePrice) || 0),
+    const transferSaleEntries = saleTransfers.map((transfer) => ({
+      id: String(transfer._id),
+      saleId: `TRF-${String(transfer._id).slice(-6).toUpperCase()}`,
+      receipt: transfer.transactionHash
+        ? `TX-${String(transfer.transactionHash).slice(-8).toUpperCase()}`
+        : `TRF-${String(transfer._id).slice(-6).toUpperCase()}`,
+      passport: passportIdFor(transfer.garmentId),
+      product: transfer.garmentId?.productName || "Garment",
+      buyer: transfer.toName || transfer.toRole || "Consumer",
+      price: formatCurrency(transfer.amount || 0, transfer.currency),
+      net: formatCurrency(transfer.amount || 0, transfer.currency),
+      tax: "0%",
+      taxAmount: formatCurrency(0, transfer.currency),
+      date: transfer.createdAt,
+      status: transfer.status || "completed",
+      hash: transfer.transactionHash,
+      source: "Ownership Transfer",
+      revenueValue: Number(transfer.amount) || 0,
+      netValue: Number(transfer.amount) || 0,
+      taxValue: 0,
+    }));
+
+    const dedupedByHash = new Map();
+
+    for (const entry of transferSaleEntries) {
+      if (entry.hash) {
+        dedupedByHash.set(entry.hash, entry);
+      }
+    }
+
+    for (const entry of retailSaleEntries) {
+      if (entry.hash) {
+        dedupedByHash.set(entry.hash, entry);
+      }
+    }
+
+    const formatted = [...dedupedByHash.values()]
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const revenue = formatted.reduce(
+      (sum, item) => sum + (item.revenueValue || 0),
       0
     );
-    const net = sales.reduce(
-      (sum, sale) => sum + (Number(sale.netAmount) || 0),
+    const net = formatted.reduce(
+      (sum, item) => sum + (item.netValue || 0),
       0
     );
-    const tax = sales.reduce(
-      (sum, sale) => sum + (Number(sale.taxAmount) || 0),
+    const tax = formatted.reduce(
+      (sum, item) => sum + (item.taxValue || 0),
       0
     );
 
@@ -447,7 +603,7 @@ export const getRetailerSales = async (req, res) => {
         revenue: Number(revenue.toFixed(2)),
         net: Number(net.toFixed(2)),
         tax: Number(tax.toFixed(2)),
-        sales: sales.length,
+        sales: formatted.length,
       },
       sales: formatted,
     });

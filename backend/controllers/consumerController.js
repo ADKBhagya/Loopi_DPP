@@ -226,6 +226,7 @@ export const getPublicConsumerPassport = async (req, res) => {
       brand: garment.manufacturingCountry || garment.location || "LOOPI",
       material: garment.material || garment.materials?.join(", ") || "Material pending",
       materials: garment.materials || [],
+      imageUrl: garment.imageUrl,
       productionDate: safeDate(garment.productionDate),
       status: garment.status,
       retailStatus: garment.retailStatus,

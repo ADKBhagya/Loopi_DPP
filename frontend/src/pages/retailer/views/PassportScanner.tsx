@@ -4,9 +4,10 @@ import { apiFetch } from "../../../lib/api";
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
+import QRScannerModal from "../../../components/qr/QRScannerModal";
+import { TransferOwnershipModal } from "./Inventory";
 
 type ScanRow = {
   id: string;
@@ -22,7 +23,8 @@ export default function PassportScanner() {
   const [success, setSuccess] = useState(false);
   const [passportId, setPassportId] = useState("");
   const [recentScans, setRecentScans] = useState<ScanRow[]>([]);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [transferProduct, setTransferProduct] = useState<any>(null);
 
   const loadAuditScans = async () => {
     try {
@@ -50,13 +52,20 @@ export default function PassportScanner() {
   const startScan = () => {
     setScannerOpen(true);
     setLoading(false);
-    setMessage("");
+    setMessage(null);
   };
 
-  const simulateScan = async () => {
+  const scanPassport = async (scannedValue?: string) => {
     try {
       setLoading(true);
-      const input = passportId.trim();
+      const input = extractPassportId(scannedValue || passportId);
+
+      if (!input) {
+        setMessage({ type: "error", text: "Scan a QR code or enter a passport ID" });
+        setScannerOpen(false);
+        return;
+      }
+
       const data = await apiFetch<any>("/retailer/passport/scan", {
         method: "POST",
         body: JSON.stringify({ passportId: input, scanSource: "passport-scanner" }),
@@ -73,12 +82,24 @@ export default function PassportScanner() {
         },
         ...current,
       ].slice(0, 6));
-      setMessage(`${scan.passport} verified on blockchain`);
+      setMessage({ type: "success", text: `${scan.passport} verified on blockchain` });
+      setTransferProduct({
+        id: scan.garmentId,
+        passport: scan.passport,
+        name: scan.productName || "Scanned garment",
+        brand: scan.brand || "LOOPI",
+        material: scan.material || "Material pending",
+        grade: "Pending",
+        price: formatCurrency(scan.price || 0),
+        rawPrice: scan.price || 0,
+        status: "IN STORE",
+        owner: scan.owner || "Retail inventory",
+      });
       setSuccess(true);
       setScannerOpen(false);
       setPassportId("");
     } catch (error: any) {
-      setMessage(error.message || "Passport scan failed");
+      setMessage({ type: "error", text: error.message || "Passport scan failed" });
     } finally {
       setLoading(false);
       setTimeout(() => setSuccess(false), 4000);
@@ -96,9 +117,15 @@ export default function PassportScanner() {
           <p className="max-w-[450px] text-[#9CA3AF] leading-relaxed mt-3">
             Scan any LOOPI garment passport to instantly verify Digital Product Passport authenticity.
           </p>
+          <input
+            value={passportId}
+            onChange={(event) => setPassportId(event.target.value)}
+            placeholder="Passport ID or garment ID"
+            className="mt-6 w-full max-w-[360px] h-12 rounded-2xl border border-[#DDEADF] bg-[#F8FAFC] px-4 text-sm outline-none focus:border-[#166B2D]"
+          />
           <button
             onClick={startScan}
-            className="mt-7 h-[46px] px-9 rounded-2xl bg-[#166B2D] text-white text-sm font-bold tracking-[0.14em] flex items-center gap-3 hover:scale-[1.01] transition-all shadow-[0_10px_30px_rgba(22,107,45,0.25)]"
+            className="mt-5 h-[46px] px-9 rounded-2xl bg-[#166B2D] text-white text-sm font-bold tracking-[0.14em] flex items-center gap-3 hover:scale-[1.01] transition-all shadow-[0_10px_30px_rgba(22,107,45,0.25)]"
           >
             <QrCodeScannerRoundedIcon />
             OPEN SCANNER
@@ -108,8 +135,14 @@ export default function PassportScanner() {
       </div>
 
       {message && (
-        <div className="rounded-2xl border border-[#DDEADF] bg-[#F4FBF6] px-5 py-3 text-sm font-semibold text-[#166B2D]">
-          {message}
+        <div
+          className={`rounded-2xl border px-5 py-3 text-sm font-semibold ${
+            message.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {message.text}
         </div>
       )}
 
@@ -168,60 +201,23 @@ export default function PassportScanner() {
         </div>
       </div>
 
-      {scannerOpen && (
-        <>
-          <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-[9998]" />
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4">
-            <div className="w-full max-w-[350px] rounded-[30px] overflow-hidden bg-[#166B2D] shadow-[0_30px_100px_rgba(0,0,0,0.45)]">
-              <div className="px-6 pt-6 flex items-start justify-between">
-                <div>
-                  <h2 className="text-white text-[20px] font-bold">Passport Scanner</h2>
-                  <p className="text-[#B7D8BF] text-[10px] tracking-[0.12em] font-bold mt-1">RETAIL NODE</p>
-                </div>
-                <button onClick={() => setScannerOpen(false)} className="text-white/70 hover:text-white">
-                  <CloseRoundedIcon />
-                </button>
-              </div>
+      <QRScannerModal
+        open={scannerOpen}
+        loading={loading}
+        onClose={() => setScannerOpen(false)}
+        onScan={scanPassport}
+      />
 
-              <div className="px-5 pt-5">
-                <div className="relative h-[280px] rounded-[24px] border border-[#3B7F4A] bg-[#0D4D16] overflow-hidden">
-                  <div className="absolute top-4 left-4 w-9 h-9 border-l-4 border-t-4 border-[#52F27C] rounded-tl-2xl" />
-                  <div className="absolute top-4 right-4 w-9 h-9 border-r-4 border-t-4 border-[#52F27C] rounded-tr-2xl" />
-                  <div className="absolute bottom-4 left-4 w-9 h-9 border-l-4 border-b-4 border-[#52F27C] rounded-bl-2xl" />
-                  <div className="absolute bottom-4 right-4 w-9 h-9 border-r-4 border-b-4 border-[#52F27C] rounded-br-2xl" />
-                  {!loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8">
-                      <QrCodeScannerRoundedIcon style={{ fontSize: 54, color: "rgba(255,255,255,0.25)" }} />
-                      <input
-                        value={passportId}
-                        onChange={(event) => setPassportId(event.target.value)}
-                        placeholder="Passport ID or Garment ID"
-                        className="w-full h-11 rounded-xl border border-white/20 bg-white/95 px-4 text-sm outline-none"
-                      />
-                    </div>
-                  )}
-                  {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="w-14 h-14 rounded-full border-[4px] border-[#52F27C]/30 border-t-[#52F27C] animate-spin" />
-                      <p className="text-[#52F27C] text-[11px] tracking-[0.12em] font-bold mt-5">QUERYING BLOCKCHAIN...</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-5">
-                <button
-                  onClick={simulateScan}
-                  disabled={loading || !passportId.trim()}
-                  className="w-full h-[54px] rounded-2xl bg-white text-[#166B2D] font-bold tracking-[0.12em] text-sm flex items-center justify-center gap-3 disabled:opacity-60"
-                >
-                  <QrCodeScannerRoundedIcon style={{ fontSize: 20 }} />
-                  SCAN PASSPORT
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
+      {transferProduct && (
+        <TransferOwnershipModal
+          product={transferProduct}
+          onClose={() => setTransferProduct(null)}
+          onSaved={() => {
+            setTransferProduct(null);
+            loadAuditScans();
+            setMessage({ type: "success", text: "Ownership transferred successfully" });
+          }}
+        />
       )}
 
       {success && (
@@ -231,10 +227,31 @@ export default function PassportScanner() {
           </div>
           <div>
             <p className="font-bold text-[#166B2D] text-sm">Passport Scan Successful</p>
-            <p className="text-[#166B2D] text-xs mt-1">{message}</p>
+            <p className="text-[#166B2D] text-xs mt-1">{message?.text}</p>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function extractPassportId(value?: string) {
+  const text = String(value || "").trim();
+
+  if (!text) return "";
+
+  const urlMatch = text.match(/(?:passport|verify)\/([^/?#]+)/i);
+  if (urlMatch?.[1]) return decodeURIComponent(urlMatch[1]);
+
+  const idMatch = text.match(/(?:garmentId|passportId)=([^&#]+)/i);
+  if (idMatch?.[1]) return decodeURIComponent(idMatch[1]);
+
+  return text;
+}
+
+function formatCurrency(amount = 0) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(amount) || 0);
 }

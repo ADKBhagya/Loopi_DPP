@@ -12,6 +12,8 @@ import { apiFetch } from "../../../lib/api";
 
 export default function FleetOverview() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [selectedShipment, setSelectedShipment] = useState<any>(null);
+  const [pingedVehicle, setPingedVehicle] = useState<string | null>(null);
   const [stats, setStats] = useState<any>({
     activeVehicles: 0,
     inTransit: 0,
@@ -37,6 +39,37 @@ export default function FleetOverview() {
   useEffect(() => {
     fetchOverview();
   }, []);
+
+  useEffect(() => {
+    if (!selectedShipment && fleet.length > 0) {
+      setSelectedShipment(fleet[0]);
+      setExpandedRow(fleet[0].vehicleId);
+    }
+  }, [fleet, selectedShipment]);
+
+  const selectedEvents = selectedShipment
+    ? buildShipmentEvents(selectedShipment, pingedVehicle === selectedShipment.vehicleId)
+    : events;
+
+  const handleToggleShipment = (item: any) => {
+    const nextExpanded = expandedRow === item.vehicleId ? null : item.vehicleId;
+
+    setExpandedRow(nextExpanded);
+    setSelectedShipment(nextExpanded ? item : null);
+  };
+
+  const handlePingVehicle = (vehicleId: string) => {
+    setPingedVehicle(vehicleId);
+    fetchOverview();
+  };
+
+  const handleViewRoute = (route: string, location: string) => {
+    const [from = "", to = ""] = String(route).split("->").map((part) => part.split("·")[0].trim());
+    const destination = to || location || from;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from || location || "")}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="bg-[#F4F7FB] min-h-screen">
@@ -71,7 +104,7 @@ export default function FleetOverview() {
             <FleetRow
               key={item.vehicleId}
               expanded={expandedRow === item.vehicleId}
-              onToggle={() => setExpandedRow(expandedRow === item.vehicleId ? null : item.vehicleId)}
+              onToggle={() => handleToggleShipment(item)}
               vehicle={item.vehicleId}
               status={formatStatus(item.status)}
               statusColor={statusColor(item.status)}
@@ -83,6 +116,9 @@ export default function FleetOverview() {
               progressColor={item.status === "delayed" ? "bg-orange-400" : "bg-green-500"}
               garment={item.garment}
               transport={item.transport}
+              onPing={() => handlePingVehicle(item.vehicleId)}
+              onViewRoute={() => handleViewRoute(item.route, item.location)}
+              pinged={pingedVehicle === item.vehicleId}
             />
           ))
         )}
@@ -91,11 +127,18 @@ export default function FleetOverview() {
       <div className="mt-6 bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
         <div className="flex items-center gap-2">
           <BoltOutlinedIcon className="text-blue-500" style={{ fontSize: 20 }} />
-          <h2 className="text-[23px] font-semibold text-gray-900">Real-time Logistics Events</h2>
+          <div>
+            <h2 className="text-[23px] font-semibold text-gray-900">Real-time Logistics Events</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {selectedShipment
+                ? `${selectedShipment.vehicleId} live at ${selectedShipment.location}`
+                : "Select a shipment to inspect live location events"}
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-4 mt-10 relative">
           <div className="absolute top-[6px] left-0 right-0 h-[1px] bg-gray-200" />
-          {(events.length ? events : [{ time: "PENDING", title: "Awaiting logistics events", subtitle: "No shipment activity yet", status: "pending" }]).slice(0, 4).map((event, index) => (
+          {(selectedEvents.length ? selectedEvents : [{ time: "PENDING", title: "Awaiting logistics events", subtitle: "No shipment activity yet", status: "pending" }]).slice(0, 4).map((event, index) => (
             <EventItem
               key={`${event.title}-${index}`}
               color={event.status === "delayed" ? "bg-orange-400" : event.status === "pending" ? "bg-gray-300" : "bg-green-500"}
@@ -124,7 +167,7 @@ function StatCard({ title, value, subtitle, icon, bg, color }: any) {
   );
 }
 
-function FleetRow({ expanded, onToggle, vehicle, status, statusColor, route, location, progress, progressWidth, load, progressColor, garment, transport }: any) {
+function FleetRow({ expanded, onToggle, vehicle, status, statusColor, route, location, progress, progressWidth, load, progressColor, garment, transport, onPing, onViewRoute, pinged }: any) {
   return (
     <div className="border-b border-gray-100 last:border-none">
       <div className="flex items-center justify-between px-6 py-5">
@@ -173,11 +216,11 @@ function FleetRow({ expanded, onToggle, vehicle, status, statusColor, route, loc
             <InfoCard title="PROGRESS" value={progress} />
           </div>
           <div className="flex items-center gap-3 mt-5">
-            <button className="px-5 h-10 rounded-xl bg-[#1B5E20] text-white text-xs font-bold flex items-center gap-2 hover:opacity-90">
+            <button onClick={onPing} className="px-5 h-10 rounded-xl bg-[#1B5E20] text-white text-xs font-bold flex items-center gap-2 hover:opacity-90">
               <SensorsRoundedIcon style={{ fontSize: 15 }} />
-              PING VEHICLE
+              {pinged ? "PINGED LIVE" : "PING VEHICLE"}
             </button>
-            <button className="px-5 h-10 rounded-xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex items-center gap-2 hover:bg-gray-50">
+            <button onClick={onViewRoute} className="px-5 h-10 rounded-xl border border-gray-200 bg-white text-gray-700 text-xs font-bold flex items-center gap-2 hover:bg-gray-50">
               <LocationOnOutlinedIcon style={{ fontSize: 15 }} />
               VIEW ROUTE
             </button>
@@ -218,6 +261,41 @@ function EventItem({ color, time, title, subtitle, pending }: any) {
       <p className="text-sm text-gray-400 mt-1">{subtitle}</p>
     </div>
   );
+}
+
+function buildShipmentEvents(shipment: any, pinged: boolean) {
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return [
+    {
+      time,
+      title: pinged ? "Vehicle ping acknowledged" : "Live location confirmed",
+      subtitle: `${shipment.vehicleId} currently at ${shipment.location || "location pending"}`,
+      status: shipment.status || "in_transit",
+    },
+    {
+      time: "ROUTE",
+      title: shipment.route || "Route pending",
+      subtitle: `${shipment.progress || 0}% complete on ${shipment.transport || "Road"} route`,
+      status: shipment.status || "in_transit",
+    },
+    {
+      time: "LOAD",
+      title: shipment.garment || "Shipment load",
+      subtitle: `Current load: ${shipment.load || "N/A"}`,
+      status: shipment.status || "in_transit",
+    },
+    {
+      time: "STATUS",
+      title: formatStatus(shipment.status),
+      subtitle: shipment.status === "delivered" ? "Delivery completed" : "Shipment remains under live monitoring",
+      status: shipment.status || "in_transit",
+    },
+  ];
 }
 
 function formatStatus(status: string) {
