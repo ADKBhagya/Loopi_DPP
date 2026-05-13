@@ -38,6 +38,12 @@ import { sendResetEmail } from "./utils/emailService.js";
 
 dotenv.config();
 
+const appPublicUrl = process.env.APP_PUBLIC_URL || process.env.CLIENT_URL || "https://loopidpp.online";
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173,https://loopidpp.online")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 /* =========================
    EXPRESS APP
 ========================= */
@@ -57,11 +63,7 @@ connectDB();
 ========================= */
 
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://loopidpp.online"
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -175,7 +177,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     ========================= */
 
     const resetLink =
-      `https://loopidpp.online/reset-password/${token}`;
+      `${appPublicUrl.replace(/\/$/, "")}/reset-password/${token}`;
 
     // SEND EMAIL
     await sendResetEmail(email, resetLink);
