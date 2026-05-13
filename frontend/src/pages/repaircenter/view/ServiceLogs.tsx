@@ -21,6 +21,7 @@ type LogType =
   | "NOTIFY";
 
 type ServiceLog = {
+  id?: string;
   hash: string;
   description: string;
   type: LogType;
@@ -28,96 +29,46 @@ type ServiceLog = {
   time: string;
   date: string;
   dot: string;
+  explorerUrl?: string;
 };
 
 export default function ServiceLogs() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"All" | LogType>("All");
 
-  const [logs, setLogs] = useState<ServiceLog[]>([
-    {
-      hash: "0xAF3c...2190",
-      description: "Repair REP-4401 signed & committed · GP-9821",
-      type: "SIGNED",
-      passport: "GP-9821",
-      time: "14:30",
-      date: "Mar 20, 2026",
-      dot: "#22C55E",
-    },
-    {
-      hash: "0x9B12...FF44",
-      description: "Blockchain circularity score updated +15 · GP-9821",
-      type: "SCORE",
-      passport: "GP-9821",
-      time: "14:31",
-      date: "Mar 20, 2026",
-      dot: "#2563EB",
-    },
-    {
-      hash: "0x3D7a...C209",
-      description: "Service photo proof uploaded · REP-4402",
-      type: "UPLOAD",
-      passport: "GP-9822",
-      time: "10:05",
-      date: "Mar 22, 2026",
-      dot: "#A855F7",
-    },
-    {
-      hash: "0x1E4f...0881",
-      description: "Repair REP-4403 status set Completed · GP-9831",
-      type: "SIGNED",
-      passport: "GP-9831",
-      time: "16:50",
-      date: "Mar 18, 2026",
-      dot: "#22C55E",
-    },
-    {
-      hash: "0xC0a2...3312",
-      description: "New service job queued · REP-4404 · GP-9855",
-      type: "QUEUED",
-      passport: "GP-9855",
-      time: "09:22",
-      date: "Mar 25, 2026",
-      dot: "#F59E0B",
-    },
-    {
-      hash: "0x77Bd...8801",
-      description: "Technician Sara Voss claimed job REP-4402",
-      type: "ASSIGN",
-      passport: "GP-9822",
-      time: "08:45",
-      date: "Mar 22, 2026",
-      dot: "#F59E0B",
-    },
-    {
-      hash: "0xF1c3...0022",
-      description: "Eco-material compliance verified · GP-9877",
-      type: "VERIFIED",
-      passport: "GP-9877",
-      time: "11:10",
-      date: "Mar 15, 2026",
-      dot: "#14B8A6",
-    },
-    {
-      hash: "0x2A9e...1103",
-      description: "Consumer passport notified · Repair complete",
-      type: "NOTIFY",
-      passport: "GP-9821",
-      time: "14:32",
-      date: "Mar 20, 2026",
-      dot: "#EC4899",
-    },
-  ]);
+  const [logs, setLogs] = useState<ServiceLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState("");
 
   useEffect(() => {
+    setLogsLoading(true);
+    setLogsError("");
+
     apiFetch<{ logs: ServiceLog[] }>("/repair-center/logs")
       .then((data) => {
         setLogs(data.logs || []);
       })
       .catch((error) => {
         console.error("Failed to load repair service logs", error);
+        setLogs([]);
+        setLogsError("Failed to load service logs");
+      })
+      .finally(() => {
+        setLogsLoading(false);
       });
   }, []);
+
+  const downloadLogs = () => {
+    const blob = new Blob([JSON.stringify(filteredLogs, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "repair-service-logs.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -127,14 +78,14 @@ export default function ServiceLogs() {
       const value = search.toLowerCase();
 
       const matchesSearch =
-        log.hash.toLowerCase().includes(value) ||
-        log.description.toLowerCase().includes(value) ||
-        log.passport.toLowerCase().includes(value) ||
-        log.type.toLowerCase().includes(value);
+        String(log.hash || "").toLowerCase().includes(value) ||
+        String(log.description || "").toLowerCase().includes(value) ||
+        String(log.passport || "").toLowerCase().includes(value) ||
+        String(log.type || "").toLowerCase().includes(value);
 
       return matchesFilter && matchesSearch;
     });
-  }, [search, filter]);
+  }, [logs, search, filter]);
 
   const totalSigned = logs.filter((l) => l.type === "SIGNED").length;
   const totalUploads = logs.filter((l) => l.type === "UPLOAD").length;
@@ -204,6 +155,7 @@ export default function ServiceLogs() {
           </div>
 
           <button
+            onClick={downloadLogs}
             className="
               h-[42px] px-4
               rounded-xl
@@ -250,15 +202,51 @@ export default function ServiceLogs() {
 
         {/* DESKTOP TABLE */}
         <div className="hidden lg:block">
-          {filteredLogs.map((log, index) => (
-            <LogRow key={index} log={log} />
+          {logsLoading && (
+            <div className="px-6 py-10 text-center text-sm font-semibold text-[#9CA3AF]">
+              Loading service logs...
+            </div>
+          )}
+
+          {!logsLoading && logsError && (
+            <div className="px-6 py-10 text-center text-sm font-semibold text-[#DC2626]">
+              {logsError}
+            </div>
+          )}
+
+          {!logsLoading && !logsError && filteredLogs.length === 0 && (
+            <div className="px-6 py-10 text-center text-sm font-semibold text-[#9CA3AF]">
+              No service logs found
+            </div>
+          )}
+
+          {!logsLoading && !logsError && filteredLogs.map((log, index) => (
+            <LogRow key={log.id || `${log.hash}-${index}`} log={log} />
           ))}
         </div>
 
         {/* MOBILE CARDS */}
         <div className="lg:hidden p-4 space-y-3 bg-[#F8FAFC]">
-          {filteredLogs.map((log, index) => (
-            <MobileLogCard key={index} log={log} />
+          {logsLoading && (
+            <div className="rounded-[22px] bg-white border border-[#E5E7EB] p-6 text-center text-sm font-semibold text-[#9CA3AF]">
+              Loading service logs...
+            </div>
+          )}
+
+          {!logsLoading && logsError && (
+            <div className="rounded-[22px] bg-red-50 border border-red-100 p-6 text-center text-sm font-semibold text-[#DC2626]">
+              {logsError}
+            </div>
+          )}
+
+          {!logsLoading && !logsError && filteredLogs.length === 0 && (
+            <div className="rounded-[22px] bg-white border border-[#E5E7EB] p-6 text-center text-sm font-semibold text-[#9CA3AF]">
+              No service logs found
+            </div>
+          )}
+
+          {!logsLoading && !logsError && filteredLogs.map((log, index) => (
+            <MobileLogCard key={log.id || `${log.hash}-${index}`} log={log} />
           ))}
         </div>
 
@@ -381,7 +369,13 @@ function LogRow({ log }: { log: ServiceLog }) {
           </p>
         </div>
 
-        <button className="w-9 h-9 rounded-xl text-[#B0B7C3] hover:bg-white hover:text-[#166B2D] transition-all flex items-center justify-center">
+        <button
+          disabled={!log.explorerUrl}
+          onClick={() => {
+            if (log.explorerUrl) window.open(log.explorerUrl, "_blank", "noopener,noreferrer");
+          }}
+          className="w-9 h-9 rounded-xl text-[#B0B7C3] hover:bg-white hover:text-[#166B2D] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#B0B7C3] transition-all flex items-center justify-center"
+        >
           <OpenInNewRoundedIcon style={{ fontSize: 17 }} />
         </button>
       </div>
@@ -409,7 +403,13 @@ function MobileLogCard({ log }: { log: ServiceLog }) {
           </div>
         </div>
 
-        <button className="w-9 h-9 rounded-xl bg-[#F8FAFC] text-[#9CA3AF] flex items-center justify-center shrink-0">
+        <button
+          disabled={!log.explorerUrl}
+          onClick={() => {
+            if (log.explorerUrl) window.open(log.explorerUrl, "_blank", "noopener,noreferrer");
+          }}
+          className="w-9 h-9 rounded-xl bg-[#F8FAFC] text-[#9CA3AF] disabled:opacity-40 flex items-center justify-center shrink-0"
+        >
           <OpenInNewRoundedIcon style={{ fontSize: 17 }} />
         </button>
       </div>

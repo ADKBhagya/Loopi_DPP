@@ -15,10 +15,21 @@ import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 
+function assetUrl(value?: string) {
+  if (!value) return "";
+  if (/^(https?:|data:|blob:)/.test(value)) return value;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const origin = apiBase.replace(/\/api\/?$/, "") || window.location.origin;
+  return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
 export default function RepairRecords() {
   const [search, setSearch] = useState("");
 
   const [filter, setFilter] = useState("ALL");
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  const [recordsError, setRecordsError] = useState("");
 
   const [selectedRecord, setSelectedRecord] =
     useState<any>(null);
@@ -26,90 +37,23 @@ export default function RepairRecords() {
   const [showCreateModal, setShowCreateModal] =
     useState(false);
 
-  const [records, setRecords] = useState([
-    {
-      id: "REP-4401",
-      passport: "GP-9821",
-      garment: "Recycled Wool Blazer",
-      service: "Lining",
-      type: "Mending",
-      technician: "Erik Lund",
-      duration: "2h",
-      cost: "€28",
-      date: "2026-03-20",
-      status: "COMPLETED",
-      note:
-        "Inner lining replaced using organic cotton materials.",
-    },
-
-    {
-      id: "REP-4403",
-      passport: "GP-9831",
-      garment: "Eco Denim Jacket",
-      service: "Zipper Repair",
-      type: "Hardware",
-      technician: "Erik Lund",
-      duration: "1.5h",
-      cost: "€18",
-      date: "2026-03-18",
-      status: "COMPLETED",
-      note:
-        "Premium zipper installed and stress tested.",
-    },
-
-    {
-      id: "REP-4405",
-      passport: "GP-9877",
-      garment: "Organic Hoodie",
-      service: "Stain Removal",
-      type: "Cleaning",
-      technician: "Sara Voss",
-      duration: "3h",
-      cost: "€35",
-      date: "2026-03-15",
-      status: "COMPLETED",
-      note:
-        "Eco-safe chemical cleaning performed successfully.",
-    },
-
-    {
-      id: "REP-4410",
-      passport: "GP-9888",
-      garment: "Cotton Shirt",
-      service: "Button Replacement",
-      type: "Hardware",
-      technician: "Emma Fischer",
-      duration: "1h",
-      cost: "€12",
-      date: "2026-03-21",
-      status: "IN PROGRESS",
-      note:
-        "Awaiting final quality inspection before closure.",
-    },
-
-    {
-      id: "REP-4412",
-      passport: "GP-9900",
-      garment: "Winter Coat",
-      service: "Sleeve Repair",
-      type: "Mending",
-      technician: "Jonas Keller",
-      duration: "2.5h",
-      cost: "€42",
-      date: "2026-03-22",
-      status: "QUEUED",
-      note:
-        "Repair scheduled for tomorrow morning.",
-    },
-  ]);
+  const [records, setRecords] = useState<any[]>([]);
 
   useEffect(() => {
+    setRecordsLoading(true);
+    setRecordsError("");
+
     apiFetch<any>("/repair-center/records")
       .then((data) => {
         setRecords(data.records || []);
       })
       .catch((error) => {
         console.error("Failed to load repair records", error);
+        setRecords([]);
+        setRecordsError("Failed to load repair records");
+      })
+      .finally(() => {
+        setRecordsLoading(false);
       });
   }, []);
 
@@ -152,6 +96,54 @@ export default function RepairRecords() {
     queued: records.filter(
       (r) => r.status === "QUEUED"
     ).length,
+  };
+
+  const exportCsv = () => {
+    const headers = [
+      "Ref ID",
+      "Passport",
+      "Garment",
+      "Service",
+      "Type",
+      "Technician",
+      "Duration",
+      "Cost",
+      "Date",
+      "Status",
+      "Photos",
+      "Certificates",
+    ];
+
+    const rows = filteredRecords.map((record) => [
+      record.id,
+      record.passport,
+      record.garment,
+      record.service,
+      record.type,
+      record.technician,
+      record.duration,
+      record.cost,
+      record.date,
+      record.status,
+      record.photos?.length || 0,
+      record.certificates?.length || 0,
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "repair-records.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -378,7 +370,40 @@ export default function RepairRecords() {
 
             <tbody>
 
-              {filteredRecords.map((record) => (
+              {recordsLoading && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-10 text-center text-sm font-semibold text-[#9CA3AF]"
+                  >
+                    Loading repair records...
+                  </td>
+                </tr>
+              )}
+
+              {!recordsLoading && recordsError && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-10 text-center text-sm font-semibold text-[#DC2626]"
+                  >
+                    {recordsError}
+                  </td>
+                </tr>
+              )}
+
+              {!recordsLoading && !recordsError && filteredRecords.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-10 text-center text-sm font-semibold text-[#9CA3AF]"
+                  >
+                    No repair records found
+                  </td>
+                </tr>
+              )}
+
+              {!recordsLoading && !recordsError && filteredRecords.map((record) => (
 
                 <tr
                   key={record.id}
@@ -487,7 +512,25 @@ export default function RepairRecords() {
         {/* MOBILE CARDS */}
         <div className="xl:hidden p-4 space-y-4">
 
-          {filteredRecords.map((record) => (
+          {recordsLoading && (
+            <div className="rounded-[24px] border border-[#ECECEC] bg-[#FAFAFA] p-6 text-center text-sm font-semibold text-[#9CA3AF]">
+              Loading repair records...
+            </div>
+          )}
+
+          {!recordsLoading && recordsError && (
+            <div className="rounded-[24px] border border-red-100 bg-red-50 p-6 text-center text-sm font-semibold text-[#DC2626]">
+              {recordsError}
+            </div>
+          )}
+
+          {!recordsLoading && !recordsError && filteredRecords.length === 0 && (
+            <div className="rounded-[24px] border border-[#ECECEC] bg-[#FAFAFA] p-6 text-center text-sm font-semibold text-[#9CA3AF]">
+              No repair records found
+            </div>
+          )}
+
+          {!recordsLoading && !recordsError && filteredRecords.map((record) => (
 
             <div
               key={record.id}
@@ -603,6 +646,7 @@ export default function RepairRecords() {
           </p>
 
           <button
+            onClick={exportCsv}
             className="
               h-[42px]
               px-4
@@ -846,7 +890,6 @@ export default function RepairRecords() {
           />
 
           <InfoRow
-            last
             label="Date"
             value={
               <span className="font-black text-[#111827]">
@@ -855,7 +898,38 @@ export default function RepairRecords() {
             }
           />
 
+          <InfoRow
+            label="Photos"
+            value={
+              <span className="font-black text-[#111827]">
+                {selectedRecord.photos?.length || 0}
+              </span>
+            }
+          />
+
+          <InfoRow
+            last
+            label="Certificates"
+            value={
+              <span className="font-black text-[#111827]">
+                {selectedRecord.certificates?.length || 0}
+              </span>
+            }
+          />
+
         </div>
+
+        <FileList
+          title="PHOTO EVIDENCE"
+          files={selectedRecord.photos || []}
+          emptyText="No repair photos uploaded"
+        />
+
+        <FileList
+          title="REPAIR CERTIFICATES"
+          files={selectedRecord.certificates || []}
+          emptyText="No repair certificates uploaded"
+        />
 
         {/* NOTES */}
         <div
@@ -1205,6 +1279,46 @@ function MobileRow({
         {value}
       </p>
 
+    </div>
+  );
+}
+
+function FileList({ title, files, emptyText }: any) {
+  return (
+    <div className="rounded-[22px] bg-white border border-[#ECECEC] p-4">
+      <p className="text-[11px] tracking-[0.12em] font-black text-[#9CA3AF]">
+        {title}
+      </p>
+
+      {files.length === 0 ? (
+        <p className="mt-3 text-sm font-semibold text-[#9CA3AF]">
+          {emptyText}
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {files.map((file: any, index: number) => {
+            const url = assetUrl(file.url);
+
+            return (
+              <button
+                key={file.key || `${file.fileName}-${index}`}
+                type="button"
+                onClick={() => {
+                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                }}
+                className="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-3 text-left hover:border-[#166B2D] transition"
+              >
+                <span className="block text-sm font-bold text-[#111827] truncate">
+                  {file.fileName || `Attachment ${index + 1}`}
+                </span>
+                <span className="mt-1 block text-xs text-[#9CA3AF]">
+                  {file.mimeType || "Uploaded file"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

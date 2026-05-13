@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
@@ -32,6 +32,15 @@ import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import TagRoundedIcon from "@mui/icons-material/TagRounded";
 
+function assetUrl(value?: string) {
+  if (!value) return "";
+  if (/^(https?:|data:|blob:)/.test(value)) return value;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const origin = apiBase.replace(/\/api\/?$/, "") || window.location.origin;
+  return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
 export default function DPPLookup() {
 
   const [search, setSearch] = useState("");
@@ -58,6 +67,8 @@ const [recycleStarted, setRecycleStarted] =
   useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [lookupError, setLookupError] = useState("");
 
   const [showPassportModal, setShowPassportModal] =
   useState(false);
@@ -68,63 +79,35 @@ const [recycleStarted, setRecycleStarted] =
   const [selectedPassport, setSelectedPassport] =
     useState<any>(null);
 
-  const [passports, setPassports] = useState([
-    {
-      id: "GP-9821",
-      garment: "Recycled Wool Blazer",
-      brand: "EcoWeave",
-      material: "Wool 60%, PET 40%",
-      grade: "Grade A+",
-      repairs: "3 services",
-      co2: "4.2 kg",
-      water: "12.5L",
-      repairStatus: "Repaired",
-      repairCount: 3,
-      verified: true,
-    },
+  const [passports, setPassports] = useState<any[]>([]);
 
-    {
-      id: "GP-9822",
-      garment: "Eco Denim Jacket",
-      brand: "DenimKind",
-      material: "Organic Denim",
-      grade: "Grade A",
-      repairs: "1 service",
-      co2: "3.1 kg",
-      water: "8.1L",
-      repairStatus: "Active",
-      repairCount: 1,
-      verified: true,
-    },
+useEffect(() => {
+  let active = true;
 
-    {
-      id: "GP-9831",
-      garment: "Bamboo Sweatshirt",
-      brand: "TerraThread",
-      material: "Bamboo Fiber",
-      grade: "Grade A+",
-      repairs: "2 services",
-      co2: "2.8 kg",
-      water: "7.4L",
-      repairStatus: "Repaired",
-      repairCount: 2,
-      verified: true,
-    },
+  const loadPassports = async () => {
+    setDirectoryLoading(true);
+    setLookupError("");
 
-    {
-      id: "GP-9855",
-      garment: "Linen Shirt",
-      brand: "Naturalia",
-      material: "Premium Linen",
-      grade: "Grade B+",
-      repairs: "0 services",
-      co2: "1.9 kg",
-      water: "5.2L",
-      repairStatus: "Queued",
-      repairCount: 0,
-      verified: false,
-    },
-  ]);
+    try {
+      const data = await apiFetch<any>("/repair-center/passports");
+      if (!active) return;
+      setPassports(data.passports || []);
+    } catch (error) {
+      console.error("Failed to load passport directory", error);
+      if (!active) return;
+      setPassports([]);
+      setLookupError("Failed to load passport directory");
+    } finally {
+      if (active) setDirectoryLoading(false);
+    }
+  };
+
+  loadPassports();
+
+  return () => {
+    active = false;
+  };
+}, []);
 
 /* DIRECTORY SHOULD ALWAYS SHOW ALL */
 const filteredPassports = passports;
@@ -137,32 +120,16 @@ const handleSearch = async () => {
   }
 
   setLoading(true);
+  setLookupError("");
 
   try {
-    const value = search.toLowerCase().trim();
-
-    const localMatch = passports.find((item) => {
-
-      return (
-        item.id.toLowerCase().includes(value) ||
-        item.garment.toLowerCase().includes(value) ||
-        item.brand.toLowerCase().includes(value)
-      );
-
-    });
-
-    if (localMatch) {
-      setSelectedPassport(localMatch);
-      return;
-    }
-
     const found = await apiFetch<any>(`/repair-center/passport/${search.trim()}`);
     setPassports((prev) =>
       prev.some((item) => item.id === found.id) ? prev : [found, ...prev]
     );
     setSelectedPassport(found);
   } catch (error) {
-    alert(error instanceof Error ? error.message : "Passport lookup failed");
+    setLookupError(error instanceof Error ? error.message : "Passport lookup failed");
     setSelectedPassport(null);
   } finally {
     setLoading(false);
@@ -277,6 +244,9 @@ const handleSearch = async () => {
                 onChange={(e) =>
                   setSearch(e.target.value)
                 }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
                 placeholder="GP-9821 or product name..."
                 className="
                   w-full
@@ -357,56 +327,11 @@ const handleSearch = async () => {
 
           </div>
 
-          {/* QUICK IDS */}
-          <div
-            className="
-              mt-5
-
-              flex flex-wrap
-              justify-center
-
-              gap-2
-            "
-          >
-
-            {passports.map((item) => (
-
-              <button
-                key={item.id}
-                onClick={() => {
-
-                setSearch(item.id);
-
-                setSelectedPassport(item);
-
-                }}
-                className="
-                  h-8
-                  px-3
-
-                  rounded-xl
-
-                  border border-[#E5E7EB]
-
-                  bg-[#FAFAFA]
-
-                  text-[11px]
-                  font-black
-
-                  text-[#6B7280]
-
-                  hover:border-[#166B2D]
-                  hover:text-[#166B2D]
-
-                  transition-all
-                "
-              >
-                {item.id}
-              </button>
-
-            ))}
-
-          </div>
+          {lookupError && (
+            <p className="mt-4 text-sm font-semibold text-[#DC2626]">
+              {lookupError}
+            </p>
+          )}
 
         </div>
 
@@ -467,29 +392,17 @@ const handleSearch = async () => {
             </div>
 
             <div
-              className="
-                h-9
-                px-4
-
-                rounded-xl
-
-                bg-[#EEF9F1]
-
-                border border-[#D5F1DB]
-
-                text-[#16A34A]
-
-                text-[11px]
-                font-black
-
-                tracking-[0.10em]
-
-                flex items-center justify-center
-
-                w-fit
-              "
+              className={`
+                h-9 px-4 rounded-xl text-[11px] font-black tracking-[0.10em]
+                flex items-center justify-center w-fit border
+                ${
+                  selectedPassport.verified
+                    ? "bg-[#EEF9F1] border-[#D5F1DB] text-[#16A34A]"
+                    : "bg-[#FFF7ED] border-[#FED7AA] text-[#EA580C]"
+                }
+              `}
             >
-              VERIFIED
+              {selectedPassport.verified ? "VERIFIED" : "PENDING REVIEW"}
             </div>
 
           </div>
@@ -712,7 +625,7 @@ const handleSearch = async () => {
               text-[#9CA3AF]
             "
           >
-            {filteredPassports.length} LINKED
+            {directoryLoading ? "LOADING" : `${filteredPassports.length} LINKED`}
           </p>
 
         </div>
@@ -720,7 +633,19 @@ const handleSearch = async () => {
         {/* LIST */}
         <div>
 
-          {filteredPassports.map((item, index) => (
+          {directoryLoading && (
+            <div className="px-5 sm:px-6 py-10 text-center text-sm font-semibold text-[#9CA3AF]">
+              Loading passport directory...
+            </div>
+          )}
+
+          {!directoryLoading && filteredPassports.length === 0 && (
+            <div className="px-5 sm:px-6 py-10 text-center text-sm font-semibold text-[#9CA3AF]">
+              No digital passports found
+            </div>
+          )}
+
+          {!directoryLoading && filteredPassports.map((item, index) => (
 
             <button
               key={item.id}
@@ -1006,14 +931,10 @@ const handleSearch = async () => {
 
             <img
               src={
-                selectedPassport.id === "GP-9821"
-                  ? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1200&auto=format&fit=crop"
-                  : selectedPassport.id === "GP-9822"
-                  ? "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop"
-                  : selectedPassport.id === "GP-9831"
-                  ? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1200&auto=format&fit=crop"
-                  : "https://images.unsplash.com/photo-1516826957135-700dedea698c?q=80&w=1200&auto=format&fit=crop"
+                assetUrl(selectedPassport.imageUrl) ||
+                "https://images.unsplash.com/photo-1516826957135-700dedea698c?q=80&w=1200&auto=format&fit=crop"
               }
+              alt={selectedPassport.garment}
               className="
                 w-full
                 h-[390px]
@@ -2403,7 +2324,7 @@ const handleSearch = async () => {
                       text-[#B0B6C3]
                     "
                   >
-                    HASH: 0X8821....F92A
+                    HASH: {selectedPassport?.hashShort || selectedPassport?.hash || "Pending"}
                   </p>
 
                   <h3
@@ -2646,7 +2567,7 @@ const handleSearch = async () => {
                 font-semibold
               "
             >
-              Passport : SAMPLE-ID
+              Passport : {selectedPassport?.id || "N/A"}
             </p>
 
           </div>
@@ -3409,7 +3330,7 @@ const handleSearch = async () => {
                       text-[#00FFA3]
                     "
                   >
-                    0x88f3...21aB
+                    {selectedPassport?.hashShort || selectedPassport?.hash || "Pending"}
                   </h2>
 
                   <div
@@ -3816,7 +3737,7 @@ const handleSearch = async () => {
                 font-semibold
               "
             >
-              Passport : SAMPLE-ID
+              Passport : {selectedPassport?.id || "N/A"}
             </p>
 
           </div>
@@ -4702,7 +4623,7 @@ const handleSearch = async () => {
                         text-white
                       "
                     >
-                      EOL-SAMPLE-ID-2025
+                      EOL-{selectedPassport?.id || "N/A"}
                     </p>
 
                   </div>

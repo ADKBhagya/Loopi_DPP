@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Garment from "../models/Garment.js";
 import Certificate from "../models/Certificate.js";
 import Shipment from "../models/Shipment.js";
@@ -16,11 +17,38 @@ export const getPassportByGarmentId = async (req, res) => {
 
     const { id } = req.params;
 
+    const normalizedId = String(id || "").trim();
+
     /* ===============================
        GARMENT
     =============================== */
 
-    const garment = await Garment.findById(id);
+    let garment = null;
+
+    if (mongoose.Types.ObjectId.isValid(normalizedId)) {
+      garment = await Garment.findById(normalizedId);
+    }
+
+    if (!garment) {
+      garment = await Garment.findOne({
+        $or: [
+          { sku: normalizedId },
+          { batchNumber: normalizedId },
+        ],
+      });
+    }
+
+    if (!garment && normalizedId.toUpperCase().startsWith("GP-")) {
+      const suffix = normalizedId.slice(3).toLowerCase();
+      const garments = await Garment.find({});
+
+      garment =
+        garments.find((item) =>
+          String(item._id || "")
+            .slice(-6)
+            .toLowerCase() === suffix
+        ) || null;
+    }
 
     if (!garment) {
       return res.status(404).json({
