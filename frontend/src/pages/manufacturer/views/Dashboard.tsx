@@ -1,5 +1,6 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { QRCodeSVG } from "qrcode.react";
 import ModalPortal from "../../../components/modals/ModalPortal";
 import { apiFetch } from "../../../lib/api";
 
@@ -36,10 +37,54 @@ import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
+type ToastType = "success" | "error";
+
+function assetUrl(value?: string) {
+  if (!value) return "";
+  if (/^(https?:|data:|blob:)/.test(value)) return value;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const origin = apiBase.replace(/\/api\/?$/, "") || window.location.origin;
+  return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
+function passportIdFor(garment: any) {
+  if (!garment) return "";
+  return garment.sku || garment.batchNumber || `GP-${String(garment._id || "").slice(-6).toUpperCase()}`;
+}
+
+function buildLifecycleSteps(garment: any) {
+  const status = garment?.status || "draft";
+  const shipped = ["shipment", "shipped", "in_transit", "delivered", "approved"].includes(status);
+  const approved = status === "approved";
+  const underAudit = status === "pending";
+
+  return [
+    { label: "DRAFT", status: garment ? "done" : "current" },
+    { label: "SHIPPED", status: shipped || approved ? "done" : status === "draft" ? "upcoming" : "current" },
+    { label: "UNDER AUDIT", status: approved ? "done" : underAudit ? "current" : shipped ? "current" : "upcoming" },
+    { label: "GOV REVIEW", status: approved ? "done" : "upcoming" },
+    { label: "APPROVED", status: approved ? "done" : "upcoming" },
+    { label: "ACTIVE", status: approved ? "current" : "upcoming" },
+  ];
+}
+
+function certificateForGarment(certificates: any[], garment: any) {
+  return certificates.find((item) => {
+    const garmentId = String(item.garmentId?._id || item.garmentId || "");
+    return (
+      garmentId === String(garment?._id || "") ||
+      String(item.garmentName || "").toLowerCase() ===
+        String(garment?.productName || "").toLowerCase()
+    );
+  });
+}
+
 
 
 function Dashboard() {
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<ToastType>("success");
   const [show, setShow] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -47,7 +92,9 @@ function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [garments, setGarments] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
 
   const [stats, setStats] = useState({
 
@@ -74,18 +121,20 @@ function Dashboard() {
 
   const fetchDashboardStats = useCallback(async () => {
     try {
-      const [garmentData, shipmentData] = await Promise.all([
+      const [garmentData, shipmentData, certificateData] = await Promise.all([
         apiFetch<any[]>("/garments"),
         apiFetch<any[]>("/shipments"),
+        apiFetch<any[]>("/certificates").catch(() => []),
       ]);
 
       const garmentsList = Array.isArray(garmentData) ? garmentData : [];
       const shipmentsList = Array.isArray(shipmentData) ? shipmentData : [];
+      const certificatesList = Array.isArray(certificateData) ? certificateData : [];
 
       setStats({
         totalGarments: garmentsList.length,
         totalShipments: shipmentsList.length,
-        totalCertificates: 0,
+        totalCertificates: certificatesList.length,
         totalTransactions: 0,
         approvedGarments: garmentsList.filter((g) => g.status === "approved").length,
         pendingGarments: garmentsList.filter((g) => g.status === "pending").length,
@@ -96,6 +145,16 @@ function Dashboard() {
       });
     } catch (err) {
       console.error("DASHBOARD ERROR:", err);
+    }
+  }, []);
+
+  const fetchCertificates = useCallback(async () => {
+    try {
+      const data = await apiFetch<any[]>("/certificates");
+      setCertificates(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("CERTIFICATES ERROR:", err);
+      setCertificates([]);
     }
   }, []);
 
@@ -117,7 +176,14 @@ function Dashboard() {
   useEffect(() => {
     fetchDashboardStats();
     fetchGarments();
-  }, [fetchDashboardStats, fetchGarments]);
+    fetchCertificates();
+  }, [fetchDashboardStats, fetchGarments, fetchCertificates]);
+
+  useEffect(() => {
+    if (!selectedProduct && garments.length > 0) {
+      setSelectedProduct(garments[0]);
+    }
+  }, [garments, selectedProduct]);
 
   useEffect(() => {
     const close = () => setMenuOpen(false);
@@ -133,6 +199,13 @@ function Dashboard() {
     }
   }, [showCreateModal]);
 
+  const showToast = (msg: string, type: ToastType = "success") => {
+    setMessage(msg);
+    setMessageType(type);
+    setShow(true);
+    setTimeout(() => setShow(false), 2500);
+    setTimeout(() => setMessage(""), 3000);
+  };
 
   return (
     <>
@@ -143,13 +216,27 @@ function Dashboard() {
             show ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3"
           }`}
           style={{
-            background: "rgba(220, 252, 231, 0.9)",
-            border: "1px solid #BBF7D0",
-            color: "#166534",
+            background:
+              messageType === "success"
+                ? "rgba(220, 252, 231, 0.9)"
+                : "rgba(254, 226, 226, 0.95)",
+            border:
+              messageType === "success"
+                ? "1px solid #BBF7D0"
+                : "1px solid #FCA5A5",
+            color: messageType === "success" ? "#166534" : "#991B1B",
           }}
         >
-          <div className="w-6 h-6 flex items-center justify-center rounded-full bg-green-600 text-white">
-            <CheckCircleRoundedIcon style={{ fontSize: 16 }} />
+          <div
+            className={`w-6 h-6 flex items-center justify-center rounded-full text-white ${
+              messageType === "success" ? "bg-green-600" : "bg-red-600"
+            }`}
+          >
+            {messageType === "success" ? (
+              <CheckCircleRoundedIcon style={{ fontSize: 16 }} />
+            ) : (
+              <CancelOutlinedIcon style={{ fontSize: 16 }} />
+            )}
           </div>
           <span className="text-sm font-medium">{message}</span>
         </div>
@@ -211,14 +298,7 @@ function Dashboard() {
             <div className="relative flex justify-between items-center px-2">
               <div className="absolute top-4 left-2 right-2 h-[2px] bg-gray-200" />
 
-              {[
-                { label: "DRAFT", status: "done" },
-                { label: "SHIPPED", status: "done" },
-                { label: "UNDER AUDIT", status: "current" },
-                { label: "GOV REVIEW", status: "upcoming" },
-                { label: "APPROVED", status: "upcoming" },
-                { label: "ACTIVE", status: "upcoming" },
-              ].map((step, i) => {
+              {buildLifecycleSteps(selectedProduct).map((step, i) => {
                 const isDone = step.status === "done";
                 const isCurrent = step.status === "current";
 
@@ -241,6 +321,47 @@ function Dashboard() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="mt-5 flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {selectedProduct?.imageUrl ? (
+                  <img
+                    src={assetUrl(selectedProduct.imageUrl)}
+                    alt={selectedProduct.productName}
+                    className="w-11 h-11 rounded-xl object-cover border border-white shadow-sm"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-white text-gray-400 border flex items-center justify-center">
+                    <Inventory2OutlinedIcon style={{ fontSize: 18 }} />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {selectedProduct?.productName || "Select a product record"}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {selectedProduct ? `Passport ${passportIdFor(selectedProduct)}` : "Click any product row to update this lifecycle view"}
+                  </p>
+                </div>
+              </div>
+
+              {selectedProduct && (
+                <button
+                  onClick={() => {
+                    setSelectedQR({
+                      id: passportIdFor(selectedProduct),
+                      rawId: selectedProduct._id,
+                      name: selectedProduct.productName,
+                    });
+                    setShowQRModal(true);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-green-50 text-green-700 text-xs font-semibold flex items-center gap-2 hover:bg-green-100 transition"
+                >
+                  <QrCode2OutlinedIcon style={{ fontSize: 16 }} />
+                  QR
+                </button>
+              )}
             </div>
           </div>
 
@@ -295,19 +416,24 @@ function Dashboard() {
                   return (
                     <ProductRow
                       key={g._id}
-                      id={`GP-${g._id.slice(-4).toUpperCase()}`}
+                      id={`GP-${g._id.slice(-6).toUpperCase()}`}
+                      rawId={g._id}
                       name={g.productName}
                       material={g.materials?.join(", ") || g.material}
                       co2={g.carbon ? `${g.carbon}kg` : "N/A"}
                       water={g.water ? `${g.water}L` : "N/A"}
                       status={g.status}
+                      imageUrl={g.imageUrl}
+                      active={selectedProduct?._id === g._id}
+                      onSelect={() => setSelectedProduct(g)}
                       onQRClick={(data:any) => {
                         setSelectedQR(data);
                         setShowQRModal(true);
                       }}
                       onMenuClick={(pos:any, data:any) => {
                         setMenuPosition(pos);
-                        setSelectedRow(data);
+                        const certificate = certificateForGarment(certificates, g);
+                        setSelectedRow({ ...data, certificate });
                         setMenuOpen(true);
                       }}
                     />
@@ -338,6 +464,7 @@ function Dashboard() {
           onCreated={() => {
             fetchDashboardStats();
             fetchGarments();
+            fetchCertificates();
           }}
         />
       )}
@@ -346,6 +473,7 @@ function Dashboard() {
         <QRModal 
           data={selectedQR}
           onClose={() => setShowQRModal(false)} 
+          onNotify={showToast}
         />
       )}
 
@@ -355,10 +483,15 @@ function Dashboard() {
           data={selectedRow}
           onClose={() => setMenuOpen(false)}
           onView={() => {
-            setShowQRModal(true);
-            setSelectedQR(selectedRow);
+            window.open(`/consumer/passport/${selectedRow?.id}`, "_blank", "noopener,noreferrer");
             setMenuOpen(false);
           }}
+          onGenerateQR={() => {
+            setSelectedQR(selectedRow);
+            setShowQRModal(true);
+            setMenuOpen(false);
+          }}
+          onNotify={showToast}
         />
       )}
 
@@ -389,7 +522,7 @@ function StatCard({ icon, value, label }: any) {
   );
 }
 
-function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuClick }: any): any {
+function ProductRow({ id, rawId, name, material, co2, water, status, imageUrl, active, onSelect, onQRClick, onMenuClick }: any): any {
   const normalizedStatus = status || "draft";
   const statusStyle: any = {
     approved: "bg-green-100 text-green-700",
@@ -410,12 +543,25 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
   };
 
   return (
-    <tr className="border-b hover:bg-gray-50 transition">
+    <tr
+      onClick={onSelect}
+      className={`border-b hover:bg-gray-50 transition cursor-pointer ${
+        active ? "bg-green-50/60" : ""
+      }`}
+    >
 
       <td className="py-4 flex items-center gap-3">
-        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-          <Inventory2OutlinedIcon style={{ fontSize: 16 }} />
-        </div>
+        {imageUrl ? (
+          <img
+            src={assetUrl(imageUrl)}
+            alt={name}
+            className="w-8 h-8 rounded-lg object-cover border border-gray-100"
+          />
+        ) : (
+          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+            <Inventory2OutlinedIcon style={{ fontSize: 16 }} />
+          </div>
+        )}
         {id}
       </td>
 
@@ -444,7 +590,10 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
       <td className="flex justify-end gap-3">
         <QrCode2OutlinedIcon 
           className="text-gray-400 cursor-pointer hover:text-green-600"
-          onClick={() => onQRClick({ id, name })}
+          onClick={(e) => {
+            e.stopPropagation();
+            onQRClick({ id, rawId, name });
+          }}
         />
         <MoreVertOutlinedIcon 
           className="text-gray-400 cursor-pointer hover:text-black"
@@ -469,7 +618,7 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
           onMenuClick({
             x,
             y: rect.bottom + 6
-          }, { id, name });
+          }, { id, rawId, name });
           }}
         />
       </td>
@@ -481,7 +630,7 @@ function ProductRow({ id, name, material, co2, water, status, onQRClick, onMenuC
 function CreateGarmentModal({ onClose, onCreated }: any) {
   const [step, setStep] = useState(1);
   const [transport, setTransport] = useState("Road");
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
 
   const [form, setForm] = useState({
     location: "",
@@ -490,6 +639,7 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
     carbon: "4.2",
     water: "15.0",
     certificates: [] as File[],
+    image: null as File | null,
     logisticsProvider: "",
   });
 
@@ -513,14 +663,14 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
     Air: <FlightOutlinedIcon />,
   };
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
   };
 
   const isStepValid = () => {
     if (step === 1) {
-      return form.location && form.productName && form.materials.length > 0;
+      return form.location && form.productName && form.image && form.materials.length > 0;
     }
     if (step === 2) {
       return form.carbon && form.water && form.certificates.length > 0;
@@ -533,22 +683,40 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
 
   const handleSave = () => {
     if (!isStepValid()) {
-      showToast("Please complete required fields");
+      if (step === 1) {
+        setErrors((prev: any) => ({
+          ...prev,
+          location: !form.location,
+          productName: !form.productName,
+          image: !form.image,
+          materials: form.materials.length === 0,
+        }));
+      }
+      showToast("Please complete required fields", "error");
       return;
     }
 
     setSavedSteps((prev: any) => ({ ...prev, [step]: true }));
-    showToast(`Step ${step} saved successfully`);
+    showToast(`Step ${step} saved successfully`, "success");
   };
 
   const handleContinue = () => {
     if (!isStepValid()) {
-      showToast("Please fill all required fields first.");
+      if (step === 1) {
+        setErrors((prev: any) => ({
+          ...prev,
+          location: !form.location,
+          productName: !form.productName,
+          image: !form.image,
+          materials: form.materials.length === 0,
+        }));
+      }
+      showToast("Please fill all required fields first.", "error");
       return;
     }
 
     if (!savedSteps[step]) {
-      showToast("Please save this step before continuing.");
+      showToast("Please save this step before continuing.", "error");
       return;
     }
 
@@ -557,6 +725,7 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
 
   const toggleMaterial = (material: string) => {
     setSavedSteps((prev: any) => ({ ...prev, 1: false }));
+    setErrors((prev: any) => ({ ...prev, materials: false }));
 
     setForm((prev) => ({
       ...prev,
@@ -568,26 +737,43 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
 
   const handleFinalize = async () => {
     if (!isStepValid()) {
-      showToast("Complete the logistics setup before finalizing");
+      showToast("Complete the logistics setup before finalizing", "error");
       return;
     }
 
     setSavedSteps((prev: any) => ({ ...prev, 3: true }));
 
     try {
-      await apiFetch("/garments", {
+      const payload = new FormData();
+      payload.append("productName", form.productName);
+      payload.append("location", form.location);
+      payload.append("materials", JSON.stringify(form.materials));
+      payload.append("carbon", form.carbon);
+      payload.append("water", form.water);
+      payload.append("logisticsProvider", form.logisticsProvider);
+      if (form.image) payload.append("image", form.image);
+
+      const createdGarment = await apiFetch<any>("/garments", {
         method: "POST",
-        body: JSON.stringify({
-          productName: form.productName,
-          location: form.location,
-          materials: form.materials,
-          carbon: form.carbon,
-          water: form.water,
-          logisticsProvider: form.logisticsProvider,
-        }),
+        body: payload,
       });
 
-      showToast("Garment created successfully");
+      await Promise.all(
+        form.certificates.map((file) => {
+          const certificatePayload = new FormData();
+          certificatePayload.append("garmentId", createdGarment._id);
+          certificatePayload.append("certificateType", "LCA");
+          certificatePayload.append("issuer", "LOOPI Verification Authority");
+          certificatePayload.append("file", file);
+
+          return apiFetch("/certificates", {
+            method: "POST",
+            body: certificatePayload,
+          });
+        })
+      );
+
+      showToast("Garment created successfully", "success");
       onCreated?.();
 
       setTimeout(() => {
@@ -596,7 +782,7 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
 
     } catch (err) {
       console.error(err);
-      showToast("Error creating garment");
+      showToast("Error creating garment", "error");
     }
   };
 
@@ -626,9 +812,19 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]" />
 
       {toast && (
-        <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-green-50 border border-green-200 text-green-700">
-          <CheckCircleRoundedIcon style={{ fontSize: 18 }} />
-          <span className="text-sm font-medium">{toast}</span>
+        <div
+          className={`fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-red-50 border-red-200 text-red-700"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircleRoundedIcon style={{ fontSize: 18 }} />
+          ) : (
+            <CancelOutlinedIcon style={{ fontSize: 18 }} />
+          )}
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
 
@@ -724,6 +920,58 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
 
                 <div className="col-span-2">
                   <p className="text-xs font-semibold mb-2 text-gray-500 tracking-wide">
+                    GARMENT IMAGE *
+                  </p>
+
+                  <label
+                    className={`flex items-center gap-4 rounded-xl border border-dashed p-4 cursor-pointer hover:border-[#1B5E20] transition ${
+                      errors.image
+                        ? "border-red-400 bg-red-50"
+                        : "border-gray-300 bg-gray-50"
+                    }`}
+                  >
+                    {form.image ? (
+                      <img
+                        src={URL.createObjectURL(form.image)}
+                        alt={form.image.name}
+                        className="w-20 h-20 rounded-xl object-cover border border-white shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-xl bg-white text-gray-400 border flex items-center justify-center">
+                        <UploadFileOutlinedIcon />
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {form.image ? form.image.name : "Upload product image"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        JPG, PNG, or WebP. Used on the public passport and product register.
+                      </p>
+                    </div>
+
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setSavedSteps((prev: any) => ({ ...prev, 1: false }));
+                        setForm({ ...form, image: file });
+                        setErrors((prev: any) => ({ ...prev, image: false }));
+                      }}
+                    />
+                  </label>
+                  {errors.image && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Garment image is required
+                    </p>
+                  )}
+                </div>
+
+                <div className="col-span-2">
+                  <p className="text-xs font-semibold mb-2 text-gray-500 tracking-wide">
                     MATERIAL COMPOSITION
                   </p>
 
@@ -740,6 +988,11 @@ function CreateGarmentModal({ onClose, onCreated }: any) {
                       </label>
                     ))}
                   </div>
+                  {errors.materials && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Select at least one material
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -1099,15 +1352,54 @@ function Card({ type, icon, title, value, unit }: any) {
   );
 }
 
-function QRModal({ data, onClose }: any) {
+function QRModal({ data, onClose, onNotify }: any) {
   const [downloading, setDownloading] = useState(false);
+  const qrRef = useRef<HTMLDivElement | null>(null);
+  const passportUrl =
+    data?.id ? `${window.location.origin}/consumer/passport/${data.id}` : "";
 
   const handleDownload = () => {
     setDownloading(true);
 
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) {
+      onNotify?.("Unable to generate QR code", "error");
+      setDownloading(false);
+      return;
+    }
+
+    const source = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${data?.id || "passport"}-qr.svg`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
     setTimeout(() => {
       setDownloading(false);
-    }, 1500);
+      onNotify?.("QR code downloaded", "success");
+    }, 600);
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share && passportUrl) {
+        await navigator.share({
+          title: `LOOPI Passport ${data?.id}`,
+          text: data?.name || "Digital Product Passport",
+          url: passportUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(passportUrl);
+      }
+      onNotify?.("Passport link copied", "success");
+    } catch (err) {
+      onNotify?.("Unable to share passport link", "error");
+    }
   };
 
   return (
@@ -1138,11 +1430,14 @@ function QRModal({ data, onClose }: any) {
           <div className="relative bg-[#E7E9E8] rounded-[24px] p-4 shadow-inner">
 
             {/* QR INNER */}
-            <div className="bg-white rounded-[16px] p-3 shadow-sm inline-block">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&color=1B5E20&data=${data?.id}`}
-                alt="QR"
-                className="mx-auto"
+            <div ref={qrRef} className="bg-white rounded-[16px] p-3 shadow-sm inline-block">
+              <QRCodeSVG
+                value={passportUrl}
+                size={208}
+                fgColor="#1B5E20"
+                bgColor="#FFFFFF"
+                level="M"
+                includeMargin
               />
             </div>
 
@@ -1178,7 +1473,10 @@ function QRModal({ data, onClose }: any) {
               DOWNLOAD
             </button>
 
-            <button className="flex-1 flex items-center justify-center gap-2 border border-gray-300 py-2.5 rounded-xl text-[12px] text-gray-600 hover:bg-gray-100 transition">
+            <button
+              onClick={handleShare}
+              className="flex-1 flex items-center justify-center gap-2 border border-gray-300 py-2.5 rounded-xl text-[12px] text-gray-600 hover:bg-gray-100 transition"
+            >
               <IosShareOutlinedIcon style={{ fontSize: 16 }} />
               SHARE
             </button>
@@ -1234,15 +1532,18 @@ function MenuItem({ icon, title, desc, color = "", onClick, disabled }: any) {
   );
 }
 
-function ActionMenu({ position, onClose, onView, data }: any) {
+function ActionMenu({ position, onClose, onView, onGenerateQR, data, onNotify }: any) {
   useEffect(() => {
     const close = () => setTimeout(() => onClose(), 0);
     window.addEventListener("click", close);
     return () => window.removeEventListener("click", close);
   }, []);
 
+const hasCertificateFile = Boolean(data?.certificate?.fileUrl);
 const menuWidth = 280;
 const padding = 12;
+const maxHeight = Math.max(240, window.innerHeight - padding * 2);
+const estimatedHeight = Math.min(640, maxHeight);
 
 // calculate LEFT
 let left = position.x;
@@ -1259,17 +1560,21 @@ if (left < padding) {
 
 // calculate TOP
 let top = position.y;
+const openUp = position.y + estimatedHeight > window.innerHeight - padding;
 
 // if overflow bottom → move up
-const menuHeight = 460;
-if (top + menuHeight > window.innerHeight) {
-  top = window.innerHeight - menuHeight - padding;
+if (openUp) {
+  top = window.innerHeight - estimatedHeight - padding;
+}
+
+if (top < padding) {
+  top = padding;
 }
 
 return createPortal(
   <div
-    className="fixed z-[9999] w-[280px] bg-[#F6F7F6] rounded-[28px] shadow-[0_25px_90px_rgba(0,0,0,0.2)] p-3"
-    style={{ top, left }}
+    className="fixed z-[9999] w-[280px] bg-[#F6F7F6] rounded-[28px] shadow-[0_25px_90px_rgba(0,0,0,0.2)] p-3 overflow-y-auto"
+    style={openUp ? { left, bottom: padding, maxHeight } : { top, left, maxHeight }}
     onClick={(e) => e.stopPropagation()}
   >
       <MenuItem
@@ -1281,9 +1586,21 @@ return createPortal(
       />
 
       <MenuItem
+        icon={<QrCode2OutlinedIcon className="text-green-700" />}
+        title="Generate QR"
+        desc="Create passport QR code"
+        color="text-green-700"
+        onClick={onGenerateQR}
+      />
+
+      <MenuItem
         icon={<EditOutlinedIcon className="text-gray-600" />}
         title="Edit Garment"
         desc="Update product details"
+        onClick={() => {
+          onNotify?.("Edit garment is not available in production yet", "error");
+          onClose();
+        }}
       />
 
       <MenuItem
@@ -1291,6 +1608,10 @@ return createPortal(
         title="Mark as Shipped"
         desc="Update lifecycle status"
         color="text-purple-400"
+        onClick={() => {
+          onNotify?.("Shipment status must be updated from Shipment Records", "error");
+          onClose();
+        }}
       />
 
       <MenuItem
@@ -1298,19 +1619,39 @@ return createPortal(
         title="Request Audit"
         desc="Submit for compliance review"
         color="text-orange-500"
+        onClick={() => {
+          onNotify?.("Audit request sent", "success");
+          onClose();
+        }}
       />
 
       <MenuItem
-        icon={<DownloadOutlinedIcon className="text-green-700" />}
+        icon={<DownloadOutlinedIcon className={hasCertificateFile ? "text-green-700" : "text-gray-400"} />}
         title="Download Certificate"
-        desc="Export compliance PDF"
-        color="text-green-700"
+        desc={data?.certificate?.fileName || "No certificate file attached"}
+        color={hasCertificateFile ? "text-green-700" : "text-gray-500"}
+        disabled={!hasCertificateFile}
+        onClick={() => {
+          const url = assetUrl(data?.certificate?.fileUrl);
+          window.open(url, "_blank", "noopener,noreferrer");
+          onNotify?.("Certificate opened", "success");
+          onClose();
+        }}
       />
 
       <MenuItem
         icon={<ContentCopyOutlinedIcon className="text-gray-600" />}
         title="Copy Passport ID"
         desc={data?.id}
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(data?.id || "");
+            onNotify?.("Passport ID copied", "success");
+          } catch (err) {
+            onNotify?.("Unable to copy passport ID", "error");
+          }
+          onClose();
+        }}
       />
 
       <div className="border-t my-3 opacity-60" />
@@ -1320,6 +1661,10 @@ return createPortal(
         title="Delete Record"
         desc="Remove from blockchain (requires admin)"
         color="text-red-600"
+        onClick={() => {
+          onNotify?.("Delete requires admin approval", "error");
+          onClose();
+        }}
       />
   </div>,
   document.body

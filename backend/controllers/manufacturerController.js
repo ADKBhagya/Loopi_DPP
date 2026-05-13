@@ -2,6 +2,7 @@ import Garment from "../models/Garment.js";
 import Shipment from "../models/Shipment.js";
 import Certificate from "../models/Certificate.js";
 import Transaction from "../models/Transaction.js";
+import User from "../models/user.js";
 
 /* =========================================
 GET MANUFACTURER DASHBOARD STATS
@@ -122,6 +123,43 @@ async (req, res) => {
     res.status(500).json({
       message:
         "Failed to fetch transactions",
+    });
+  }
+};
+
+export const getManufacturerRetailers =
+async (req, res) => {
+
+  try {
+
+    const retailers =
+      await User.find({
+        role: "Retailer",
+        status: "approved",
+      })
+        .select("fullName email organization")
+        .sort({ organization: 1, fullName: 1 });
+
+    res.status(200).json(
+      retailers.map((retailer) => ({
+        id: retailer._id,
+        name: retailer.organization || retailer.fullName,
+        contact: retailer.fullName,
+        email: retailer.email,
+        destination: retailer.organization || retailer.fullName,
+      }))
+    );
+
+  } catch (error) {
+
+    console.error(
+      "GET MANUFACTURER RETAILERS ERROR:",
+      error
+    );
+
+    res.status(500).json({
+      message:
+        "Failed to fetch retailers",
     });
   }
 };
