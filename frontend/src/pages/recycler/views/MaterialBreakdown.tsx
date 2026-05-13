@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
@@ -21,9 +22,10 @@ export default function MaterialBreakdown() {
     useState("");
 
   const [selectedId, setSelectedId] =
-    useState("GP-9811");
+    useState("");
+  const [apiError, setApiError] = useState("");
 
-  const passports = [
+  const fallbackPassports = [
 
     {
       id: "GP-9811",
@@ -189,6 +191,23 @@ export default function MaterialBreakdown() {
 
   ];
 
+  const [passports, setPassports] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiFetch<any>("/recycler/materials")
+      .then((data) => {
+        setApiError("");
+        if (data.passports?.length) {
+          setPassports(data.passports);
+          setSelectedId(data.passports[0].id);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load recycler materials", error);
+        setApiError(error instanceof Error ? error.message : "Failed to load recycler materials");
+      });
+  }, []);
+
   const filteredPassports = useMemo(() => {
 
     return passports.filter((item) => {
@@ -205,7 +224,7 @@ export default function MaterialBreakdown() {
 
     });
 
-  }, [search]);
+  }, [passports, search]);
 
   const selectedPassport =
     passports.find(
@@ -215,6 +234,11 @@ export default function MaterialBreakdown() {
 
   return (
     <div className="space-y-5 ">
+      {apiError && (
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+          {apiError}
+        </div>
+      )}
 
 
       {/* CONTENT */}
@@ -539,8 +563,8 @@ export default function MaterialBreakdown() {
 
                 {selectedPassport.materials.map(
                   (
-                    material,
-                    index
+                    material: any,
+                    index: number
                   ) => (
 
                     <div key={index}>

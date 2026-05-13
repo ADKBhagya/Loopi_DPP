@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 /* =========================================
 ICONS
@@ -31,12 +32,13 @@ export default function LifecycleClose() {
 
   const [selectedItem, setSelectedItem] =
     useState<any>(null);
+  const [apiError, setApiError] = useState("");
 
   /* =========================================
   DATA
   ========================================= */
 
-  const passports = [
+  const fallbackPassports = [
 
     {
       id: "GP-9811",
@@ -108,7 +110,7 @@ export default function LifecycleClose() {
 
   ];
 
-  const logs = [
+  const fallbackLogs = [
 
     {
       hash: "0x8A31...F223",
@@ -166,6 +168,50 @@ export default function LifecycleClose() {
   FILTERED
   ========================================= */
 
+  const [passports, setPassports] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+
+  const loadCloseQueue = () => {
+    apiFetch<any>("/recycler/lifecycle-close")
+      .then((data) => {
+        setApiError("");
+        setPassports(data.passports || []);
+        setLogs(data.logs || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load lifecycle close queue", error);
+        setApiError(error instanceof Error ? error.message : "Failed to load lifecycle close queue");
+      });
+  };
+
+  useEffect(() => {
+    loadCloseQueue();
+  }, []);
+
+  const closeLifecycle = async () => {
+    if (!selectedItem?.processId) return;
+
+    try {
+      await apiFetch(`/recycler/processing/${selectedItem.processId}/close`, {
+        method: "POST",
+      });
+      setSelectedItem(null);
+      loadCloseQueue();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to close lifecycle";
+      setApiError(message);
+      alert(message);
+    }
+  };
+
+  const readyCount = passports.filter((item) => item.status === "READY").length;
+  const reviewCount = passports.filter((item) => item.status === "RECOVER" || item.status === "WAIT").length;
+  const closedCount = passports.filter((item) => item.status === "CLOSED").length;
+  const creditTotal = passports.reduce(
+    (sum, item) => sum + (Number.parseFloat(String(item.credits || "0")) || 0),
+    0
+  );
+
   const filteredPassports =
     useMemo(() => {
 
@@ -196,7 +242,7 @@ export default function LifecycleClose() {
 
       });
 
-    }, [search, filter]);
+    }, [passports, search, filter]);
 
   /* =========================================
   UI
@@ -205,6 +251,11 @@ export default function LifecycleClose() {
   return (
 
     <div className="space-y-5">
+      {apiError && (
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+          {apiError}
+        </div>
+      )}
 
       {/* =========================================
       STATS
@@ -223,7 +274,7 @@ export default function LifecycleClose() {
 
         <StatCard
           title="READY TO CLOSE"
-          value="2"
+          value={String(readyCount)}
           icon={<CheckCircleRoundedIcon />}
           iconBg="#EAF7EE"
           iconColor="#16A34A"
@@ -231,7 +282,7 @@ export default function LifecycleClose() {
 
         <StatCard
           title="IN REVIEW"
-          value="1"
+          value={String(reviewCount)}
           icon={<AutoAwesomeRoundedIcon />}
           iconBg="#FFF4E6"
           iconColor="#F59E0B"
@@ -239,7 +290,7 @@ export default function LifecycleClose() {
 
         <StatCard
           title="CLOSED"
-          value="1"
+          value={String(closedCount)}
           icon={<HubRoundedIcon />}
           iconBg="#EEF4FF"
           iconColor="#2563EB"
@@ -247,7 +298,7 @@ export default function LifecycleClose() {
 
         <StatCard
           title="RECYCLED CREDIT"
-          value="150+"
+          value={`${creditTotal}+`}
           icon={<TokenRoundedIcon />}
           iconBg="#F5EFFF"
           iconColor="#9333EA"
@@ -1105,6 +1156,7 @@ export default function LifecycleClose() {
                   </button>
 
                   <button
+                    onClick={closeLifecycle}
                     className="
                       flex-1
 
