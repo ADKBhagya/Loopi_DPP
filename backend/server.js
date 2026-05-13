@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
@@ -51,6 +52,9 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173,http:
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
+const frontendIndexPath = path.join(frontendDistPath, "index.html");
+const hasFrontendBuild = fs.existsSync(frontendIndexPath);
 
 /* =========================
    DATABASE CONNECTION
@@ -69,6 +73,10 @@ app.use(cors({
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+if (hasFrontendBuild) {
+  app.use(express.static(frontendDistPath));
+}
 
 /* =========================
    ROUTES
@@ -97,9 +105,15 @@ app.use("/api/auditor", auditorRoutes);
    TEST ROUTE
 ========================= */
 
-app.get("/", (req, res) => {
-  res.send("Backend running 🚀");
-});
+if (hasFrontendBuild) {
+  app.get(/^(?!\/api|\/uploads).*/, (req, res) => {
+    res.sendFile(frontendIndexPath);
+  });
+} else {
+  app.get("/", (req, res) => {
+    res.send("Backend running 🚀");
+  });
+}
 
 /* =========================
    REGISTER

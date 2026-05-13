@@ -29,13 +29,14 @@ jobs:
 
             cd backend
             npm ci || npm install
-            pm2 restart loopi-backend --update-env || pm2 start server.js --name loopi-backend
-            pm2 save
-
             cd ../frontend
             rm -rf node_modules
             npm ci || npm install
             npm run build
+
+            cd ../backend
+            pm2 restart loopi-backend --update-env || pm2 start server.js --name loopi-backend
+            pm2 save
 
             echo "Frontend build:"
             ls -la dist
