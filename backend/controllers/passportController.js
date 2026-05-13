@@ -4,6 +4,8 @@ import Shipment from "../models/Shipment.js";
 import Transaction from "../models/Transaction.js";
 import OwnershipTransfer from "../models/OwnershipTransfer.js";
 
+const appPublicUrl = process.env.APP_PUBLIC_URL || process.env.CLIENT_URL || "https://loopidpp.online";
+
 /* ======================================================
 GET COMPLETE DIGITAL PRODUCT PASSPORT
 ====================================================== */
@@ -176,10 +178,10 @@ export const getPassportByGarmentId = async (req, res) => {
 
     const qrVerification = {
       qrUrl:
-        `https://loopidpp.online/passport/${garment._id}`,
+        `${appPublicUrl.replace(/\/$/, "")}/passport/${garment._id}`,
 
       publicVerifyUrl:
-        `https://loopidpp.online/verify/${garment._id}`,
+        `${appPublicUrl.replace(/\/$/, "")}/verify/${garment._id}`,
     };
 
     /* ===============================
