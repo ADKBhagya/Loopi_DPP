@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import PageContainer from "../../../components/ui/PageContainer";
+import { useState } from "react";
+import { apiFetch } from "../../../lib/api";
+import { downloadJsonFile } from "../../../lib/download";
 
 /* ICONS */
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
@@ -18,6 +19,9 @@ import HourglassTopRoundedIcon from "@mui/icons-material/HourglassTopRounded";
 export default function ComplianceCheck() {
   const [started, setStarted] = useState(false);
   const [running, setRunning] = useState(false);
+  const [passportId, setPassportId] = useState("GP-9822");
+  const [apiError, setApiError] = useState("");
+  const [score, setScore] = useState(0);
 
   const initialChecks = [
     {
@@ -79,83 +83,36 @@ export default function ComplianceCheck() {
 
   const [checks, setChecks] = useState(initialChecks);
 
-  /* RUN ENGINE */
-  useEffect(() => {
-    if (!running) return;
-
-    const statuses = [
-      "PASS",
-      "PASS",
-      "PASS",
-      "PASS",
-      "PASS",
-      "FAIL",
-      "PASS",
-    ];
-
-    checks.forEach((_, index) => {
-
-      setTimeout(() => {
-
-        /* CURRENT CHECKING */
-        setChecks((prev) =>
-          prev.map((item, i) => {
-
-            if (i < index) return item;
-
-            if (i === index) {
-              return {
-                ...item,
-                status: "CHECKING",
-              };
-            }
-
-            return item;
-          })
-        );
-
-        /* COMPLETE */
-        setTimeout(() => {
-
-          setChecks((prev) =>
-            prev.map((item, i) =>
-              i === index
-                ? {
-                    ...item,
-                    status: statuses[index],
-                  }
-                : item
-            )
-          );
-
-          /* STOP */
-          if (index === checks.length - 1) {
-            setRunning(false);
-          }
-
-        }, 1200);
-
-      }, index * 1600);
-
-    });
-
-  }, [running]);
-
   /* START / RERUN */
-  const startComplianceCheck = () => {
+  const startComplianceCheck = async () => {
+    if (running) return;
 
     setStarted(true);
+    setRunning(true);
+    setApiError("");
 
     setChecks(
       initialChecks.map((item) => ({
         ...item,
-        status: "IDLE",
+        status: "CHECKING",
       }))
     );
 
-    setTimeout(() => {
-      setRunning(true);
-    }, 200);
+    try {
+      const data = await apiFetch<any>("/auditor/compliance-check", {
+        method: "POST",
+        body: JSON.stringify({ passportId: passportId.trim() }),
+      });
+
+      setPassportId(data.passportId || passportId);
+      setScore(data.score || 0);
+      setChecks(data.checks || initialChecks);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Failed to run compliance check");
+      setChecks(initialChecks);
+    } finally {
+      setRunning(false);
+    }
   };
 
   const passedCount = checks.filter(
@@ -261,7 +218,8 @@ export default function ComplianceCheck() {
             <div className="mt-8">
 
               <input
-                defaultValue="GP-9822"
+                value={passportId}
+                onChange={(event) => setPassportId(event.target.value)}
                 className="
                   w-full h-12
                   rounded-2xl
@@ -305,6 +263,13 @@ export default function ComplianceCheck() {
       )}
 
       {/* AFTER START */}
+      {apiError && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-600">
+          {apiError}
+        </div>
+      )}
+
+      {/* AFTER START */}
       {started && (
         <>
           <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm overflow-hidden">
@@ -333,7 +298,7 @@ export default function ComplianceCheck() {
                   <h2 className="text-[18px] font-bold text-gray-900">
                     Compliance Check —
                     <span className="text-[#166534] ml-1">
-                      GP-9822
+                      {passportId}
                     </span>
                   </h2>
 
@@ -366,6 +331,7 @@ export default function ComplianceCheck() {
                   </button>
 
                   <button
+                    onClick={() => downloadJsonFile(`${passportId}-compliance-check.json`, { passportId, score, checks })}
                     className="
                       h-10 px-4 rounded-xl
                       bg-[#166534]
@@ -396,7 +362,7 @@ export default function ComplianceCheck() {
                   <div className="flex items-center gap-3">
 
                     <span className="text-sm font-bold text-[#166534]">
-                      {progress}%
+                      {fullyCompleted ? score : progress}%
                     </span>
 
                     <span

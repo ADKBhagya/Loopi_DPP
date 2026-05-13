@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageContainer from "../../../components/ui/PageContainer";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
@@ -22,6 +23,9 @@ import FactoryOutlinedIcon from "@mui/icons-material/FactoryOutlined";
 
 export default function LifecycleReview() {
   const [passportId, setPassportId] = useState("GP-9821");
+  const [lifecycle, setLifecycle] = useState<any>(null);
+  const [apiError, setApiError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [expanded, setExpanded] = useState("raw");
 
@@ -83,22 +87,42 @@ export default function LifecycleReview() {
     (verifiedCount / timeline.length) * 100
   );
 
-  const verifyRetailStage = () => {
-    setTimeline((prev) =>
-      prev.map((item) =>
-        item.id === "retail"
-          ? {
-              ...item,
-              status: "VERIFIED",
-            }
-          : item
-      )
-    );
+  const loadLifecycle = async () => {
+    if (!passportId.trim()) return;
+    setLoading(true);
+    try {
+      const data = await apiFetch<any>(`/auditor/lifecycle/${passportId.trim()}`);
+      setLifecycle(data);
+      setTimeline(data.timeline || []);
+      setApiError("");
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Failed to load lifecycle review");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyRetailStage = async () => {
+    try {
+      const data = await apiFetch<any>(`/auditor/lifecycle/${passportId.trim()}/stages/retail/verify`, {
+        method: "POST",
+      });
+      setLifecycle(data);
+      setTimeline(data.timeline || []);
+      setApiError("");
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Failed to verify lifecycle stage");
+    }
   };
 
   return (
     <PageContainer>
     <div className="space-y-5 pb-10">
+      {apiError && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-600">
+          {apiError}
+        </div>
+      )}
 
       {/* STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -174,6 +198,7 @@ export default function LifecycleReview() {
           </div>
 
           <button
+            onClick={loadLifecycle}
             className="
               h-11 px-5 rounded-2xl
               bg-[#166534]
@@ -185,7 +210,7 @@ export default function LifecycleReview() {
             "
           >
             <SearchOutlinedIcon style={{ fontSize: 18 }} />
-            LOAD LIFECYCLE
+            {loading ? "LOADING..." : "LOAD LIFECYCLE"}
           </button>
 
         </div>
@@ -198,7 +223,7 @@ export default function LifecycleReview() {
         <div className="flex justify-between items-center mb-4">
 
           <p className="text-sm font-bold text-gray-800">
-            GP-9821 — Lifecycle Completeness
+            {lifecycle?.passportId || passportId} - Lifecycle Completeness
           </p>
 
           <div className="text-right">
@@ -238,11 +263,11 @@ export default function LifecycleReview() {
           <div>
 
             <h2 className="text-[18px] font-bold text-gray-900">
-              Lifecycle Timeline — GP-9821
+              Lifecycle Timeline - {lifecycle?.passportId || passportId}
             </h2>
 
             <p className="text-sm text-gray-400 mt-1">
-              Sthlm-MF-01 · Registered Jan 02, 2026
+              {lifecycle?.manufacturer || "Manufacturer"} · Registered {lifecycle?.registeredDate || "pending"}
             </p>
 
           </div>
