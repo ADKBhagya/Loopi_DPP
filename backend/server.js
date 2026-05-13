@@ -21,6 +21,7 @@ import verificationRoutes from "./routes/verificationRoutes.js";
 import lifecycleRoutes from "./routes/lifecycleRoutes.js";
 import blockchainRoutes from "./routes/blockchainRoutes.js";
 import logisticsRoutes from "./routes/logisticsRoutes.js";
+import retailerRoutes from "./routes/retailerRoutes.js";
 
 import { sendResetEmail } from "./utils/emailService.js";
 
@@ -73,6 +74,7 @@ app.use("/api/verify", verificationRoutes);
 app.use("/api/lifecycle", lifecycleRoutes);
 app.use("/api/blockchain", blockchainRoutes);
 app.use("/api/logistics", logisticsRoutes);
+app.use("/api/retailer", retailerRoutes);
 /* =========================
    TEST ROUTE
 ========================= */
