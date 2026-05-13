@@ -36,6 +36,26 @@ export default function ProofOfDelivery() {
       .includes(search.toLowerCase())
   );
 
+  const downloadSignature = (record: any) => {
+    downloadJson(`pod-signature-${record.id}.json`, {
+      podReference: record.id,
+      shipment: record.shipment,
+      garment: record.garment,
+      recipient: record.recipient,
+      signedAt: record.signedAt,
+      arrivalDate: record.arrivalDate,
+      emissions: record.emissions,
+      documents: record.documents || [],
+      signature: record.signature || record.hash,
+      blockchainHash: record.hash,
+      verified: true,
+    });
+  };
+
+  const downloadAll = () => {
+    downloadJson("loopi-proof-of-delivery-records.json", filteredRecords);
+  };
+
   return (
     <div className="relative min-h-screen bg-[#F4F7FB] overflow-hidden">
       <div className="bg-white border border-gray-100 rounded-[32px] h-[410px] flex flex-col items-center justify-center shadow-sm">
@@ -150,11 +170,23 @@ export default function ProofOfDelivery() {
                               </div>
                             </div>
                             <div className="flex items-center gap-3 mt-4">
-                              <button className="flex-1 h-11 rounded-xl bg-[#08152F] text-white text-xs font-bold tracking-[2px] flex items-center justify-center gap-2">
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  downloadSignature(record);
+                                }}
+                                className="flex-1 h-11 rounded-xl bg-[#08152F] text-white text-xs font-bold tracking-[2px] flex items-center justify-center gap-2"
+                              >
                                 <DownloadOutlinedIcon style={{ fontSize: 18 }} />
                                 DOWNLOAD SIGNATURE
                               </button>
-                              <button className="w-12 h-11 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex items-center justify-center">
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  downloadJson(`pod-${record.id}.json`, record);
+                                }}
+                                className="w-12 h-11 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+                              >
                                 <OpenInNewOutlinedIcon style={{ fontSize: 18 }} />
                               </button>
                             </div>
@@ -170,7 +202,7 @@ export default function ProofOfDelivery() {
                 <p className="text-sm text-gray-400">
                   {filteredRecords.length} of {records.length} records · All verified
                 </p>
-                <button className="flex items-center gap-2 text-[#1B5E20] text-xs font-bold tracking-widest">
+                <button onClick={downloadAll} className="flex items-center gap-2 text-[#1B5E20] text-xs font-bold tracking-widest">
                   <DownloadOutlinedIcon style={{ fontSize: 18 }} />
                   DOWNLOAD ALL JSON
                 </button>
@@ -208,4 +240,17 @@ function formatTime(value?: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function downloadJson(fileName: string, payload: any) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }

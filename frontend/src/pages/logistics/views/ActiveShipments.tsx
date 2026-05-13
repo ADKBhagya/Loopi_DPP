@@ -18,6 +18,8 @@ import MyLocationOutlinedIcon from "@mui/icons-material/MyLocationOutlined";
 import ModalPortal from "../../../components/modals/ModalPortal";
 import { apiFetch } from "../../../lib/api";
 
+type ToastType = "success" | "error";
+
 export default function ActiveShipments() {
   const [openModal, setOpenModal] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
@@ -189,34 +191,62 @@ export default function ActiveShipments() {
 }
 
 function UpdateShipmentModal({ shipment, onClose, onUpdated }: any) {
-  const [status, setStatus] = useState("arrived");
-  const [arrivalDate, setArrivalDate] = useState("");
-  const [emission, setEmission] = useState("0.62");
+  const [status, setStatus] = useState(shipment?.status === "delayed" ? "delayed" : "arrived");
+  const [arrivalDate, setArrivalDate] = useState(shipment?.actualArrivalDate || "");
+  const [emission, setEmission] = useState(String(Number.parseFloat(String(shipment?.emissions || "0.62")) || 0.62));
   const [documents, setDocuments] = useState<File[]>([]);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  };
 
   const handleConfirm = async () => {
     if (!shipment?.id) {
-      setToast("Shipment record is missing");
+      showToast("Shipment record is missing", "error");
       return;
     }
 
+    if (status === "arrived") {
+      if (!arrivalDate) {
+        showToast("Select the actual arrival date before saving arrived", "error");
+        return;
+      }
+
+      const emissionsValue = Number.parseFloat(String(emission));
+
+      if (!Number.isFinite(emissionsValue) || emissionsValue < 0) {
+        showToast("Enter valid emissions data before saving arrived", "error");
+        return;
+      }
+
+      if (documents.length === 0 && (!Array.isArray(shipment?.documents) || shipment.documents.length === 0)) {
+        showToast("Attach shipping documents before saving arrived", "error");
+        return;
+      }
+    }
+
     try {
+      setSaving(true);
       await apiFetch(`/logistics/shipments/${shipment.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           status,
           arrivalDate,
           emission,
-          documents: documents.map((file) => file.name),
+          documents: documents.length > 0 ? documents.map((file) => file.name) : shipment?.documents || [],
         }),
       });
 
-      setToast("Shipment updated on-chain");
+      showToast("Shipment updated on-chain", "success");
       await onUpdated?.();
       setTimeout(onClose, 900);
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Update failed");
+      showToast(error instanceof Error ? error.message : "Update failed", "error");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -226,9 +256,15 @@ function UpdateShipmentModal({ shipment, onClose, onUpdated }: any) {
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9998]" />
 
         {toast && (
-          <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg bg-blue-50 border border-blue-200 text-blue-700">
-            <CheckCircleRoundedIcon />
-            <span className="text-sm font-medium">{toast}</span>
+          <div
+            className={`fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg ${
+              toast.type === "success"
+                ? "bg-green-50 border border-green-200 text-green-700"
+                : "bg-red-50 border border-red-200 text-red-700"
+            }`}
+          >
+            {toast.type === "success" ? <CheckCircleRoundedIcon /> : <CloseOutlinedIcon />}
+            <span className="text-sm font-medium">{toast.message}</span>
           </div>
         )}
 
@@ -340,6 +376,8 @@ function UpdateShipmentModal({ shipment, onClose, onUpdated }: any) {
                   <p className="text-sm font-semibold mt-3">
                     {documents.length > 0
                       ? `${documents.length} document(s) selected`
+                      : Array.isArray(shipment?.documents) && shipment.documents.length > 0
+                      ? `${shipment.documents.length} document(s) already attached`
                       : "Upload Delivery Proof / BOL"}
                   </p>
                   <p className="text-[11px] mt-1">
@@ -368,9 +406,10 @@ function UpdateShipmentModal({ shipment, onClose, onUpdated }: any) {
               </button>
               <button
                 onClick={handleConfirm}
-                className="h-11 px-6 rounded-2xl bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all"
+                disabled={saving}
+                className="h-11 px-6 rounded-2xl bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Confirm & Push to Blockchain
+                {saving ? "Saving..." : "Confirm & Push to Blockchain"}
               </button>
             </div>
           </div>

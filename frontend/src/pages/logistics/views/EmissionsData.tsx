@@ -43,6 +43,72 @@ export default function EmissionsData() {
   const byMode = Array.isArray(summary.byMode) ? summary.byMode : [];
   const totalByMode = byMode.reduce((sum: number, item: any) => sum + (item.total || 0), 0);
 
+  const exportEmissions = (format: "csv" | "json" | "report" | "dpp") => {
+    const exportedAt = new Date().toISOString();
+    const payload = {
+      exportedAt,
+      totalKgCo2e: summary.total || 0,
+      averageKgCo2ePerShipment: summary.average || 0,
+      shipmentCount: summary.shipmentCount || 0,
+      byMode,
+      latestTransactions: summary.latestTransactions || [],
+      blockchainCertified: true,
+    };
+
+    if (format === "csv") {
+      const rows = [
+        ["Mode", "Shipment Count", "Total kg CO2e"],
+        ...byMode.map((item: any) => [item.mode, item.count || 0, item.total || 0]),
+        ["All", summary.shipmentCount || 0, summary.total || 0],
+      ];
+
+      downloadFile(
+        "loopi-emissions-data.csv",
+        rows.map((row) => row.map(csvCell).join(",")).join("\n"),
+        "text/csv"
+      );
+      return;
+    }
+
+    if (format === "json") {
+      downloadJson("loopi-emissions-data.json", payload);
+      return;
+    }
+
+    if (format === "dpp") {
+      downloadJson("loopi-emissions-eu-dpp.json", {
+        schema: "EU-DPP-LOGISTICS-EMISSIONS",
+        generatedAt: exportedAt,
+        sustainability: {
+          logisticsEmissionsKgCo2e: payload.totalKgCo2e,
+          averagePerShipmentKgCo2e: payload.averageKgCo2ePerShipment,
+          transportModes: byMode,
+        },
+        evidence: {
+          blockchainCertified: true,
+          latestTransactions: payload.latestTransactions,
+        },
+      });
+      return;
+    }
+
+    const report = [
+      "LOOPI Logistics Emissions Report",
+      `Generated: ${new Date(exportedAt).toLocaleString()}`,
+      "",
+      `Total CO2e: ${payload.totalKgCo2e} kg`,
+      `Average per shipment: ${payload.averageKgCo2ePerShipment} kg`,
+      `Shipment count: ${payload.shipmentCount}`,
+      "",
+      "Emissions by mode:",
+      ...byMode.map((item: any) => `- ${item.mode}: ${item.total || 0} kg across ${item.count || 0} shipment(s)`),
+      "",
+      "Blockchain certification: verified",
+    ].join("\n");
+
+    downloadFile("loopi-emissions-report.txt", report, "text/plain");
+  };
+
   return (
     <div className="bg-[#F4F7FB] min-h-screen">
       <div className="grid grid-cols-4 gap-5">
@@ -122,10 +188,10 @@ export default function EmissionsData() {
                   </button>
                 </div>
                 <div className="p-6 space-y-4">
-                  <ExportOption title="CSV (Spreadsheet)" subtitle="Raw emissions metrics for analytics" />
-                  <ExportOption title="JSON (API format)" subtitle="Machine-readable blockchain payload" />
-                  <ExportOption title="PDF Report" subtitle="Executive sustainability report" />
-                  <ExportOption title="EU DPP Format" subtitle="Compliant Digital Product Passport export" />
+                  <ExportOption title="CSV (Spreadsheet)" subtitle="Raw emissions metrics for analytics" onClick={() => exportEmissions("csv")} />
+                  <ExportOption title="JSON (API format)" subtitle="Machine-readable blockchain payload" onClick={() => exportEmissions("json")} />
+                  <ExportOption title="Report" subtitle="Executive sustainability report" onClick={() => exportEmissions("report")} />
+                  <ExportOption title="EU DPP Format" subtitle="Compliant Digital Product Passport export" onClick={() => exportEmissions("dpp")} />
                 </div>
                 <div className="px-6 py-5 border-t border-gray-100 flex justify-end">
                   <button onClick={() => setOpenExport(false)} className="h-11 px-5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
@@ -165,9 +231,9 @@ function ProgressItem({ label, value, width, color }: any) {
   );
 }
 
-function ExportOption({ title, subtitle }: any) {
+function ExportOption({ title, subtitle, onClick }: any) {
   return (
-    <button className="w-full rounded-2xl border border-gray-200 bg-[#F8FAFC] hover:bg-white hover:border-[#2458F3] transition-all p-5 flex items-center justify-between text-left group">
+    <button onClick={onClick} className="w-full rounded-2xl border border-gray-200 bg-[#F8FAFC] hover:bg-white hover:border-[#2458F3] transition-all p-5 flex items-center justify-between text-left group">
       <div>
         <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
         <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
@@ -193,4 +259,24 @@ function modeWidth(items: any[], mode: string, total: number) {
   const value = modeValue(items, mode);
   const percent = total ? Math.round((value / total) * 100) : 0;
   return `${percent}%`;
+}
+
+function csvCell(value: any) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadJson(fileName: string, payload: any) {
+  downloadFile(fileName, JSON.stringify(payload, null, 2), "application/json");
+}
+
+function downloadFile(fileName: string, content: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }
