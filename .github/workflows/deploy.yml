@@ -24,7 +24,7 @@ jobs:
             cd /var/www/Loopi_DPP
 
             git reset --hard
-            git clean -fd
+            git clean -fd -e backend/uploads -e backend/uploads/**
             git pull origin main
 
             cd backend
@@ -39,7 +39,7 @@ jobs:
             pm2 save
 
             echo "Frontend build:"
-            ls -la dist
-            grep -o "assets/index-[^\"]*\.js" dist/index.html || true
+            ls -la ../frontend/dist
+            grep -o "assets/index-[^\"]*\.js" ../frontend/dist/index.html || true
 
-            curl -fsS http://127.0.0.1:5000/ || true
+            curl -fsS http://127.0.0.1:5000/api/health >/dev/null
