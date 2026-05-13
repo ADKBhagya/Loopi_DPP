@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProvisionUserModal from "../components/ProvisionUserModal";
 import UserModal from "../components/UserModal";
+import { apiFetch } from "../../../lib/api";
 
 /* ICONS */
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
@@ -38,23 +39,16 @@ export default function Overview() {
     activeNodes: 0,
   });
 
-  const token = localStorage.getItem("token");
-
   const handleSync = () => {
     setShowToast(true);
+    fetchStats();
     setTimeout(() => setShowToast(false), 2500);
   };
 
   // ================= SINGLE CLEAN FETCH =================
   const fetchStats = async () => {
     try {
-      const res = await fetch(`https://loopidpp.online/api/admin/dashboard`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
+      const data = await apiFetch<any>("/admin/dashboard");
 
       setStats(data);
 
@@ -76,12 +70,7 @@ export default function Overview() {
 }, [toast]);
 
   useEffect(() => {
-    fetch(`https://loopidpp.online/api/admin/approved-users`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(res => res.json())
+    apiFetch<any[]>("/admin/approved-users")
       .then(data => setAuthorizedUsers(data))
       .catch(err => console.error(err));
   }, []);

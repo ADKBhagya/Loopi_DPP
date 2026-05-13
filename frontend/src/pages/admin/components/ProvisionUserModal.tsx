@@ -6,6 +6,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import ModalPortal from "../../../components/modals/ModalPortal";
+import { apiFetch } from "../../../lib/api";
 
 export default function ProvisionUserModal({
   onClose,
@@ -28,9 +29,6 @@ useEffect(() => {
   }
 }, [toast]);
   
-console.log("ROLE:", role);
-console.log("NODE ID:", nodeId);
-
 const roleMap: any = {
   ADMIN: "AD",
   AUTHORITY: "AU",
@@ -70,12 +68,8 @@ useEffect(() => {
   setLoading(true);
 
   try {
-    const res = await fetch(`https://loopidpp.online/api/admin/provision-user`, {
+    const data = await apiFetch<any>("/admin/provision-user", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
       body: JSON.stringify({
         fullName,
         email,
@@ -85,16 +79,6 @@ useEffect(() => {
         password: tempPassword,
       }),
     });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setToast({
-        type: "error",
-        message: data.message,
-      });
-      return;
-    }
 
     setToast({
       type: "success",

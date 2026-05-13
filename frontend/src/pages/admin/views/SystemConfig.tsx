@@ -6,14 +6,13 @@ import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import PageLoader from "../components/PageLoader";
+import { apiFetch } from "../../../lib/api";
 // lightweight fallback for toast if react-hot-toast is not installed
 
 
 
 
 export default function SystemConfig() {
-  const token = localStorage.getItem("token");
-
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,16 +24,7 @@ useEffect(() => {
 
 const fetchConfig = async () => {
   try {
-    const res = await fetch(
-      `https://loopidpp.online/api/admin/system-config`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const data = await res.json();
+    const data = await apiFetch<any>("/admin/system-config");
     setConfig(data);
   } catch (err) {
     console.error("Config load failed");
@@ -43,19 +33,10 @@ const fetchConfig = async () => {
   }
 };
 
-  const [versions, setVersions] = useState([]);
+  const [versions, setVersions] = useState<any[]>([]);
 
 const fetchVersions = async () => {
-  const res = await fetch(
-    `https://loopidpp.online/api/admin/system-config/versions`,
-    {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    }
-  );
-
-  const data = await res.json();
+  const data = await apiFetch<any[]>("/admin/system-config/versions");
   setVersions(data);
 };
 
@@ -63,15 +44,9 @@ const handleRollback = async (versionId: string) => {
   if (!window.confirm("Are you sure you want to rollback?")) return;
 
   try {
-    await fetch(
-      `https://loopidpp.online/api/admin/system-config/rollback/${versionId}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    await apiFetch(`/admin/system-config/rollback/${versionId}`, {
+      method: "PUT",
+    });
 
     toast.success("Rollback successful");
 
@@ -94,19 +69,10 @@ const handleRollback = async (versionId: string) => {
 
  const handleSave = async () => {
   try {
-    const res = await fetch(
-      `https://loopidpp.online/api/admin/system-config`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(config),
-      }
-    );
-
-    if (!res.ok) throw new Error();
+    await apiFetch("/admin/system-config", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    });
 
     toast.success("Configuration Saved", {
       description: "System configuration updated successfully",
@@ -120,14 +86,7 @@ const handleRollback = async (versionId: string) => {
 
 const handleReveal = async () => {
   try {
-    const res = await fetch(
-      `https://loopidpp.online/api/admin/system-config/reveal`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    const data = await res.json();
+    const data = await apiFetch<any>("/admin/system-config/reveal");
 
     setConfig({
       ...config,
