@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../../assets/logo.png";
+import { apiFetch } from "../../../lib/api";
 
 /* OUTLINED ICONS */
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
@@ -31,7 +32,23 @@ type TabKey =
   | "recycling"
   | "reports";
 
-const ownedItems = [
+type ConsumerDashboard = {
+  stats: {
+    owned: number;
+    resale: number;
+    repairs: number;
+    recycling: number;
+    reports: number;
+    ecoCredits: number;
+  };
+  ownedItems: typeof fallbackOwnedItems;
+  resaleListings: typeof fallbackResaleListings;
+  repairRequests: typeof fallbackRepairRequests;
+  recyclingRequests: typeof fallbackRecyclingRequests;
+  issueReports: typeof fallbackIssueReports;
+};
+
+const fallbackOwnedItems = [
   {
     id: "GP-9822",
     name: "Organic Cotton Hoodie",
@@ -61,7 +78,7 @@ const ownedItems = [
   },
 ];
 
-const resaleListings = [
+const fallbackResaleListings = [
   {
     id: "RS-1001",
     product: "Organic Cotton Hoodie",
@@ -82,7 +99,7 @@ const resaleListings = [
   },
 ];
 
-const repairRequests = [
+const fallbackRepairRequests = [
   {
     id: "RP-4481",
     product: "Recycled Wool Blazer",
@@ -103,7 +120,7 @@ const repairRequests = [
   },
 ];
 
-const recyclingRequests = [
+const fallbackRecyclingRequests = [
   {
     id: "RC-7710",
     product: "Linen Summer Shirt",
@@ -116,7 +133,7 @@ const recyclingRequests = [
   },
 ];
 
-const issueReports = [
+const fallbackIssueReports = [
   {
     id: "IR-9011",
     product: "Organic Cotton Hoodie",
@@ -133,6 +150,42 @@ export default function ConsumerMyClothes() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [search, setSearch] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [dashboard, setDashboard] = useState<ConsumerDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    apiFetch<ConsumerDashboard>("/consumer/dashboard")
+      .then((data) => {
+        if (mounted) setDashboard(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load consumer dashboard", error);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const ownedItems = dashboard?.ownedItems || fallbackOwnedItems;
+  const resaleListings = dashboard?.resaleListings || fallbackResaleListings;
+  const repairRequests = dashboard?.repairRequests || fallbackRepairRequests;
+  const recyclingRequests =
+    dashboard?.recyclingRequests || fallbackRecyclingRequests;
+  const issueReports = dashboard?.issueReports || fallbackIssueReports;
+  const stats = dashboard?.stats || {
+    owned: ownedItems.length,
+    resale: resaleListings.length,
+    repairs: repairRequests.length,
+    recycling: recyclingRequests.length,
+    reports: issueReports.length,
+    ecoCredits: 265,
+  };
 
   const filteredOwnedItems = useMemo(() => {
     const keyword = search.toLowerCase().trim();
@@ -243,16 +296,19 @@ export default function ConsumerMyClothes() {
 
           <div className="rounded-[28px] bg-white/10 border border-white/20 p-6">
             <p className="text-white/70 text-sm font-bold">Eco Credit Balance</p>
-            <h3 className="text-4xl font-black mt-2">265 Credits</h3>
+            <h3 className="text-4xl font-black mt-2">{stats.ecoCredits} Credits</h3>
             <p className="text-white/60 text-sm mt-2">
               Earned from repairs, resale participation, and recycling actions.
             </p>
 
             <div className="grid grid-cols-2 gap-3 mt-6">
-              <HeroMini label="Owned Items" value="3" />
-              <HeroMini label="Open Requests" value="3" />
-              <HeroMini label="Listings" value="2" />
-              <HeroMini label="Reports" value="1" />
+              <HeroMini label="Owned Items" value={String(stats.owned)} />
+              <HeroMini
+                label="Open Requests"
+                value={String(stats.repairs + stats.recycling)}
+              />
+              <HeroMini label="Listings" value={String(stats.resale)} />
+              <HeroMini label="Reports" value={String(stats.reports)} />
             </div>
           </div>
         </div>
@@ -260,42 +316,48 @@ export default function ConsumerMyClothes() {
 
       {/* MAIN CONTENT */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-10">
+        {loading && (
+          <div className="mb-6 rounded-2xl border border-[#DDE8DF] bg-white p-4 text-sm font-bold text-[#64748B]">
+            Loading latest consumer records...
+          </div>
+        )}
+
         {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
           <SummaryCard
             icon={<Inventory2OutlinedIcon />}
             label="Owned Clothes"
-            value="3"
+            value={String(stats.owned)}
             tone="green"
           />
           <SummaryCard
             icon={<StorefrontOutlinedIcon />}
             label="Resale Listings"
-            value="2"
+            value={String(stats.resale)}
             tone="green"
           />
           <SummaryCard
             icon={<BuildOutlinedIcon />}
             label="Repair Requests"
-            value="2"
+            value={String(stats.repairs)}
             tone="blue"
           />
           <SummaryCard
             icon={<RecyclingOutlinedIcon />}
             label="Recycling"
-            value="1"
+            value={String(stats.recycling)}
             tone="green"
           />
           <SummaryCard
             icon={<ReportProblemOutlinedIcon />}
             label="Reports"
-            value="1"
+            value={String(stats.reports)}
             tone="amber"
           />
           <SummaryCard
             icon={<TokenOutlinedIcon />}
             label="Eco Credits"
-            value="265"
+            value={String(stats.ecoCredits)}
             tone="green"
           />
         </div>
@@ -546,7 +608,7 @@ function OwnedItemsPanel({
   items,
   navigate,
 }: {
-  items: typeof ownedItems;
+  items: typeof fallbackOwnedItems;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   return (
@@ -609,7 +671,7 @@ function OwnedItemsPanel({
   );
 }
 
-function ResalePanel({ listings }: { listings: typeof resaleListings }) {
+function ResalePanel({ listings }: { listings: typeof fallbackResaleListings }) {
   return (
     <div>
       <SectionHeading
@@ -638,7 +700,7 @@ function ResalePanel({ listings }: { listings: typeof resaleListings }) {
   );
 }
 
-function RepairPanel({ repairs }: { repairs: typeof repairRequests }) {
+function RepairPanel({ repairs }: { repairs: typeof fallbackRepairRequests }) {
   return (
     <div>
       <SectionHeading
@@ -670,7 +732,7 @@ function RepairPanel({ repairs }: { repairs: typeof repairRequests }) {
 function RecyclingPanel({
   requests,
 }: {
-  requests: typeof recyclingRequests;
+  requests: typeof fallbackRecyclingRequests;
 }) {
   return (
     <div>
@@ -701,7 +763,7 @@ function RecyclingPanel({
   );
 }
 
-function ReportsPanel({ reports }: { reports: typeof issueReports }) {
+function ReportsPanel({ reports }: { reports: typeof fallbackIssueReports }) {
   return (
     <div>
       <SectionHeading
