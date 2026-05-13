@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../../../lib/api";
 
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import RemoveRedEyeOutlinedIcon from "@mui/icons-material/RemoveRedEyeOutlined";
@@ -52,7 +50,7 @@ export default function Inventory() {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [stats, setStats] = useState(emptyStats);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<InventoryItem | null>(null);
@@ -64,9 +62,9 @@ export default function Inventory() {
       const data = await apiFetch<InventoryResponse>("/retailer/inventory");
       setStats(data.stats || emptyStats);
       setInventory(data.inventory || []);
-      setMessage("");
+      setMessage(null);
     } catch (error: any) {
-      setMessage(error.message || "Failed to load retailer inventory");
+      setMessage({ type: "error", text: error.message || "Failed to load retailer inventory" });
     } finally {
       setLoading(false);
     }
@@ -78,75 +76,34 @@ export default function Inventory() {
 
   const filteredInventory = useMemo(() => {
     return inventory.filter((item) => {
+      const isActive = item.status !== "SOLD";
       const matchesFilter =
         filter === "all" ||
-        (filter === "store" && item.status === "IN STORE") ||
-        (filter === "transit" && item.status === "IN TRANSIT") ||
-        (filter === "sold" && item.status === "SOLD");
+        (filter === "store" && item.status === "IN STORE");
 
-      const text = `${item.passport} ${item.name} ${item.brand} ${item.material}`.toLowerCase();
-      return matchesFilter && text.includes(query.toLowerCase());
+      const text = `${item.passport} ${item.id} ${item.name} ${item.brand}`.toLowerCase();
+      return isActive && matchesFilter && text.includes(query.toLowerCase());
     });
   }, [filter, inventory, query]);
 
-  const scanFirstPassport = async () => {
-    const passportId = inventory[0]?.passport;
-    if (!passportId) return;
-
-    try {
-      await apiFetch("/retailer/passport/scan", {
-        method: "POST",
-        body: JSON.stringify({ passportId, scanSource: "inventory" }),
-      });
-      setMessage(`${passportId} verified on blockchain`);
-    } catch (error: any) {
-      setMessage(error.message || "Passport scan failed");
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-5">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-5">
-          <button
-            onClick={scanFirstPassport}
-            className="h-[70px] px-6 rounded-2xl bg-[#166B2D] text-white shadow-[0_10px_30px_rgba(22,107,45,0.25)] flex items-center gap-4 hover:scale-[1.01] active:scale-[0.99] transition-all"
-          >
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-              <QrCodeScannerRoundedIcon />
-            </div>
-            <div className="text-left">
-              <p className="text-[17px] font-bold leading-none">SCAN PASSPORT</p>
-              <p className="text-[11px] opacity-80 mt-1 tracking-wide">VERIFY & RECEIVE</p>
-            </div>
-          </button>
 
-          <div className="flex items-center gap-8">
-            <MiniStat label="INVENTORY" value={stats.total} />
-            <MiniStat label="SALES" value={stats.sold} />
-          </div>
-        </div>
-
-        <div className="relative w-full 2xl:w-[280px]">
-          <SearchRoundedIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search Store Inventory..."
-            className="w-full h-[52px] rounded-2xl border border-gray-200 bg-white pl-12 pr-4 text-sm outline-none focus:border-[#166B2D] transition-all"
-          />
-        </div>
-      </div>
 
       {message && (
-        <div className="rounded-2xl border border-[#DDEADF] bg-[#F4FBF6] px-5 py-3 text-sm font-semibold text-[#166B2D]">
-          {message}
+        <div
+          className={`rounded-2xl border px-5 py-3 text-sm font-semibold ${
+            message.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {message.text}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Card title="IN STORE" value={stats.inStore} icon={<Inventory2OutlinedIcon />} iconBg="#DDEADF" iconColor="#166B2D" />
-        <Card title="IN TRANSIT" value={stats.inTransit} icon={<LocalShippingOutlinedIcon />} iconBg="#E2EAFE" iconColor="#2563EB" />
         <Card title="SOLD TOTAL" value={stats.sold} icon={<ShoppingCartOutlinedIcon />} iconBg="#F3E4FF" iconColor="#9333EA" />
         <Card title="ALL TRACKED" value={stats.total} icon={<CategoryOutlinedIcon />} iconBg="#FEEDD1" iconColor="#EA8A00" />
       </div>
@@ -158,23 +115,32 @@ export default function Inventory() {
             <p className="text-sm text-[#9CA3AF] mt-1">
               {loading ? "Loading retailer inventory..." : "Manage product passports and ownership transfers"}
             </p>
+            <p className="text-[11px] text-[#A0A6B2] mt-1">
+              Grade is calculated from certificates: A+ for 2+ verified, A for 1 verified, B+ for submitted.
+            </p>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto">
+          <div className="flex flex-wrap items-center gap-2">
             <FilterBtn active={filter === "all"} label="All" onClick={() => setFilter("all")} />
             <FilterBtn active={filter === "store"} label="In Store" onClick={() => setFilter("store")} />
-            <FilterBtn active={filter === "transit"} label="In Transit" onClick={() => setFilter("transit")} />
-            <FilterBtn active={filter === "sold"} label="Sold" onClick={() => setFilter("sold")} />
+            <div className="relative w-full sm:w-[280px]">
+              <SearchRoundedIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search Product ID, name, brand..."
+                className="w-full h-10 rounded-xl border border-[#ECECEC] bg-white pl-11 pr-4 text-sm outline-none focus:border-[#166B2D] transition-all"
+              />
+            </div>
           </div>
         </div>
 
         <div className="overflow-x-auto overflow-y-hidden">
           <div className="min-w-max">
-            <div className="grid grid-cols-[1fr_1.7fr_1.4fr_0.7fr_0.9fr_1fr_1.4fr_1fr_1fr] px-6 py-4 border-b border-[#F4F4F4] text-[11px] uppercase tracking-[0.14em] text-[#B4BAC4] font-bold">
+            <div className="grid grid-cols-[1fr_1.7fr_1.4fr_0.7fr_1fr_1.4fr_1fr_1fr] px-6 py-4 border-b border-[#F4F4F4] text-[11px] uppercase tracking-[0.14em] text-[#B4BAC4] font-bold">
               <div>Product ID</div>
               <div>Name & Brand</div>
               <div>Material</div>
               <div>Grade</div>
-              <div>Price</div>
               <div>Status</div>
               <div>Owner</div>
               <div>Received</div>
@@ -184,7 +150,7 @@ export default function Inventory() {
             {filteredInventory.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-[1fr_1.7fr_1.4fr_0.7fr_0.9fr_1fr_1.4fr_1fr_1fr] px-6 py-5 border-b border-[#F8F8F8] items-center hover:bg-[#FAFAFA] transition-all"
+                className="grid grid-cols-[1fr_1.7fr_1.4fr_0.7fr_1fr_1.4fr_1fr_1fr] px-6 py-5 border-b border-[#F8F8F8] items-center hover:bg-[#FAFAFA] transition-all"
               >
                 <div>
                   <p className="font-bold text-[#1B1F28]">{item.passport}</p>
@@ -195,7 +161,6 @@ export default function Inventory() {
                 </div>
                 <div className="text-sm text-[#6B7280]">{item.material}</div>
                 <div><Grade grade={item.grade} /></div>
-                <div className="font-bold text-[#1B1F28]">{item.price}</div>
                 <div><Status status={item.status} /></div>
                 <div className="flex items-center gap-2 text-sm text-[#6B7280]">
                   <PersonOutlineOutlinedIcon style={{ fontSize: 16 }} />
@@ -400,9 +365,9 @@ function DetailCard({ label, value }: any) {
   );
 }
 
-function TransferOwnershipModal({ product, onClose, onSaved }: any) {
+export function TransferOwnershipModal({ product, onClose, onSaved }: any) {
   const [buyerName, setBuyerName] = useState("");
-  const [buyerDid, setBuyerDid] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
   const [salePrice, setSalePrice] = useState(product.rawPrice || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -411,11 +376,25 @@ function TransferOwnershipModal({ product, onClose, onSaved }: any) {
     try {
       setSaving(true);
       setError("");
+
+      if (!buyerName.trim()) {
+        setError("Enter buyer name so ownership can be saved");
+        setSaving(false);
+        return;
+      }
+
+      if (!buyerPhone.trim()) {
+        setError("Enter consumer phone number so ownership can be saved");
+        setSaving(false);
+        return;
+      }
+
       await apiFetch("/retailer/ownership/transfer", {
         method: "POST",
         body: JSON.stringify({
           garmentId: product.id,
-          toName: buyerName || buyerDid || "Consumer",
+          toName: buyerName,
+          toPhone: buyerPhone,
           toRole: "Consumer",
           amount: Number(salePrice) || product.rawPrice || 0,
           transferType: "sale",
@@ -462,7 +441,7 @@ function TransferOwnershipModal({ product, onClose, onSaved }: any) {
             </div>
 
             <div className="space-y-5 mt-6">
-              <Input label="BUYER DIGITAL IDENTITY (DID)" value={buyerDid} onChange={setBuyerDid} placeholder="0x8821...F92A" />
+              <Input label="CONSUMER PHONE NUMBER" value={buyerPhone} onChange={setBuyerPhone} placeholder="+94 77 123 4567" />
               <div className="grid grid-cols-2 gap-4">
                 <Input label="SALE PRICE" value={salePrice} onChange={setSalePrice} placeholder="129.00" />
                 <Input label="BUYER NAME" value={buyerName} onChange={setBuyerName} placeholder="Consumer full name" />

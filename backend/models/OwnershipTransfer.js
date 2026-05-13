@@ -30,6 +30,7 @@ const ownershipTransferSchema =
       ref: "User",
     },
     toName: String,
+    toPhone: String,
     amount: Number,
     currency: {
       type: String,

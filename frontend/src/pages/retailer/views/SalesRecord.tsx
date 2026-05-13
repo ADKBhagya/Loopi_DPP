@@ -7,7 +7,6 @@ import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
 import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
-import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 type Sale = {
@@ -18,9 +17,9 @@ type Sale = {
   buyer: string;
   price: string;
   net: string;
-  tax: string;
   date: string;
   receipt: string;
+  revenueValue?: number;
 };
 
 type InventoryItem = {
@@ -34,7 +33,6 @@ type InventoryItem = {
 const emptyStats = {
   revenue: 0,
   net: 0,
-  tax: 0,
   sales: 0,
 };
 
@@ -85,37 +83,28 @@ export default function SalesRecord() {
   }, [query, sales]);
 
   const revenueData = useMemo(() => {
-    const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-    const base = Math.max(stats.revenue / Math.max(months.length, 1), 1);
-    return months.map((month, index) => ({
+    const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const buckets = new Map(monthLabels.map((month) => [month, 0]));
+    const currentMonthIndex = new Date().getMonth();
+    const visibleMonths = Array.from({ length: 7 }, (_, index) => monthLabels[(currentMonthIndex - 6 + index + 12) % 12]);
+
+    sales.forEach((sale) => {
+      const date = new Date(sale.date);
+      const month = monthLabels[date.getMonth()];
+      buckets.set(month, (buckets.get(month) || 0) + (sale.revenueValue || 0));
+    });
+
+    return visibleMonths.map((month) => ({
       month,
-      value: Math.round(base * (0.6 + index * 0.12)),
+      value: buckets.get(month) || 0,
     }));
-  }, [stats.revenue]);
+  }, [sales]);
 
   const maxValue = Math.max(...revenueData.map((d) => d.value), 1);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-5">
-        <button
-          onClick={() => setSaleModal(true)}
-          className="h-[54px] px-6 rounded-2xl bg-[#166B2D] text-white font-bold tracking-[0.12em] text-sm flex items-center gap-3 shadow-[0_10px_30px_rgba(22,107,45,0.25)] w-fit"
-        >
-          <ReceiptLongOutlinedIcon />
-          RECORD SALE
-        </button>
 
-        <div className="relative w-full 2xl:w-[320px]">
-          <SearchRoundedIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Sale ID, garment..."
-            className="w-full h-[52px] rounded-2xl border border-gray-200 bg-white pl-12 pr-4 text-sm outline-none focus:border-[#166B2D]"
-          />
-        </div>
-      </div>
 
       {message && (
         <div className="rounded-2xl border border-[#DDEADF] bg-[#F4FBF6] px-5 py-3 text-sm font-semibold text-[#166B2D]">
@@ -123,11 +112,10 @@ export default function SalesRecord() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
         <StatCard title="TOTAL REVENUE" value={money(stats.revenue)} icon={<PaymentsOutlinedIcon />} iconBg="#EAF7EE" iconColor="#166B2D" />
         <StatCard title="SALES" value={stats.sales} icon={<SellOutlinedIcon />} iconBg="#F3E8FF" iconColor="#9333EA" />
         <StatCard title="NET AMOUNT" value={money(stats.net)} icon={<TrendingUpRoundedIcon />} iconBg="#EEF4FF" iconColor="#2563EB" />
-        <StatCard title="TAX" value={money(stats.tax)} icon={<ReceiptLongOutlinedIcon />} iconBg="#FFF4E6" iconColor="#EA8A00" />
       </div>
 
       <div className="bg-white border border-[#ECECEC] rounded-[30px] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
@@ -148,28 +136,26 @@ export default function SalesRecord() {
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[920px]">
-            <div className="grid grid-cols-[1fr_1fr_1.4fr_1.2fr_0.9fr_0.9fr_0.7fr_1fr_1fr] px-6 py-4 border-b border-[#F4F4F4] text-[11px] uppercase tracking-[0.14em] text-[#B4BAC4] font-bold">
+          <div className="min-w-[820px]">
+            <div className="grid grid-cols-[1fr_1fr_1.4fr_1.2fr_0.9fr_0.9fr_1fr_1fr] px-6 py-4 border-b border-[#F4F4F4] text-[11px] uppercase tracking-[0.14em] text-[#B4BAC4] font-bold">
               <div>Sale ID</div>
               <div>Passport</div>
               <div>Product</div>
               <div>Buyer</div>
               <div>Price</div>
               <div>Net</div>
-              <div>Tax</div>
               <div>Date</div>
               <div>Receipt</div>
             </div>
 
             {filteredSales.map((sale) => (
-              <div key={sale.id} className="grid grid-cols-[1fr_1fr_1.4fr_1.2fr_0.9fr_0.9fr_0.7fr_1fr_1fr] px-6 py-5 border-b border-[#F8F8F8] items-center hover:bg-[#FAFAFA] transition-all text-sm">
+              <div key={sale.id} className="grid grid-cols-[1fr_1fr_1.4fr_1.2fr_0.9fr_0.9fr_1fr_1fr] px-6 py-5 border-b border-[#F8F8F8] items-center hover:bg-[#FAFAFA] transition-all text-sm">
                 <div className="font-bold text-[#111827]">{sale.saleId}</div>
                 <div className="font-bold text-[#166B2D]">{sale.passport}</div>
                 <div className="text-[#4B5563]">{sale.product}</div>
                 <div className="text-[#4B5563]">{sale.buyer}</div>
                 <div className="font-bold text-[#111827]">{sale.price}</div>
                 <div>{sale.net}</div>
-                <div>{sale.tax}</div>
                 <div>{new Date(sale.date).toLocaleDateString()}</div>
                 <div>
                   <button className="h-8 px-3 rounded-xl bg-[#EEF7F1] text-[#166B2D] text-[11px] font-bold">
@@ -188,10 +174,11 @@ export default function SalesRecord() {
 
       <div className="bg-white border border-[#ECECEC] rounded-[30px] p-6 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
         <h2 className="text-[18px] font-bold text-[#111827]">Revenue Trend</h2>
+        <p className="text-sm text-[#9CA3AF] mt-1">Trend based on the loaded sales records, including sold transfer entries.</p>
         <div className="h-[180px] mt-6 flex items-end gap-4">
           {revenueData.map((item) => (
             <div key={item.month} className="flex-1 flex flex-col items-center gap-3">
-              <div className="w-full rounded-t-2xl bg-[#166B2D]" style={{ height: `${Math.max((item.value / maxValue) * 150, 8)}px` }} />
+              <div className="w-full rounded-t-2xl bg-[#166B2D]" style={{ height: `${item.value > 0 ? Math.max((item.value / maxValue) * 150, 8) : 8}px` }} />
               <p className="text-[11px] font-bold text-[#9CA3AF]">{item.month}</p>
             </div>
           ))}
