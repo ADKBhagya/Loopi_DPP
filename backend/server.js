@@ -101,6 +101,14 @@ app.use("/api/repair-center", repairCenterRoutes);
 app.use("/api/recycler", recyclerRoutes);
 app.use("/api/authority", authorityRoutes);
 app.use("/api/auditor", auditorRoutes);
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    status: "healthy",
+    uptime: process.uptime(),
+  });
+});
 /* =========================
    TEST ROUTE
 ========================= */
