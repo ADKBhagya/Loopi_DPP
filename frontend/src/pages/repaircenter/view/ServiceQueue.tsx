@@ -283,16 +283,6 @@ export default function ServiceQueue() {
     }
   };
 
-  const removeFromQueue = (jobId: string) => {
-    setJobs((prev) =>
-      prev.filter((job) => job.id !== jobId)
-    );
-
-    setSelectedJob(null);
-
-    setShowMenu("");
-  };
-
   return (
     <div className="space-y-4 sm:space-y-6 pb-10">
 

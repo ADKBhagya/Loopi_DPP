@@ -2324,7 +2324,7 @@ const handleSearch = async () => {
                       text-[#B0B6C3]
                     "
                   >
-                    HASH: 0X8821....F92A
+                    HASH: {selectedPassport?.hashShort || selectedPassport?.hash || "Pending"}
                   </p>
 
                   <h3
@@ -2567,7 +2567,7 @@ const handleSearch = async () => {
                 font-semibold
               "
             >
-              Passport : SAMPLE-ID
+              Passport : {selectedPassport?.id || "N/A"}
             </p>
 
           </div>
@@ -3330,7 +3330,7 @@ const handleSearch = async () => {
                       text-[#00FFA3]
                     "
                   >
-                    0x88f3...21aB
+                    {selectedPassport?.hashShort || selectedPassport?.hash || "Pending"}
                   </h2>
 
                   <div
@@ -3737,7 +3737,7 @@ const handleSearch = async () => {
                 font-semibold
               "
             >
-              Passport : SAMPLE-ID
+              Passport : {selectedPassport?.id || "N/A"}
             </p>
 
           </div>
@@ -4623,7 +4623,7 @@ const handleSearch = async () => {
                         text-white
                       "
                     >
-                      EOL-SAMPLE-ID-2025
+                      EOL-{selectedPassport?.id || "N/A"}
                     </p>
 
                   </div>

@@ -15,6 +15,15 @@ import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 
+function assetUrl(value?: string) {
+  if (!value) return "";
+  if (/^(https?:|data:|blob:)/.test(value)) return value;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const origin = apiBase.replace(/\/api\/?$/, "") || window.location.origin;
+  return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
+}
+
 export default function RepairRecords() {
   const [search, setSearch] = useState("");
 
@@ -87,6 +96,54 @@ export default function RepairRecords() {
     queued: records.filter(
       (r) => r.status === "QUEUED"
     ).length,
+  };
+
+  const exportCsv = () => {
+    const headers = [
+      "Ref ID",
+      "Passport",
+      "Garment",
+      "Service",
+      "Type",
+      "Technician",
+      "Duration",
+      "Cost",
+      "Date",
+      "Status",
+      "Photos",
+      "Certificates",
+    ];
+
+    const rows = filteredRecords.map((record) => [
+      record.id,
+      record.passport,
+      record.garment,
+      record.service,
+      record.type,
+      record.technician,
+      record.duration,
+      record.cost,
+      record.date,
+      record.status,
+      record.photos?.length || 0,
+      record.certificates?.length || 0,
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "repair-records.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -589,6 +646,7 @@ export default function RepairRecords() {
           </p>
 
           <button
+            onClick={exportCsv}
             className="
               h-[42px]
               px-4
@@ -860,6 +918,18 @@ export default function RepairRecords() {
           />
 
         </div>
+
+        <FileList
+          title="PHOTO EVIDENCE"
+          files={selectedRecord.photos || []}
+          emptyText="No repair photos uploaded"
+        />
+
+        <FileList
+          title="REPAIR CERTIFICATES"
+          files={selectedRecord.certificates || []}
+          emptyText="No repair certificates uploaded"
+        />
 
         {/* NOTES */}
         <div
@@ -1209,6 +1279,46 @@ function MobileRow({
         {value}
       </p>
 
+    </div>
+  );
+}
+
+function FileList({ title, files, emptyText }: any) {
+  return (
+    <div className="rounded-[22px] bg-white border border-[#ECECEC] p-4">
+      <p className="text-[11px] tracking-[0.12em] font-black text-[#9CA3AF]">
+        {title}
+      </p>
+
+      {files.length === 0 ? (
+        <p className="mt-3 text-sm font-semibold text-[#9CA3AF]">
+          {emptyText}
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {files.map((file: any, index: number) => {
+            const url = assetUrl(file.url);
+
+            return (
+              <button
+                key={file.key || `${file.fileName}-${index}`}
+                type="button"
+                onClick={() => {
+                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                }}
+                className="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-3 text-left hover:border-[#166B2D] transition"
+              >
+                <span className="block text-sm font-bold text-[#111827] truncate">
+                  {file.fileName || `Attachment ${index + 1}`}
+                </span>
+                <span className="mt-1 block text-xs text-[#9CA3AF]">
+                  {file.mimeType || "Uploaded file"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
