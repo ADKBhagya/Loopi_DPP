@@ -2,6 +2,7 @@ import express from "express";
 
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/roleMiddleware.js";
+import { upload } from "../middleware/uploadMiddleware.js";
 import {
   createRepairService,
   getRepairLogs,
@@ -15,8 +16,24 @@ const router = express.Router();
 const repairCenterAccess = [verifyToken, allowRoles("Repair Center", "Admin")];
 
 router.get("/queue", repairCenterAccess, getRepairQueue);
-router.post("/queue", repairCenterAccess, createRepairService);
-router.patch("/queue/:id", repairCenterAccess, updateRepairService);
+router.post(
+  "/queue",
+  repairCenterAccess,
+  upload.fields([
+    { name: "photos", maxCount: 12 },
+    { name: "certificates", maxCount: 8 },
+  ]),
+  createRepairService
+);
+router.patch(
+  "/queue/:id",
+  repairCenterAccess,
+  upload.fields([
+    { name: "photos", maxCount: 12 },
+    { name: "certificates", maxCount: 8 },
+  ]),
+  updateRepairService
+);
 router.get("/records", repairCenterAccess, getRepairRecords);
 router.get("/logs", repairCenterAccess, getRepairLogs);
 router.get("/passport/:id", repairCenterAccess, lookupRepairPassport);

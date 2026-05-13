@@ -7,6 +7,7 @@ import LifecycleEvent from "../models/LifecycleEvent.js";
 import RepairService from "../models/RepairService.js";
 import Transaction from "../models/Transaction.js";
 import { createBlockchainTransaction } from "../services/blockchainService.js";
+import { saveUploadedFile } from "../services/fileStorageService.js";
 
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value));
 
@@ -73,7 +74,26 @@ const formatService = (service) => ({
   date: service.createdAt?.toISOString?.().slice(0, 10),
   color: colorForStatus(service.status),
   hash: service.blockchainHash,
+  photos: service.photos || [],
+  certificates: service.certificates || [],
 });
+
+const storeRepairFiles = async (files = {}) => {
+  const photoFiles = files.photos || [];
+  const certificateFiles = files.certificates || [];
+
+  const [photos, certificates] = await Promise.all([
+    Promise.all(photoFiles.map((file) => saveUploadedFile(file, "repair-photos"))),
+    Promise.all(
+      certificateFiles.map((file) => saveUploadedFile(file, "repair-certificates"))
+    ),
+  ]);
+
+  return {
+    photos: photos.filter(Boolean),
+    certificates: certificates.filter(Boolean),
+  };
+};
 
 const createServiceFromAction = async (action, user) => {
   const existing = await RepairService.findOne({ consumerActionId: action._id });
@@ -142,6 +162,7 @@ export const createRepairService = async (req, res) => {
 
     const serviceId = await nextServiceId();
     const blockchainHash = hashFor(serviceId, garment._id, Date.now());
+    const storedFiles = await storeRepairFiles(req.files);
 
     const service = await RepairService.create({
       serviceId,
@@ -155,6 +176,8 @@ export const createRepairService = async (req, res) => {
       cost: Number(String(req.body.price || req.body.cost || "0").replace(/[^0-9.]/g, "")),
       status: req.body.status || "QUEUED",
       note: req.body.note,
+      photos: storedFiles.photos,
+      certificates: storedFiles.certificates,
       repairCenterId: req.user._id,
       blockchainHash,
     });
@@ -168,6 +191,8 @@ export const createRepairService = async (req, res) => {
       metadata: {
         serviceId,
         passportId: passportIdFor(garment),
+        photos: storedFiles.photos.length,
+        certificates: storedFiles.certificates.length,
       },
     });
 
@@ -191,6 +216,18 @@ export const updateRepairService = async (req, res) => {
 
     if (req.body.status) service.status = req.body.status;
     if (req.body.technician) service.technician = req.body.technician;
+    const storedFiles = await storeRepairFiles(req.files);
+
+    if (storedFiles.photos.length) {
+      service.photos = [...(service.photos || []), ...storedFiles.photos];
+    }
+
+    if (storedFiles.certificates.length) {
+      service.certificates = [
+        ...(service.certificates || []),
+        ...storedFiles.certificates,
+      ];
+    }
 
     if (req.body.status === "COMPLETED") {
       service.blockchainHash = service.blockchainHash || hashFor(service._id, Date.now());
@@ -222,6 +259,8 @@ export const updateRepairService = async (req, res) => {
         serviceId: service.serviceId,
         status: service.status,
         technician: service.technician,
+        photos: service.photos?.length || 0,
+        certificates: service.certificates?.length || 0,
       },
     });
 

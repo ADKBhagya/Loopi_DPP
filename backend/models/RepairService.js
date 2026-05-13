@@ -35,6 +35,26 @@ const repairServiceSchema = new mongoose.Schema(
       index: true,
     },
     note: String,
+    photos: [
+      {
+        url: String,
+        key: String,
+        provider: String,
+        fileName: String,
+        mimeType: String,
+        size: Number,
+      },
+    ],
+    certificates: [
+      {
+        url: String,
+        key: String,
+        provider: String,
+        fileName: String,
+        mimeType: String,
+        size: Number,
+      },
+    ],
     repairCenterId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
