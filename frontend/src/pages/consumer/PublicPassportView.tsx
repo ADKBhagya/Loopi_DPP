@@ -44,6 +44,7 @@ type ConsumerPassport = {
   brand?: string;
   material?: string;
   materials?: string[];
+  imageUrl?: string;
   carbon?: string;
   water?: string;
   verification?: { status?: string; hash?: string };
@@ -56,6 +57,15 @@ type ConsumerPassport = {
     blockchainHash?: string;
   }>;
 };
+
+function assetUrl(value?: string) {
+  if (!value) return "";
+  if (/^(https?:|data:|blob:)/.test(value)) return value;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const origin = apiBase.replace(/\/api\/?$/, "") || window.location.origin;
+  return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
+}
 
 export default function PublicPassportView() {
   const navigate = useNavigate();
@@ -76,6 +86,7 @@ export default function PublicPassportView() {
   const carbon = passport?.carbon || "4.2 kg";
   const water = passport?.water || "15.0 L";
   const material = passport?.material || "Recycled Wool";
+  const productImageUrl = assetUrl(passport?.imageUrl);
   const dynamicBlockchainRecords = useMemo(() => {
     if (!passport?.transactions?.length) return blockchainRecords;
 
@@ -202,15 +213,20 @@ export default function PublicPassportView() {
         <aside className="relative min-h-[520px] lg:h-screen lg:min-h-0 bg-[#0B2E17] overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/65 z-10" />
 
-          {/* Placeholder product image area */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#1F3A2D] via-[#203C32] to-[#111827]">
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,#D1FAE5,transparent_24%),radial-gradient(circle_at_70%_80%,#065F46,transparent_30%)]" />
-
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="w-[72%] max-w-[420px] aspect-[3/4] rounded-[40px] bg-gradient-to-br from-[#334155] to-[#111827] shadow-2xl border border-white/10 flex items-center justify-center">
-                <Inventory2OutlinedIcon sx={{ fontSize: 110 }} className="text-white/25" />
+            {productImageUrl ? (
+              <img
+                src={productImageUrl}
+                alt={productName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="w-[72%] max-w-[420px] aspect-[3/4] rounded-[40px] bg-gradient-to-br from-[#334155] to-[#111827] shadow-2xl border border-white/10 flex items-center justify-center">
+                  <Inventory2OutlinedIcon sx={{ fontSize: 110 }} className="text-white/25" />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* DESKTOP BACK */}
