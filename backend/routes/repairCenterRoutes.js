@@ -6,6 +6,7 @@ import { upload } from "../middleware/uploadMiddleware.js";
 import {
   createRepairService,
   getRepairLogs,
+  getRepairPassports,
   getRepairQueue,
   getRepairRecords,
   lookupRepairPassport,
@@ -36,6 +37,7 @@ router.patch(
 );
 router.get("/records", repairCenterAccess, getRepairRecords);
 router.get("/logs", repairCenterAccess, getRepairLogs);
+router.get("/passports", repairCenterAccess, getRepairPassports);
 router.get("/passport/:id", repairCenterAccess, lookupRepairPassport);
 
 export default router;

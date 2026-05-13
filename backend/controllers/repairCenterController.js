@@ -2,9 +2,12 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 
 import ConsumerAction from "../models/ConsumerAction.js";
+import Certificate from "../models/Certificate.js";
 import Garment from "../models/Garment.js";
 import LifecycleEvent from "../models/LifecycleEvent.js";
+import RecyclingProcess from "../models/RecyclingProcess.js";
 import RepairService from "../models/RepairService.js";
+import Shipment from "../models/Shipment.js";
 import Transaction from "../models/Transaction.js";
 import { createBlockchainTransaction } from "../services/blockchainService.js";
 import { saveUploadedFile } from "../services/fileStorageService.js";
@@ -31,8 +34,156 @@ const findGarmentByIdentifier = async (identifier) => {
   const garments = await Garment.find();
   return garments.find(
     (garment) =>
-      passportIdFor(garment).toLowerCase() === String(identifier).toLowerCase()
+      passportIdFor(garment).toLowerCase() === String(identifier).toLowerCase() ||
+      String(garment.productName || "").toLowerCase() ===
+        String(identifier).toLowerCase() ||
+      String(garment.productName || "")
+        .toLowerCase()
+        .includes(String(identifier).toLowerCase())
   );
+};
+
+const materialFor = (garment) => {
+  if (Array.isArray(garment?.materials) && garment.materials.length) {
+    return garment.materials.join(", ");
+  }
+
+  return garment?.material || "Material pending";
+};
+
+const gradeFor = (garment, repairs, certificates, recycling) => {
+  let score = 70;
+  if (certificates.some((item) => item.verificationStatus === "verified")) score += 10;
+  if (repairs.some((item) => item.status === "COMPLETED")) score += 10;
+  if (recycling.length) score += 5;
+  if (garment?.status === "certified") score += 5;
+
+  if (score >= 92) return "Grade A+";
+  if (score >= 82) return "Grade A";
+  if (score >= 72) return "Grade B+";
+  return "Grade B";
+};
+
+const repairStatusFor = (repairs) => {
+  if (!repairs.length) return "No repairs";
+  if (repairs.some((item) => item.status === "IN PROGRESS")) return "In progress";
+  if (repairs.some((item) => item.status === "QUEUED")) return "Queued";
+  return "Repaired";
+};
+
+const shortHash = (value = "") =>
+  value ? `${String(value).slice(0, 10)}...${String(value).slice(-6)}` : "Pending";
+
+const buildPassportPayload = async (garment, { compact = false } = {}) => {
+  const [repairs, certificates, lifecycle, transactions, shipments, recycling] =
+    await Promise.all([
+      RepairService.find({ garmentId: garment._id }).sort({ createdAt: -1 }),
+      Certificate.find({ garmentId: garment._id }).sort({ issuedDate: -1 }),
+      LifecycleEvent.find({ garmentId: garment._id }).sort({ createdAt: -1 }),
+      Transaction.find({ garmentId: garment._id }).sort({ createdAt: -1 }),
+      Shipment.find({ garmentId: garment._id }).sort({ createdAt: -1 }),
+      RecyclingProcess.find({ garmentId: garment._id }).sort({ createdAt: -1 }),
+    ]);
+
+  const id = passportIdFor(garment);
+  const material = materialFor(garment);
+  const latestHash =
+    transactions[0]?.blockchainHash ||
+    lifecycle[0]?.blockchainHash ||
+    repairs[0]?.blockchainHash ||
+    certificates[0]?.blockchainHash ||
+    "";
+
+  const payload = {
+    id,
+    garmentId: garment._id,
+    garment: garment.productName || "Unnamed garment",
+    brand:
+      garment.createdBy?.organization ||
+      garment.currentOwnerName ||
+      garment.manufacturingCountry ||
+      garment.location ||
+      "LOOPI",
+    material,
+    materials: Array.isArray(garment.materials) ? garment.materials : [],
+    grade: gradeFor(garment, repairs, certificates, recycling),
+    repairs: `${repairs.length} service${repairs.length === 1 ? "" : "s"}`,
+    co2: garment.carbon ? `${garment.carbon} kg` : "N/A",
+    water: garment.water ? `${garment.water}L` : "N/A",
+    repairStatus: repairStatusFor(repairs),
+    repairCount: repairs.length,
+    verified:
+      garment.status === "certified" ||
+      certificates.some((item) => item.verificationStatus === "verified"),
+    imageUrl: garment.imageUrl,
+    status: garment.status,
+    location: garment.location || shipments[0]?.currentLocation || "N/A",
+    productionDate: garment.productionDate?.toISOString?.().slice(0, 10),
+    batchNumber: garment.batchNumber,
+    sku: garment.sku,
+    hash: latestHash,
+    hashShort: shortHash(latestHash),
+    certificateCount: certificates.length,
+    lifecycleCount: lifecycle.length,
+    shipmentCount: shipments.length,
+    recyclingCount: recycling.length,
+  };
+
+  if (compact) return payload;
+
+  return {
+    ...payload,
+    certificates: certificates.map((item) => ({
+      id: item._id,
+      type: item.certificateType,
+      issuer: item.issuer,
+      status: item.verificationStatus,
+      fileName: item.fileName,
+      fileUrl: item.fileUrl,
+      date: item.issuedDate?.toISOString?.().slice(0, 10),
+      hash: item.blockchainHash,
+    })),
+    repairHistory: repairs.map(formatService),
+    lifecycle: lifecycle.map((item) => ({
+      id: item._id,
+      stage: item.stage,
+      description: item.description,
+      actorRole: item.actorRole,
+      date: item.createdAt?.toISOString?.().slice(0, 10),
+      hash: item.blockchainHash,
+      metadata: item.metadata,
+    })),
+    transactions: transactions.map((item) => ({
+      id: item._id,
+      type: item.transactionType,
+      status: item.status,
+      network: item.network,
+      blockNumber: item.blockNumber,
+      gasUsed: item.gasUsed,
+      date: item.createdAt?.toISOString?.().slice(0, 10),
+      hash: item.blockchainHash,
+      explorerUrl: item.explorerUrl,
+    })),
+    shipments: shipments.map((item) => ({
+      id: item.shipmentId || item._id,
+      from: item.from,
+      to: item.to,
+      transport: item.transport,
+      provider: item.provider,
+      status: item.status,
+      currentLocation: item.currentLocation,
+      co2: item.co2,
+      date: item.createdAt?.toISOString?.().slice(0, 10),
+    })),
+    recycling: recycling.map((item) => ({
+      id: item.processId,
+      stage: item.stage,
+      credits: item.credits,
+      weight: item.weight,
+      date: item.createdAt?.toISOString?.().slice(0, 10),
+      hash: item.blockchainHash,
+    })),
+  };
 };
 
 const nextServiceId = async () => {
@@ -216,6 +367,8 @@ export const updateRepairService = async (req, res) => {
 
     if (req.body.status) service.status = req.body.status;
     if (req.body.technician) service.technician = req.body.technician;
+    const updateAction =
+      req.body.technician && !req.body.status ? "ASSIGN" : "STATUS";
     const storedFiles = await storeRepairFiles(req.files);
 
     if (storedFiles.photos.length) {
@@ -257,8 +410,10 @@ export const updateRepairService = async (req, res) => {
       user: req.user,
       metadata: {
         serviceId: service.serviceId,
+        passportId: service.passportId,
         status: service.status,
         technician: service.technician,
+        action: updateAction,
         photos: service.photos?.length || 0,
         certificates: service.certificates?.length || 0,
       },
@@ -293,6 +448,24 @@ export const getRepairRecords = async (req, res) => {
   }
 };
 
+export const getRepairPassports = async (req, res) => {
+  try {
+    const garments = await Garment.find()
+      .populate("createdBy", "organization fullName")
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const passports = await Promise.all(
+      garments.map((garment) => buildPassportPayload(garment, { compact: true }))
+    );
+
+    res.status(200).json({ passports });
+  } catch (error) {
+    console.error("REPAIR PASSPORT DIRECTORY ERROR:", error);
+    res.status(500).json({ message: "Failed to fetch passport directory" });
+  }
+};
+
 export const getRepairLogs = async (req, res) => {
   try {
     const transactions = await Transaction.find({
@@ -301,19 +474,112 @@ export const getRepairLogs = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(100);
 
-    const logs = transactions.map((tx) => ({
-      hash: tx.blockchainHash,
-      description: `${tx.transactionType} · ${tx.metadata?.serviceId || tx.metadata?.actionId || ""} · ${tx.metadata?.passportId || ""}`,
-      type: tx.transactionType.includes("QUEUED")
-        ? "QUEUED"
-        : tx.transactionType.includes("UPDATED")
-          ? "SIGNED"
-          : "VERIFIED",
-      passport: tx.metadata?.passportId || "N/A",
-      time: tx.createdAt?.toLocaleTimeString?.([], { hour: "2-digit", minute: "2-digit" }),
-      date: tx.createdAt?.toLocaleDateString?.(),
-      dot: "#22C55E",
-    }));
+    const transactionServiceIds = transactions
+      .filter((tx) => tx.entityType === "RepairService" && tx.entityId)
+      .map((tx) => tx.entityId);
+
+    const [services, transactionServices] = await Promise.all([
+      RepairService.find({
+        $or: [
+          { "photos.0": { $exists: true } },
+          { "certificates.0": { $exists: true } },
+        ],
+      })
+        .sort({ updatedAt: -1 })
+        .limit(100),
+      RepairService.find({ _id: { $in: transactionServiceIds } }),
+    ]);
+
+    const serviceById = new Map(
+      transactionServices.map((service) => [String(service._id), service])
+    );
+
+    const typeFor = (tx) => {
+      if (tx.transactionType.includes("QUEUED")) return "QUEUED";
+      if (tx.transactionType.includes("UPDATED") && tx.metadata?.action === "ASSIGN") {
+        return "ASSIGN";
+      }
+      if (tx.transactionType.includes("UPDATED")) return "SIGNED";
+      if (tx.transactionType.includes("SUBMITTED")) return "NOTIFY";
+      return "VERIFIED";
+    };
+
+    const dotFor = (type) => {
+      const colors = {
+        SIGNED: "#22C55E",
+        SCORE: "#2563EB",
+        UPLOAD: "#A855F7",
+        QUEUED: "#F59E0B",
+        ASSIGN: "#F59E0B",
+        VERIFIED: "#14B8A6",
+        NOTIFY: "#EC4899",
+      };
+
+      return colors[type] || "#22C55E";
+    };
+
+    const passportForTransaction = (tx) =>
+      tx.metadata?.passportId ||
+      serviceById.get(String(tx.entityId))?.passportId ||
+      "N/A";
+
+    const describeTransaction = (tx, type) => {
+      const serviceId = tx.metadata?.serviceId || tx.metadata?.actionId || "Repair event";
+      const passportId = passportForTransaction(tx);
+
+      if (type === "QUEUED") return `New service job queued · ${serviceId} · ${passportId}`;
+      if (type === "ASSIGN") return `Technician assigned · ${tx.metadata?.technician || "Repair Center"} · ${serviceId}`;
+      if (type === "SIGNED") return `Repair service update signed · ${serviceId} · ${tx.metadata?.status || "UPDATED"}`;
+      if (type === "NOTIFY") return `Consumer repair request submitted · ${serviceId} · ${passportId}`;
+
+      return `${tx.transactionType} · ${serviceId} · ${passportId}`;
+    };
+
+    const transactionLogs = transactions.map((tx) => {
+      const type = typeFor(tx);
+
+      return {
+        id: String(tx._id),
+        hash: tx.blockchainHash,
+        description: describeTransaction(tx, type),
+        type,
+        passport: passportForTransaction(tx),
+        time: tx.createdAt?.toLocaleTimeString?.([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        date: tx.createdAt?.toLocaleDateString?.(),
+        dot: dotFor(type),
+        explorerUrl: tx.explorerUrl,
+        createdAt: tx.createdAt,
+      };
+    });
+
+    const uploadLogs = services.map((service) => {
+      const photoCount = service.photos?.length || 0;
+      const certificateCount = service.certificates?.length || 0;
+
+      return {
+        id: `${service._id}-uploads`,
+        hash: service.blockchainHash || "Pending",
+        description: `Service evidence uploaded · ${photoCount} photo${photoCount === 1 ? "" : "s"} · ${certificateCount} certificate${certificateCount === 1 ? "" : "s"} · ${service.serviceId}`,
+        type: "UPLOAD",
+        passport: service.passportId || "N/A",
+        time: service.updatedAt?.toLocaleTimeString?.([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        date: service.updatedAt?.toLocaleDateString?.(),
+        dot: dotFor("UPLOAD"),
+        explorerUrl: "",
+        createdAt: service.updatedAt,
+      };
+    });
+
+    const logs = [...transactionLogs, ...uploadLogs]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 100)
+      .map(({ createdAt, ...log }) => log);
 
     res.status(200).json({ logs });
   } catch (error) {
@@ -330,23 +596,9 @@ export const lookupRepairPassport = async (req, res) => {
       return res.status(404).json({ message: "Digital passport not found" });
     }
 
-    const repairs = await RepairService.find({ garmentId: garment._id }).sort({
-      createdAt: -1,
-    });
+    await garment.populate("createdBy", "organization fullName");
 
-    res.status(200).json({
-      id: passportIdFor(garment),
-      garment: garment.productName || "Unnamed garment",
-      brand: garment.manufacturingCountry || garment.location || "LOOPI",
-      material: garment.material || garment.materials?.join(", ") || "Material pending",
-      grade: repairs.some((item) => item.status === "COMPLETED") ? "Grade A+" : "Grade A",
-      repairs: `${repairs.length} service${repairs.length === 1 ? "" : "s"}`,
-      co2: garment.carbon || "N/A",
-      water: garment.water || "N/A",
-      repairStatus: repairs[0]?.status || "Queued",
-      repairCount: repairs.length,
-      verified: true,
-    });
+    res.status(200).json(await buildPassportPayload(garment));
   } catch (error) {
     console.error("REPAIR PASSPORT LOOKUP ERROR:", error);
     res.status(500).json({ message: "Failed to lookup passport" });
