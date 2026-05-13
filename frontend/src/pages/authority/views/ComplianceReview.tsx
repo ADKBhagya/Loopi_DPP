@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -10,8 +11,17 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 export default function ComplianceReview() {
   const [expandedStage, setExpandedStage] =
     useState<string | null>(null);
+  const [apiError, setApiError] = useState("");
 
-  const pipelineData = [
+  const stageIcon = (label: string) => {
+    if (label.includes("Submitted")) return <DescriptionOutlinedIcon style={{ fontSize: 15 }} />;
+    if (label.includes("Initial")) return <VisibilityOutlinedIcon style={{ fontSize: 15 }} />;
+    if (label.includes("Deep")) return <SearchOutlinedIcon style={{ fontSize: 15 }} />;
+    if (label.includes("Sign-off")) return <CheckCircleOutlineOutlinedIcon style={{ fontSize: 15 }} />;
+    return <PublicOutlinedIcon style={{ fontSize: 15 }} />;
+  };
+
+  const fallbackPipelineData = [
     {
       label: "Submitted by Auditor",
       value: 22,
@@ -78,8 +88,10 @@ export default function ComplianceReview() {
         "4 records received gold seal this month — immutable on-chain.",
     },
   ];
+  void fallbackPipelineData;
+  const [pipelineData, setPipelineData] = useState<any[]>([]);
 
-  const regions = [
+  const fallbackRegions = [
     {
       region: "EU-NORTH",
       records: "1204 records",
@@ -105,10 +117,35 @@ export default function ComplianceReview() {
       width: "96%",
     },
   ];
+  void fallbackRegions;
+  const [regions, setRegions] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiFetch<any>("/authority/compliance-review")
+      .then((data) => {
+        setApiError("");
+        setPipelineData(
+          (data.pipeline || []).map((item: any) => ({
+            ...item,
+            icon: stageIcon(item.label),
+          }))
+        );
+        setRegions(data.regions || []);
+      })
+      .catch((error) => {
+        console.error("Failed to load authority compliance review", error);
+        setApiError(error instanceof Error ? error.message : "Failed to load compliance review");
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F6F7F9]">
       <div className="space-y-6">
+        {apiError && (
+          <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
+            {apiError}
+          </div>
+        )}
         
         {/* PIPELINE CARD */}
         <div className="mt-3 bg-white border border-gray-100 rounded-[22px] p-5 shadow-sm">
