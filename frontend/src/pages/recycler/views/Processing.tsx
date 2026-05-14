@@ -574,7 +574,7 @@ export default function Processing() {
           </div>
 
           {/* RIGHT */}
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
 
             {/* REFRESH */}
             <button
@@ -599,7 +599,7 @@ export default function Processing() {
             </button>
 
             {/* SEARCH */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
 
               <SearchRoundedIcon
                 className="
@@ -618,7 +618,8 @@ export default function Processing() {
                 }
                 placeholder="Search recycling queue..."
                 className="
-                  w-[220px]
+                  w-full
+                  sm:w-[220px]
                   h-[42px]
 
                   rounded-2xl
@@ -646,7 +647,8 @@ export default function Processing() {
         {/* TABLE HEADER */}
         <div
           className="
-            grid
+            hidden
+            lg:grid
             grid-cols-[1fr_1.3fr_1.4fr_1fr_0.9fr_0.8fr_0.8fr_0.6fr]
 
             px-5
@@ -955,6 +957,84 @@ export default function Processing() {
 
           ))}
 
+        </div>
+
+        <div className="divide-y divide-[#F3F4F6] lg:hidden">
+          {filteredItems.map((item) => (
+            <div key={item.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-black text-[#111827]">
+                    {item.id}
+                  </p>
+                  <p className="mt-2 break-words text-[15px] font-black text-[#111827]">
+                    {item.passport}
+                  </p>
+                  <p className="mt-1 break-words text-[12px] text-[#9CA3AF]">
+                    {item.garment}
+                  </p>
+                </div>
+
+                <div className="relative shrink-0">
+                  <button
+                    onClick={() => setShowMenu(showMenu === item.id ? "" : item.id)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ECECEC] text-[#6B7280]"
+                  >
+                    <MoreVertRoundedIcon style={{ fontSize: 18 }} />
+                  </button>
+
+                  {showMenu === item.id && (
+                    <div
+                      ref={menuRef}
+                      className="absolute right-0 top-10 z-[9999] w-[220px] overflow-hidden rounded-[22px] border border-[#ECECEC] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.16)]"
+                    >
+                      <MenuBtn
+                        icon={<VisibilityOutlinedIcon />}
+                        label="View Breakdown"
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setShowMenu("");
+                        }}
+                      />
+                      <MenuBtn
+                        icon={<AutorenewRoundedIcon />}
+                        label="Move To Recovery"
+                        onClick={() => updateProcess(item.id, "FIBER RECOVERY")}
+                      />
+                      <MenuBtn
+                        icon={<CheckCircleRoundedIcon />}
+                        label="Mark Completed"
+                        onClick={() => updateProcess(item.id, "COMPLETED")}
+                      />
+                      <MenuBtn
+                        icon={<DeleteSweepRoundedIcon />}
+                        label="Terminate Lifecycle"
+                        onClick={() => updateProcess(item.id, "CLOSED")}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <MobileMeta label="Material" value={item.material} />
+                <MobileMeta label="Entry Date" value={item.date} />
+                <MobileMeta label="Weight" value={item.weight} />
+                <MobileMeta label="Credits" value={item.credits} accent />
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <StageChip stage={item.stage} />
+                <button
+                  onClick={() => setSelectedItem(item)}
+                  className="flex h-9 shrink-0 items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 text-[11px] font-black text-[#166B2D]"
+                >
+                  <VisibilityOutlinedIcon style={{ fontSize: 16 }} />
+                  REVIEW
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* FOOTER */}
@@ -1851,7 +1931,7 @@ function MaterialRow({ material }: any) {
   return (
     <div className="mt-5">
       <div className="flex items-center justify-between gap-3">
-        <div>
+        <div className="hidden lg:block">
           <p className="text-[13px] font-black text-[#111827]">
             {material.name}
           </p>
@@ -1891,6 +1971,25 @@ function MaterialRow({ material }: any) {
           }}
         />
       </div>
+    </div>
+  );
+}
+
+/* ======================================================= */
+
+function MobileMeta({ label, value, accent }: any) {
+  return (
+    <div className="rounded-2xl border border-[#F1F1F1] bg-[#FAFAFA] px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#A0A6B2]">
+        {label}
+      </p>
+      <p
+        className={`mt-1 break-words text-[12px] font-black ${
+          accent ? "text-[#F97316]" : "text-[#111827]"
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
