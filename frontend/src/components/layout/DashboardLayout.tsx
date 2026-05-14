@@ -7,12 +7,16 @@ interface Props {
   children: ReactNode;
   menuItems: any[];
   title: string;
+  walletCredits?: number | string;
+  networkLabel?: string;
 }
 
 export default function DashboardLayout({
   children,
   menuItems,
   title,
+  walletCredits,
+  networkLabel,
 }: Props) {
 
   const [mobileOpen, setMobileOpen] =
@@ -26,12 +30,15 @@ export default function DashboardLayout({
         menuItems={menuItems}
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
+        walletCredits={walletCredits}
       />
 
       {/* TOPBAR */}
       <Topbar
         title={title}
         onMenuClick={() => setMobileOpen(true)}
+        networkLabel={networkLabel}
+        walletCredits={walletCredits}
       />
 
       {/* CONTENT */}

@@ -8,12 +8,14 @@ interface Props {
   menuItems: any[];
   mobileOpen?: boolean;
   onClose?: () => void;
+  walletCredits?: number | string;
 }
 
 export default function Sidebar({
   menuItems,
   mobileOpen,
   onClose,
+  walletCredits,
 }: Props) {
 
   const location = useLocation();
@@ -116,7 +118,7 @@ export default function Sidebar({
                 </p>
 
                 <p className="text-xs font-bold text-gray-900">
-                  4,285.50 LOOPI
+                  {walletCredits ?? "0"} LOOPI
                 </p>
               </div>
 

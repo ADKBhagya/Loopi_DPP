@@ -31,9 +31,11 @@ import LanguageOutlinedIcon from "@mui/icons-material/LanguageOutlined";
 interface Props {
   title?: string;
   onMenuClick?: () => void;
+  networkLabel?: string;
+  walletCredits?: number | string;
 }
 
-export default function Topbar({ title, onMenuClick }: Props) {
+export default function Topbar({ title, onMenuClick, networkLabel, walletCredits }: Props) {
   const navigate = useNavigate();
 
   const [showNotif, setShowNotif] = useState(false);
@@ -78,7 +80,7 @@ export default function Topbar({ title, onMenuClick }: Props) {
 
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex px-4 py-2 rounded-full bg-green-50 border text-green-600 text-xs font-bold">
-            ● MAINNET ONLINE
+            {networkLabel || "MAINNET ONLINE"}
           </div>
 
           <div className="relative">
@@ -166,7 +168,12 @@ export default function Topbar({ title, onMenuClick }: Props) {
         <SystemPreferencesModal onClose={() => setShowPrefs(false)} />
       )}
 
-      {showGas && <GasCreditsModal onClose={() => setShowGas(false)} />}
+      {showGas && (
+        <GasCreditsModal
+          onClose={() => setShowGas(false)}
+          walletCredits={walletCredits}
+        />
+      )}
 
       {showSecurityExplorer && (
         <SecurityExplorerModal
@@ -806,7 +813,7 @@ function Toggle({ title, sub, disabled }: any) {
   );
 }
 
-function GasCreditsModal({ onClose }: any) {
+function GasCreditsModal({ onClose, walletCredits }: any) {
   const [amount, setAmount] = useState(500);
 
   return createPortal(
@@ -844,7 +851,7 @@ function GasCreditsModal({ onClose }: any) {
               </p>
 
               <p className="text-2xl font-bold mt-1">
-                4,285.50 <span className="text-lg font-medium">LOOPI</span>
+                {walletCredits ?? 0} <span className="text-lg font-medium">LOOPI</span>
               </p>
 
               <div className="border-t border-white/30 mt-4 pt-3 flex justify-between text-xs">
