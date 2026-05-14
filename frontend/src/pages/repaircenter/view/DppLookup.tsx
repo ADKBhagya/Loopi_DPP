@@ -84,6 +84,71 @@ function passportFromGarment(garment: any) {
   };
 }
 
+function passportFromRepairService(service: any) {
+  const passportId = service?.passport || service?.passportId || service?.garmentId;
+
+  return {
+    id: passportId || `REP-${String(service?._id || service?.id || "").slice(-6).toUpperCase()}`,
+    garmentId: service?.garmentId,
+    garment: service?.garment || service?.garmentName || "Unknown Garment",
+    brand: service?.brand || service?.owner || "LOOPI",
+    material: service?.material || "Material pending",
+    materials: service?.materials || [],
+    grade: service?.status === "COMPLETED" ? "Grade A" : "Grade B+",
+    repairs: service?.id ? `${service.id} repair service` : "Repair service",
+    co2: service?.co2 || "N/A",
+    water: service?.water || "N/A",
+    repairStatus: service?.status || "No repairs",
+    repairCount: 1,
+    verified: service?.status === "COMPLETED",
+    imageUrl: service?.imageUrl || service?.photos?.[0]?.url,
+    status: service?.status,
+    location: service?.location || "Repair Center",
+    productionDate: service?.date,
+    batchNumber: service?.batchNumber,
+    sku: passportId,
+    hash: service?.txHash || service?.hash || "",
+    hashShort: service?.txHash
+      ? `${String(service.txHash).slice(0, 10)}...`
+      : service?.hash
+        ? `${String(service.hash).slice(0, 10)}...`
+        : "Pending",
+    repairHistory: [service],
+    certificates: service?.certificates || [],
+  };
+}
+
+function mergePassportRows(rows: any[]) {
+  const byPassport = new Map<string, any>();
+
+  rows.forEach((row) => {
+    const passport = passportFromRepairService(row);
+    const key = String(passport.id || "").trim();
+    if (!key) return;
+
+    const existing = byPassport.get(key);
+    if (!existing) {
+      byPassport.set(key, passport);
+      return;
+    }
+
+    byPassport.set(key, {
+      ...existing,
+      ...passport,
+      repairCount: (existing.repairCount || 0) + 1,
+      repairs: `${(existing.repairCount || 0) + 1} services`,
+      repairHistory: [...(existing.repairHistory || []), row],
+      verified: existing.verified || passport.verified,
+      imageUrl: existing.imageUrl || passport.imageUrl,
+      hash: existing.hash || passport.hash,
+      hashShort: existing.hashShort !== "Pending" ? existing.hashShort : passport.hashShort,
+      certificates: [...(existing.certificates || []), ...(passport.certificates || [])],
+    });
+  });
+
+  return Array.from(byPassport.values());
+}
+
 export default function DPPLookup() {
 
   const [search, setSearch] = useState("");
@@ -131,25 +196,35 @@ useEffect(() => {
     setDirectoryLoading(true);
     setLookupError("");
 
-    try {
-      const data = await apiFetch<any>("/repair-center/passports");
-      if (!active) return;
-      setPassports(data.passports || []);
-    } catch (error) {
+    const [recordsResult, queueResult] = await Promise.allSettled([
+      apiFetch<any>("/repair-center/records"),
+      apiFetch<any>("/repair-center/queue"),
+    ]);
+
+    if (!active) return;
+
+    const records =
+      recordsResult.status === "fulfilled" ? recordsResult.value.records || [] : [];
+    const jobs = queueResult.status === "fulfilled" ? queueResult.value.jobs || [] : [];
+    const repairedPassports = mergePassportRows([...records, ...jobs]);
+
+    if (repairedPassports.length) {
+      setPassports(repairedPassports);
+      setLookupError("");
+    } else {
       try {
         const garments = await apiFetch<any[]>("/garments");
         if (!active) return;
         setPassports((Array.isArray(garments) ? garments : []).map(passportFromGarment));
         setLookupError("");
-      } catch (fallbackError) {
-        console.error("Failed to load passport directory", error, fallbackError);
+      } catch (error) {
         if (!active) return;
         setPassports([]);
         setLookupError("Failed to load passport directory");
       }
-    } finally {
-      if (active) setDirectoryLoading(false);
     }
+
+    if (active) setDirectoryLoading(false);
   };
 
   loadPassports();
@@ -172,6 +247,22 @@ const handleSearch = async () => {
   setLoading(true);
   setLookupError("");
 
+  const value = search.toLowerCase().trim();
+  const localMatch = passports.find((item) => {
+    return (
+      String(item.id || "").toLowerCase().includes(value) ||
+      String(item.garment || "").toLowerCase().includes(value) ||
+      String(item.brand || "").toLowerCase().includes(value)
+    );
+  });
+
+  if (localMatch) {
+    setSelectedPassport(localMatch);
+    setLookupError("");
+    setLoading(false);
+    return;
+  }
+
   try {
     const found = await apiFetch<any>(`/repair-center/passport/${search.trim()}`);
     setPassports((prev) =>
@@ -179,22 +270,8 @@ const handleSearch = async () => {
     );
     setSelectedPassport(found);
   } catch (error) {
-    const value = search.toLowerCase().trim();
-    const localMatch = passports.find((item) => {
-      return (
-        String(item.id || "").toLowerCase().includes(value) ||
-        String(item.garment || "").toLowerCase().includes(value) ||
-        String(item.brand || "").toLowerCase().includes(value)
-      );
-    });
-
-    if (localMatch) {
-      setSelectedPassport(localMatch);
-      setLookupError("");
-    } else {
       setLookupError(error instanceof Error ? error.message : "Passport lookup failed");
       setSelectedPassport(null);
-    }
   } finally {
     setLoading(false);
   }
