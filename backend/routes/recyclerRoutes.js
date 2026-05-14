@@ -6,6 +6,7 @@ import {
   closeRecyclerLifecycle,
   createRecyclingProcess,
   getLifecycleCloseQueue,
+  getRecyclerDashboard,
   getRecyclerMaterials,
   getRecyclerProcessing,
   lookupRecyclerPassport,
@@ -15,6 +16,7 @@ import {
 const router = express.Router();
 const recyclerAccess = [verifyToken, allowRoles("Recycler", "Admin")];
 
+router.get("/dashboard", recyclerAccess, getRecyclerDashboard);
 router.get("/processing", recyclerAccess, getRecyclerProcessing);
 router.post("/processing", recyclerAccess, createRecyclingProcess);
 router.patch("/processing/:id", recyclerAccess, updateRecyclingProcess);

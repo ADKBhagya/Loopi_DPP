@@ -21,16 +21,32 @@ const hashFor = (...parts) =>
     .update(parts.filter(Boolean).join("-"))
     .digest("hex");
 
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const findGarmentByIdentifier = async (identifier) => {
+  const value = String(identifier || "").trim();
+  const exactValue = new RegExp(`^${escapeRegex(value)}$`, "i");
+
   if (isObjectId(identifier)) {
     const garment = await Garment.findById(identifier);
     if (garment) return garment;
   }
 
+  const directMatch = await Garment.findOne({
+    $or: [
+      { sku: exactValue },
+      { batchNumber: exactValue },
+      { productName: exactValue },
+    ],
+  });
+
+  if (directMatch) return directMatch;
+
   const garments = await Garment.find();
   return garments.find(
     (garment) =>
-      passportIdFor(garment).toLowerCase() === String(identifier).toLowerCase()
+      passportIdFor(garment).toLowerCase() === value.toLowerCase() ||
+      String(garment.productName || "").toLowerCase().includes(value.toLowerCase())
   );
 };
 
@@ -72,27 +88,27 @@ const materialBreakdownFor = (garment, repairs = []) => {
     : String(materialFor(garment))
         .split(/,|\//)
         .map((item) => item.trim())
-        .filter(Boolean);
+        .filter((item) => item && item !== "Material pending");
 
-  const fallback = materials.length ? materials : ["Organic Cotton", "Elastane", "Metal Hardware"];
-  const values = fallback.map((_, index) =>
-    index === 0 ? 70 : index === fallback.length - 1 ? 10 : 20
+  const materialRows = materials.length ? materials : ["Material pending"];
+  const values = materialRows.map((_, index) =>
+    materialRows.length === 1 ? 100 : index === 0 ? 70 : index === materialRows.length - 1 ? 10 : 20
   );
 
   return {
     id: passportIdFor(garment),
     garment: garment.productName || "Unnamed garment",
     company: garment.manufacturingCountry || garment.location || "LOOPI",
-    weight: "0.60 kg",
+    weight: repairs[0]?.weight || "0.60 kg",
     verified: true,
-    hazardous: fallback.some((item) => /poly|chemical|dye|elastane/i.test(item)),
+    hazardous: materialRows.some((item) => /poly|chemical|dye|elastane/i.test(item)),
     metrics: {
       carbon: garment.carbon || "N/A",
       water: garment.water || "N/A",
       recyclability: repairs.some((item) => item.stage === "COMPLETED") ? "91%" : "87%",
       energy: "2.4 kWh",
     },
-    materials: fallback.map((name, index) => ({
+    materials: materialRows.map((name, index) => ({
       name,
       type: /poly|pet|elastane/i.test(name)
         ? "SYNTHETIC"
@@ -113,6 +129,13 @@ const createProcessFromAction = async (action, user) => {
   const existing = await RecyclingProcess.findOne({ consumerActionId: action._id });
   if (existing) return existing;
 
+  const activeExisting = await RecyclingProcess.findOne({
+    passportId: action.passportId,
+    stage: { $ne: "CLOSED" },
+  });
+
+  if (activeExisting) return activeExisting;
+
   const processId = await nextProcessId();
   const weight = action.details?.weight || "0.60 kg";
 
@@ -132,15 +155,82 @@ const createProcessFromAction = async (action, user) => {
   });
 };
 
+const ensureProcessesFromRecyclingActions = async (user) => {
+  const recyclingActions = await ConsumerAction.find({ type: "recycling" })
+    .populate("garmentId")
+    .sort({ createdAt: -1 });
+
+  await Promise.all(
+    recyclingActions.map((action) => createProcessFromAction(action, user))
+  );
+};
+
+export const getRecyclerDashboard = async (req, res) => {
+  try {
+    await ensureProcessesFromRecyclingActions(req.user);
+
+    const [processes, garmentCount, recyclingRequests, logs] = await Promise.all([
+      RecyclingProcess.find().sort({ createdAt: -1 }).limit(8),
+      Garment.countDocuments(),
+      ConsumerAction.countDocuments({ type: "recycling" }),
+      Transaction.find({ transactionType: /RECYCLING|RECYCLED/i })
+        .sort({ createdAt: -1 })
+        .limit(6),
+    ]);
+
+    const allProcesses = await RecyclingProcess.find();
+    const activeProcesses = allProcesses.filter((item) => item.stage !== "CLOSED");
+    const closedProcesses = allProcesses.filter((item) => item.stage === "CLOSED");
+    const readyToClose = allProcesses.filter(
+      (item) => item.stage === "COMPLETED" || item.stage === "CLOSED"
+    );
+    const credits = allProcesses.reduce(
+      (sum, item) => sum + (Number(item.credits) || 0),
+      0
+    );
+    const recoveredWeight = allProcesses.reduce((sum, item) => {
+      const numericWeight = Number.parseFloat(String(item.weight || "0"));
+      return sum + (Number.isFinite(numericWeight) ? numericWeight : 0);
+    }, 0);
+
+    res.status(200).json({
+      stats: {
+        totalProcesses: allProcesses.length,
+        activeProcesses: activeProcesses.length,
+        closedProcesses: closedProcesses.length,
+        readyToClose: readyToClose.length,
+        passports: garmentCount,
+        recyclingRequests,
+        credits,
+        recoveredWeight: `${recoveredWeight.toFixed(2)} kg`,
+        logs: logs.length,
+        walletCredits: credits,
+      },
+      recent: processes.map(formatProcess),
+      logs: logs.map((log) => ({
+        hash: log.blockchainHash,
+        title: `${log.transactionType} for ${log.metadata?.passportId || "passport"}`,
+        type: log.transactionType.includes("UPDATED") ? "STAGE" : "ENTRY",
+        explorerUrl: log.explorerUrl,
+        time: log.createdAt?.toLocaleTimeString?.([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      })),
+      network: {
+        status: "ONLINE",
+        label: "MAINNET ONLINE",
+      },
+    });
+  } catch (error) {
+    console.error("RECYCLER DASHBOARD ERROR:", error);
+    res.status(500).json({ message: "Failed to fetch recycler dashboard" });
+  }
+};
+
 export const getRecyclerProcessing = async (req, res) => {
   try {
-    const recyclingActions = await ConsumerAction.find({ type: "recycling" })
-      .populate("garmentId")
-      .sort({ createdAt: -1 });
-
-    await Promise.all(
-      recyclingActions.map((action) => createProcessFromAction(action, req.user))
-    );
+    await ensureProcessesFromRecyclingActions(req.user);
 
     const processes = await RecyclingProcess.find({ stage: { $ne: "CLOSED" } })
       .sort({ createdAt: -1 });
@@ -168,6 +258,20 @@ export const createRecyclingProcess = async (req, res) => {
       return res.status(404).json({ message: "Digital passport not found" });
     }
 
+    const passportId = passportIdFor(garment);
+    const existingActiveProcess = await RecyclingProcess.findOne({
+      passportId,
+      stage: { $ne: "CLOSED" },
+    });
+
+    if (existingActiveProcess) {
+      return res.status(200).json({
+        message: "Recycling process already active for this passport",
+        item: formatProcess(existingActiveProcess),
+        existing: true,
+      });
+    }
+
     const processId = await nextProcessId();
     const weight = req.body.weight || "0.60 kg";
     const blockchainHash = hashFor(processId, garment._id, Date.now());
@@ -175,7 +279,7 @@ export const createRecyclingProcess = async (req, res) => {
     const process = await RecyclingProcess.create({
       processId,
       garmentId: garment._id,
-      passportId: passportIdFor(garment),
+      passportId,
       garmentName: req.body.garment || garment.productName,
       material: req.body.material || materialFor(garment),
       stage: req.body.stage || "SORTING",
@@ -194,7 +298,7 @@ export const createRecyclingProcess = async (req, res) => {
       user: req.user,
       metadata: {
         processId,
-        passportId: passportIdFor(garment),
+        passportId,
       },
     });
 
@@ -216,11 +320,15 @@ export const updateRecyclingProcess = async (req, res) => {
       return res.status(404).json({ message: "Recycling process not found" });
     }
 
+    const previousStage = process.stage;
     if (req.body.stage) process.stage = req.body.stage;
     process.blockchainHash = process.blockchainHash || hashFor(process._id, Date.now());
     await process.save();
 
-    if (process.stage === "COMPLETED" || process.stage === "CLOSED") {
+    if (
+      (process.stage === "COMPLETED" || process.stage === "CLOSED") &&
+      previousStage !== process.stage
+    ) {
       await LifecycleEvent.create({
         garmentId: process.garmentId,
         stage: "RECYCLED",
@@ -262,7 +370,7 @@ export const updateRecyclingProcess = async (req, res) => {
 export const getRecyclerMaterials = async (req, res) => {
   try {
     const garments = await Garment.find().sort({ createdAt: -1 }).limit(20);
-    const processes = await RecyclingProcess.find();
+    const processes = await RecyclingProcess.find().sort({ createdAt: -1 });
 
     res.status(200).json({
       passports: garments.map((garment) =>
@@ -302,8 +410,15 @@ export const getLifecycleCloseQueue = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(20);
 
+    const latestByPassport = new Map();
+    processes.forEach((process) => {
+      if (!latestByPassport.has(process.passportId)) {
+        latestByPassport.set(process.passportId, process);
+      }
+    });
+
     res.status(200).json({
-      passports: processes.map((process) => ({
+      passports: Array.from(latestByPassport.values()).map((process) => ({
         id: process.passportId,
         processId: process.processId,
         garment: process.garmentName,
@@ -323,6 +438,7 @@ export const getLifecycleCloseQueue = async (req, res) => {
         color: "#16A34A",
         bg: "#EAF7EE",
         time: log.createdAt?.toLocaleTimeString?.([], { hour: "2-digit", minute: "2-digit" }),
+        explorerUrl: log.explorerUrl,
       })),
     });
   } catch (error) {
