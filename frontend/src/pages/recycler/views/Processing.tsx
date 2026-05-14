@@ -38,6 +38,8 @@ export default function Processing() {
 
   const [selectedItem, setSelectedItem] =
     useState<any>(null);
+  const [selectedBreakdown, setSelectedBreakdown] = useState<any>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
   const [createForm, setCreateForm] = useState({
     passport: "",
     garment: "",
@@ -46,6 +48,9 @@ export default function Processing() {
     stage: "SORTING",
   });
   const [creating, setCreating] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+  const [passportDetails, setPassportDetails] = useState<any>(null);
   const [stats, setStats] = useState({
     materialRecovery: "0 Items",
     credits: 0,
@@ -55,6 +60,106 @@ export default function Processing() {
   const menuRef = useRef<any>(null);
 
   const [items, setItems] = useState<any[]>([]);
+
+  const downloadJson = (fileName: string, payload: any) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const selectedMaterialRows = useMemo(() => {
+    const source = selectedBreakdown?.materials?.length
+      ? selectedBreakdown.materials
+      : String(selectedItem?.material || "")
+          .split(/,|\//)
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .map((name, index, list) => ({
+            name,
+            type: /poly|pet|elastane|synthetic/i.test(name)
+              ? "SYNTHETIC"
+              : /metal|zip|button|hardware/i.test(name)
+                ? "METAL"
+                : "NATURAL",
+            value: list.length === 1 ? 100 : index === 0 ? 70 : 30,
+            barColor: index === 0 ? "#166B2D" : index === 1 ? "#2563EB" : "#EA580C",
+            badge: /elastane|chemical|dye/i.test(name) ? "Non-Extract" : "Extractable",
+            badgeBg: /elastane|chemical|dye/i.test(name) ? "#FFF1F1" : "#EAF7EE",
+            badgeColor: /elastane|chemical|dye/i.test(name) ? "#EF4444" : "#16A34A",
+          }));
+
+    return source.map((material: any, index: number) => ({
+      name: material.name || material,
+      type: material.type || "MATERIAL",
+      value: Number.parseFloat(String(material.value || 0)) || (index === 0 ? 70 : 30),
+      barColor: material.barColor || material.color || (index === 0 ? "#166B2D" : "#2563EB"),
+      badge: material.badge || "Extractable",
+      badgeBg: material.badgeBg || "#EAF7EE",
+      badgeColor: material.badgeColor || "#16A34A",
+    }));
+  }, [selectedBreakdown, selectedItem]);
+
+  const selectedMetrics = selectedBreakdown?.metrics || {
+    carbon: "N/A",
+    water: "N/A",
+    recyclability: selectedItem?.stage === "COMPLETED" ? "91%" : "87%",
+    energy: "N/A",
+  };
+
+  const normalizePassportInput = (value?: string) => {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) return "";
+
+    try {
+      const url = new URL(rawValue);
+      const parts = url.pathname.split("/").filter(Boolean);
+      return parts[parts.length - 1] || rawValue;
+    } catch {
+      return rawValue;
+    }
+  };
+
+  const applyPassportDetails = (passport: any, scannedValue?: string) => {
+    const material = Array.isArray(passport.materials)
+      ? passport.materials.map((item: any) => item.name || item).join(", ")
+      : passport.material || passport.materials?.[0]?.name || "";
+
+    setPassportDetails(passport);
+    setCreateForm((prev) => ({
+      ...prev,
+      passport: passport.id || normalizePassportInput(scannedValue) || prev.passport,
+      garment: passport.garment || prev.garment,
+      material: material || prev.material,
+      weight: passport.weight || prev.weight || "0.60 kg",
+    }));
+  };
+
+  const lookupPassport = async (value?: string) => {
+    const passport = normalizePassportInput(value || createForm.passport);
+    if (!passport) return null;
+
+    setLookupLoading(true);
+    setLookupError("");
+
+    try {
+      const data = await apiFetch<any>(`/recycler/passport/${encodeURIComponent(passport)}`);
+      applyPassportDetails(data, passport);
+      return data;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Digital passport not found";
+      setPassportDetails(null);
+      setLookupError(message);
+      return null;
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   const loadProcessing = () => {
     apiFetch<any>("/recycler/processing")
@@ -75,6 +180,48 @@ export default function Processing() {
   useEffect(() => {
     loadProcessing();
   }, []);
+
+  useEffect(() => {
+    if (!selectedItem?.passport) {
+      setSelectedBreakdown(null);
+      return;
+    }
+
+    let active = true;
+
+    const loadBreakdown = async () => {
+      setBreakdownLoading(true);
+      try {
+        const data = await apiFetch<any>(
+          `/recycler/passport/${encodeURIComponent(selectedItem.passport)}`
+        );
+        if (active) setSelectedBreakdown(data);
+      } catch (error) {
+        if (active) setSelectedBreakdown(null);
+      } finally {
+        if (active) setBreakdownLoading(false);
+      }
+    };
+
+    loadBreakdown();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedItem?.passport]);
+
+  useEffect(() => {
+    if (!showCreateModal) return;
+
+    const passport = normalizePassportInput(createForm.passport);
+    if (!passport || passport === passportDetails?.id) return;
+
+    const timer = setTimeout(() => {
+      lookupPassport(passport);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [createForm.passport, showCreateModal]);
 
   const updateProcess = async (itemId: string, stage: string) => {
     try {
@@ -97,14 +244,15 @@ export default function Processing() {
       }
 
       setShowMenu("");
+      loadProcessing();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update recycling process");
+      setApiError(error instanceof Error ? error.message : "Failed to update recycling process");
     }
   };
 
   const createProcess = async () => {
     if (!createForm.passport.trim()) {
-      alert("Enter a passport ID before creating the recycling record");
+      setLookupError("Enter a passport ID before creating the recycling record");
       return;
     }
 
@@ -114,8 +262,15 @@ export default function Processing() {
         method: "POST",
         body: JSON.stringify(createForm),
       });
-      setItems((prev) => [data.item, ...prev]);
+      setItems((prev) =>
+        prev.some((item) => item.id === data.item.id)
+          ? prev.map((item) => (item.id === data.item.id ? data.item : item))
+          : [data.item, ...prev]
+      );
       setShowCreateModal(false);
+      setPassportDetails(null);
+      setLookupError("");
+      setApiError(data.existing ? data.message : "");
       setCreateForm({
         passport: "",
         garment: "",
@@ -125,10 +280,18 @@ export default function Processing() {
       });
       loadProcessing();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to create recycling process");
+      setLookupError(error instanceof Error ? error.message : "Failed to create recycling process");
     } finally {
       setCreating(false);
     }
+  };
+
+  const exportQueue = () => {
+    downloadJson("recycling-queue.json", {
+      exportedAt: new Date().toISOString(),
+      stats,
+      items: filteredItems,
+    });
   };
 
   useEffect(() => {
@@ -368,7 +531,7 @@ export default function Processing() {
           bg-white
           border border-[#ECECEC]
           rounded-[28px]
-          overflow-hidden
+          overflow-visible
           shadow-[0_10px_40px_rgba(0,0,0,0.03)]
         "
       >
@@ -415,6 +578,7 @@ export default function Processing() {
 
             {/* REFRESH */}
             <button
+              onClick={loadProcessing}
               className="
                 w-10 h-10 rounded-2xl
                 border border-[#ECECEC]
@@ -816,6 +980,7 @@ export default function Processing() {
           </p>
 
           <button
+            onClick={exportQueue}
             className="
               flex items-center gap-2
 
@@ -1082,329 +1247,22 @@ export default function Processing() {
 
             </div>
 
-            {/* ITEM */}
-            <div className="mt-5">
-
-                <div className="flex items-center justify-between">
-
-                <div>
-
-                    <p
-                    className="
-                        text-[13px]
-
-                        font-black
-
-                        text-[#111827]
-                    "
-                    >
-                    Organic Cotton
-                    </p>
-
-                    <p
-                    className="
-                        text-[10px]
-
-                        text-[#A0A6B2]
-
-                        mt-1
-
-                        tracking-[0.12em]
-
-                        font-bold
-                    "
-                    >
-                    NATURAL
-                    </p>
-
-                </div>
-
-                <div
-                    className="
-                    flex items-center gap-3
-                    "
-                >
-
-                    <span
-                    className="
-                        px-2 py-1
-
-                        rounded-lg
-
-                        bg-[#EAF7EE]
-
-                        text-[#16A34A]
-
-                        text-[9px]
-
-                        font-black
-                    "
-                    >
-                    Extractable
-                    </span>
-
-                    <span
-                    className="
-                        text-[12px]
-
-                        font-black
-
-                        text-[#16A34A]
-                    "
-                    >
-                    78%
-                    </span>
-
-                </div>
-
-                </div>
-
-                <div
-                className="
-                    mt-3
-
-                    h-2
-
-                    rounded-full
-
-                    bg-[#F1F1F1]
-
-                    overflow-hidden
-                "
-                >
-
-                <div
-                    className="
-                    h-full
-
-                    rounded-full
-
-                    bg-[#166B2D]
-                    "
-                    style={{
-                    width: "78%",
-                    }}
-                />
-
-                </div>
-
-            </div>
-
-            {/* ELASTANE */}
-            <div className="mt-6">
-
-                <div className="flex items-center justify-between">
-
-                <div>
-
-                    <p
-                    className="
-                        text-[13px]
-
-                        font-black
-
-                        text-[#111827]
-                    "
-                    >
-                    Elastane
-                    </p>
-
-                    <p
-                    className="
-                        text-[10px]
-
-                        text-[#A0A6B2]
-
-                        mt-1
-
-                        tracking-[0.12em]
-
-                        font-bold
-                    "
-                    >
-                    SYNTHETIC
-                    </p>
-
-                </div>
-
-                <div
-                    className="
-                    flex items-center gap-3
-                    "
-                >
-
-                    <span
-                    className="
-                        px-2 py-1
-
-                        rounded-lg
-
-                        bg-[#FFF1F1]
-
-                        text-[#EF4444]
-
-                        text-[9px]
-
-                        font-black
-                    "
-                    >
-                    Non-Extract
-                    </span>
-
-                    <span
-                    className="
-                        text-[12px]
-
-                        font-black
-
-                        text-[#2563EB]
-                    "
-                    >
-                    14%
-                    </span>
-
-                </div>
-
-                </div>
-
-                <div
-                className="
-                    mt-3
-
-                    h-2
-
-                    rounded-full
-
-                    bg-[#F1F1F1]
-
-                    overflow-hidden
-                "
-                >
-
-                <div
-                    className="
-                    h-full
-
-                    rounded-full
-
-                    bg-[#2563EB]
-                    "
-                    style={{
-                    width: "14%",
-                    }}
-                />
-
-                </div>
-
-            </div>
-
-            {/* HARDWARE */}
-            <div className="mt-6">
-
-                <div className="flex items-center justify-between">
-
-                <div>
-
-                    <p
-                    className="
-                        text-[13px]
-
-                        font-black
-
-                        text-[#111827]
-                    "
-                    >
-                    Metal Hardware
-                    </p>
-
-                    <p
-                    className="
-                        text-[10px]
-
-                        text-[#A0A6B2]
-
-                        mt-1
-
-                        tracking-[0.12em]
-
-                        font-bold
-                    "
-                    >
-                    METAL
-                    </p>
-
-                </div>
-
-                <div
-                    className="
-                    flex items-center gap-3
-                    "
-                >
-
-                    <span
-                    className="
-                        px-2 py-1
-
-                        rounded-lg
-
-                        bg-[#EAF7EE]
-
-                        text-[#16A34A]
-
-                        text-[9px]
-
-                        font-black
-                    "
-                    >
-                    Extractable
-                    </span>
-
-                    <span
-                    className="
-                        text-[12px]
-
-                        font-black
-
-                        text-[#EA580C]
-                    "
-                    >
-                    8%
-                    </span>
-
-                </div>
-
-                </div>
-
-                <div
-                className="
-                    mt-3
-
-                    h-2
-
-                    rounded-full
-
-                    bg-[#F1F1F1]
-
-                    overflow-hidden
-                "
-                >
-
-                <div
-                    className="
-                    h-full
-
-                    rounded-full
-
-                    bg-[#EA580C]
-                    "
-                    style={{
-                    width: "8%",
-                    }}
-                />
-
-                </div>
-
-            </div>
+            {breakdownLoading && (
+              <p className="mt-5 text-[12px] font-black tracking-[0.12em] text-[#9CA3AF]">
+                LOADING MATERIAL DATA...
+              </p>
+            )}
+
+            {!breakdownLoading && selectedMaterialRows.length === 0 && (
+              <p className="mt-5 text-sm font-semibold text-[#9CA3AF]">
+                No material breakdown found for this passport.
+              </p>
+            )}
+
+            {!breakdownLoading &&
+              selectedMaterialRows.map((material: any) => (
+                <MaterialRow key={`${material.name}-${material.value}`} material={material} />
+              ))}
 
             </div>
 
@@ -1421,7 +1279,7 @@ export default function Processing() {
                 iconBg="#EAF7EE"
                 iconColor="#16A34A"
                 title="CARBON SAVED"
-                value="6.1 kg CO₂e"
+                value={selectedMetrics.carbon || "N/A"}
                 icon={<BoltRoundedIcon />}
             />
 
@@ -1429,7 +1287,7 @@ export default function Processing() {
                 iconBg="#EEF4FF"
                 iconColor="#2563EB"
                 title="WATER RECOVERED"
-                value="18.0 L"
+                value={selectedMetrics.water || "N/A"}
                 icon={<RecyclingRoundedIcon />}
             />
 
@@ -1437,7 +1295,7 @@ export default function Processing() {
                 iconBg="#F5EFFF"
                 iconColor="#9333EA"
                 title="RECYCLABILITY"
-                value="87%"
+                value={selectedMetrics.recyclability || "N/A"}
                 icon={<ScienceRoundedIcon />}
             />
 
@@ -1445,7 +1303,7 @@ export default function Processing() {
                 iconBg="#FFF4E6"
                 iconColor="#EA8A00"
                 title="ENERGY RECOVERED"
-                value="2.4 kWh"
+                value={selectedMetrics.energy || "N/A"}
                 icon={<BoltRoundedIcon />}
             />
 
@@ -1539,7 +1397,16 @@ export default function Processing() {
                 SHREDDING PROCESS PROOF
             </h3>
 
-            <div
+            <button
+                type="button"
+                onClick={() =>
+                  downloadJson(`recycling-breakdown-${selectedItem.passport}.json`, {
+                    process: selectedItem,
+                    passport: selectedBreakdown,
+                    materials: selectedMaterialRows,
+                    metrics: selectedMetrics,
+                  })
+                }
                 className="
                 mt-4
 
@@ -1575,7 +1442,7 @@ export default function Processing() {
                     text-[#374151]
                 "
                 >
-                Upload Process Documentation
+                Download Process Documentation
                 </p>
 
                 <p
@@ -1587,10 +1454,10 @@ export default function Processing() {
                     text-[#9CA3AF]
                 "
                 >
-                Video proof or sensor logs required for credit minting
+                Exports selected process, material, and passport evidence
                 </p>
 
-            </div>
+            </button>
 
             </div>
 
@@ -1685,12 +1552,18 @@ export default function Processing() {
         onClose={() =>
           setScannerOpen(false)
         }
-        onScan={() => {
+        onScan={async (value) => {
+          const passport = normalizePassportInput(value);
 
           setScannerOpen(false);
+          setCreateForm((prev) => ({
+            ...prev,
+            passport,
+          }));
 
-          setTimeout(() => {
+          setTimeout(async () => {
             setShowCreateModal(true);
+            if (passport) await lookupPassport(passport);
           }, 400);
 
         }}
@@ -1843,9 +1716,13 @@ export default function Processing() {
                     label="Passport ID"
                     value={createForm.passport}
                     onChange={(value: string) =>
-                      setCreateForm((prev) => ({ ...prev, passport: value }))
+                      setCreateForm((prev) => ({
+                        ...prev,
+                        passport: normalizePassportInput(value),
+                      }))
                     }
-                    placeholder="GP-9811 or SKU"
+                    onBlur={() => lookupPassport()}
+                    placeholder="Passport ID or SKU"
                   />
                   <CreateField
                     label="Weight"
@@ -1892,6 +1769,58 @@ export default function Processing() {
 
                 </div>
 
+                {(lookupLoading || lookupError || passportDetails) && (
+                  <div
+                    className={`
+                      mt-4 rounded-2xl border px-4 py-3 text-sm
+                      ${
+                        lookupError
+                          ? "border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]"
+                          : "border-[#DCEFD9] bg-[#F7FCF8] text-[#166B2D]"
+                      }
+                    `}
+                  >
+                    {lookupLoading && (
+                      <p className="font-black tracking-[0.08em]">
+                        LOADING PASSPORT DETAILS...
+                      </p>
+                    )}
+
+                    {!lookupLoading && lookupError && (
+                      <p className="font-bold">{lookupError}</p>
+                    )}
+
+                    {!lookupLoading && passportDetails && (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[10px] font-black tracking-[0.12em] text-[#6B7280]">
+                            PASSPORT
+                          </p>
+                          <p className="mt-1 font-black text-[#111827]">
+                            {passportDetails.id}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black tracking-[0.12em] text-[#6B7280]">
+                            GARMENT
+                          </p>
+                          <p className="mt-1 font-black text-[#111827]">
+                            {passportDetails.garment}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black tracking-[0.12em] text-[#6B7280]">
+                            RECYCLABILITY
+                          </p>
+                          <p className="mt-1 font-black text-[#111827]">
+                            {passportDetails.metrics?.recyclability || "Pending"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <button
                   onClick={createProcess}
                   disabled={creating}
@@ -1916,15 +1845,69 @@ export default function Processing() {
 
 /* ======================================================= */
 
+function MaterialRow({ material }: any) {
+  const percent = `${Math.min(100, Math.max(0, Number(material.value) || 0))}%`;
+
+  return (
+    <div className="mt-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-black text-[#111827]">
+            {material.name}
+          </p>
+          <p className="mt-1 text-[10px] font-bold tracking-[0.12em] text-[#A0A6B2]">
+            {material.type}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span
+            className="rounded-lg px-2 py-1 text-[9px] font-black"
+            style={{
+              background: material.badgeBg,
+              color: material.badgeColor,
+            }}
+          >
+            {material.badge}
+          </span>
+
+          <span
+            className="text-[12px] font-black"
+            style={{
+              color: material.barColor,
+            }}
+          >
+            {percent}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F1F1F1]">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: percent,
+            background: material.barColor,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================= */
+
 function CreateField({
   label,
   value,
   onChange,
+  onBlur,
   placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder: string;
 }) {
   return (
@@ -1935,6 +1918,7 @@ function CreateField({
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         className="mt-2 h-[46px] w-full rounded-2xl border border-[#ECECEC] bg-[#FAFAFA] px-4 text-sm font-bold outline-none focus:border-[#166B2D]"
       />
