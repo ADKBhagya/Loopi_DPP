@@ -22,7 +22,11 @@ import SmartphoneRoundedIcon from "@mui/icons-material/SmartphoneRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 
-export default function Processing() {
+type ProcessingProps = {
+  onDataChanged?: () => void;
+};
+
+export default function Processing({ onDataChanged }: ProcessingProps) {
 
   const [search, setSearch] =
     useState("");
@@ -56,6 +60,9 @@ export default function Processing() {
     credits: 0,
   });
   const [apiError, setApiError] = useState("");
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [actionStatus, setActionStatus] = useState("");
+  const [updatingProcessId, setUpdatingProcessId] = useState("");
 
   const menuRef = useRef<any>(null);
 
@@ -184,9 +191,11 @@ export default function Processing() {
   useEffect(() => {
     if (!selectedItem?.passport) {
       setSelectedBreakdown(null);
+      setChecklist({});
       return;
     }
 
+    setChecklist({});
     let active = true;
 
     const loadBreakdown = async () => {
@@ -210,6 +219,15 @@ export default function Processing() {
     };
   }, [selectedItem?.passport]);
 
+  const toggleChecklistItem = (label: string) => {
+    setChecklist((prev) => ({
+      ...prev,
+      [label]: !prev[label],
+    }));
+  };
+
+  const completedChecklistSteps = Object.values(checklist).filter(Boolean).length;
+
   useEffect(() => {
     if (!showCreateModal) return;
 
@@ -225,6 +243,17 @@ export default function Processing() {
 
   const updateProcess = async (itemId: string, stage: string) => {
     try {
+      setShowMenu("");
+      setApiError("");
+      setUpdatingProcessId(itemId);
+      setActionStatus(
+        stage === "CLOSED"
+          ? `Closing ${itemId}...`
+          : stage === "COMPLETED"
+            ? `Marking ${itemId} completed...`
+            : `Moving ${itemId} to recovery...`
+      );
+
       const endpoint =
         stage === "CLOSED"
           ? `/recycler/processing/${itemId}/close`
@@ -243,10 +272,18 @@ export default function Processing() {
         );
       }
 
-      setShowMenu("");
       loadProcessing();
+      onDataChanged?.();
+      setActionStatus(
+        stage === "CLOSED"
+          ? `${itemId} moved to lifecycle close.`
+          : `${itemId} updated to ${stage}.`
+      );
     } catch (error) {
       setApiError(error instanceof Error ? error.message : "Failed to update recycling process");
+      setActionStatus("");
+    } finally {
+      setUpdatingProcessId("");
     }
   };
 
@@ -279,6 +316,7 @@ export default function Processing() {
         stage: "SORTING",
       });
       loadProcessing();
+      onDataChanged?.();
     } catch (error) {
       setLookupError(error instanceof Error ? error.message : "Failed to create recycling process");
     } finally {
@@ -297,6 +335,9 @@ export default function Processing() {
   useEffect(() => {
 
     const closeMenu = (e: any) => {
+      if (e.target?.closest?.("[data-recycler-menu]")) {
+        return;
+      }
 
       if (
         menuRef.current &&
@@ -352,6 +393,12 @@ export default function Processing() {
       {apiError && (
         <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] px-5 py-4 text-sm font-bold text-[#B91C1C]">
           {apiError}
+        </div>
+      )}
+
+      {actionStatus && !apiError && (
+        <div className="rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-5 py-4 text-sm font-bold text-[#166B2D]">
+          {actionStatus}
         </div>
       )}
 
@@ -854,6 +901,8 @@ export default function Processing() {
                 <div className="relative">
 
                   <button
+                    type="button"
+                    data-recycler-menu
                     onClick={() =>
                       setShowMenu(
                         showMenu === item.id
@@ -878,6 +927,7 @@ export default function Processing() {
 
                     <div
                       ref={menuRef}
+                      data-recycler-menu
                       className="
                         absolute
                         right-0
@@ -917,6 +967,7 @@ export default function Processing() {
                           <AutorenewRoundedIcon />
                         }
                         label="Move To Recovery"
+                        disabled={!!updatingProcessId}
                         onClick={() => {
                           updateProcess(item.id, "FIBER RECOVERY");
 
@@ -928,6 +979,7 @@ export default function Processing() {
                           <CheckCircleRoundedIcon />
                         }
                         label="Mark Completed"
+                        disabled={!!updatingProcessId}
                         onClick={() => {
                           updateProcess(item.id, "COMPLETED");
 
@@ -939,6 +991,7 @@ export default function Processing() {
                           <DeleteSweepRoundedIcon />
                         }
                         label="Terminate Lifecycle"
+                        disabled={!!updatingProcessId}
                         onClick={() => {
                           updateProcess(item.id, "CLOSED");
 
@@ -977,6 +1030,8 @@ export default function Processing() {
 
                 <div className="relative shrink-0">
                   <button
+                    type="button"
+                    data-recycler-menu
                     onClick={() => setShowMenu(showMenu === item.id ? "" : item.id)}
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ECECEC] text-[#6B7280]"
                   >
@@ -986,6 +1041,7 @@ export default function Processing() {
                   {showMenu === item.id && (
                     <div
                       ref={menuRef}
+                      data-recycler-menu
                       className="absolute right-0 top-10 z-[9999] w-[220px] overflow-hidden rounded-[22px] border border-[#ECECEC] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.16)]"
                     >
                       <MenuBtn
@@ -999,16 +1055,19 @@ export default function Processing() {
                       <MenuBtn
                         icon={<AutorenewRoundedIcon />}
                         label="Move To Recovery"
+                        disabled={!!updatingProcessId}
                         onClick={() => updateProcess(item.id, "FIBER RECOVERY")}
                       />
                       <MenuBtn
                         icon={<CheckCircleRoundedIcon />}
                         label="Mark Completed"
+                        disabled={!!updatingProcessId}
                         onClick={() => updateProcess(item.id, "COMPLETED")}
                       />
                       <MenuBtn
                         icon={<DeleteSweepRoundedIcon />}
                         label="Terminate Lifecycle"
+                        disabled={!!updatingProcessId}
                         onClick={() => updateProcess(item.id, "CLOSED")}
                       />
                     </div>
@@ -1429,10 +1488,19 @@ export default function Processing() {
 
             <div className="mt-4 space-y-3">
 
-                <ChecklistItem label="Metal Hardware Removed (Buttons, Zippers)" />
-                <ChecklistItem label="Synthetic Lining Separated" />
-                <ChecklistItem label="Chemical Trace Neutralization" />
-                <ChecklistItem label="Fiber Shredding Sequence Initiated" />
+                {[
+                  "Metal Hardware Removed (Buttons, Zippers)",
+                  "Synthetic Lining Separated",
+                  "Chemical Trace Neutralization",
+                  "Fiber Shredding Sequence Initiated",
+                ].map((label) => (
+                  <ChecklistItem
+                    key={label}
+                    label={label}
+                    checked={!!checklist[label]}
+                    onToggle={() => toggleChecklistItem(label)}
+                  />
+                ))}
 
             </div>
 
@@ -1445,7 +1513,7 @@ export default function Processing() {
                 text-[#A0A6B2]
                 "
             >
-                0 / 4 steps completed
+                {completedChecklistSteps} / 4 steps completed
             </p>
 
             </div>
@@ -2179,11 +2247,15 @@ function MenuBtn({
   icon,
   label,
   onClick,
+  disabled,
 }: any) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      data-recycler-menu
+      disabled={disabled}
       className="
         w-full
 
@@ -2350,11 +2422,17 @@ function MetricCard({
 
 function ChecklistItem({
   label,
+  checked,
+  onToggle,
 }: any) {
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={onToggle}
       className="
+        w-full
+
         min-h-[52px]
 
         rounded-2xl
@@ -2366,6 +2444,13 @@ function ChecklistItem({
         px-4
 
         flex items-center gap-3
+
+        text-left
+
+        transition-all
+
+        disabled:opacity-50
+        disabled:cursor-not-allowed
       "
     >
 
@@ -2375,11 +2460,19 @@ function ChecklistItem({
 
           rounded-md
 
-          border border-[#D7DCE2]
+          border
 
-          bg-white
+          flex items-center justify-center
         "
-      />
+        style={{
+          borderColor: checked ? "#16A34A" : "#D7DCE2",
+          background: checked ? "#16A34A" : "#FFFFFF",
+        }}
+      >
+        {checked && (
+          <CheckCircleRoundedIcon style={{ fontSize: 14, color: "#FFFFFF" }} />
+        )}
+      </div>
 
       <p
         className="
@@ -2389,10 +2482,10 @@ function ChecklistItem({
 
           text-[#4B5563]
         "
-      >
+    >
         {label}
       </p>
 
-    </div>
+    </button>
   );
 }

@@ -670,6 +670,18 @@ export default function MaterialBreakdown() {
               </button>
 
               <button
+                type="button"
+                onClick={() => {
+                  if (selectedPassport?.id) {
+                    window.open(
+                      `/consumer/passport/${encodeURIComponent(selectedPassport.id)}`,
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                  }
+                }}
+                disabled={!selectedPassport?.id}
+                title="Open public passport"
                 className="
                   w-[30px]
                   h-[30px]
@@ -683,6 +695,8 @@ export default function MaterialBreakdown() {
                   flex items-center justify-center
 
                   text-[#9CA3AF]
+
+                  disabled:opacity-40
                 "
               >
 
