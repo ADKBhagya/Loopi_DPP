@@ -33,6 +33,8 @@ export default function LifecycleClose() {
   const [selectedItem, setSelectedItem] =
     useState<any>(null);
   const [apiError, setApiError] = useState("");
+  const [modalError, setModalError] = useState("");
+  const [closing, setClosing] = useState(false);
 
   /* =========================================
   DATA
@@ -75,17 +77,38 @@ export default function LifecycleClose() {
   }, []);
 
   const closeLifecycle = async () => {
-    if (!selectedItem?.processId) return;
+    if (!selectedItem?.processId) {
+      setModalError("Missing recycling process ID for this passport.");
+      return;
+    }
 
     try {
+      setClosing(true);
+      setModalError("");
       await apiFetch(`/recycler/processing/${selectedItem.processId}/close`, {
         method: "POST",
       });
+      setPassports((prev) =>
+        prev.map((item) =>
+          item.processId === selectedItem.processId
+            ? {
+                ...item,
+                status: "CLOSED",
+                score: item.score || "91%",
+                color: "#9CA3AF",
+                badgeBg: "#F3F4F6",
+              }
+            : item
+        )
+      );
       setSelectedItem(null);
       loadCloseQueue();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to close lifecycle";
       setApiError(message);
+      setModalError(message);
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -867,7 +890,10 @@ export default function LifecycleClose() {
           {/* OVERLAY */}
           <div
             onClick={() =>
-              setSelectedItem(null)
+              {
+                setSelectedItem(null);
+                setModalError("");
+              }
             }
             className="
               fixed inset-0
@@ -1033,8 +1059,12 @@ export default function LifecycleClose() {
 
                   <button
                     onClick={() =>
-                      setSelectedItem(null)
+                      {
+                        setSelectedItem(null);
+                        setModalError("");
+                      }
                     }
+                    disabled={closing}
                     className="
                       flex-1
 
@@ -1058,6 +1088,7 @@ export default function LifecycleClose() {
 
                   <button
                     onClick={closeLifecycle}
+                    disabled={closing}
                     className="
                       flex-1
 
@@ -1076,12 +1107,21 @@ export default function LifecycleClose() {
                       font-black
 
                       shadow-[0_10px_25px_rgba(22,107,45,0.20)]
+
+                      disabled:opacity-60
+                      disabled:cursor-not-allowed
                     "
                   >
-                    CONFIRM & CLOSE
+                    {closing ? "CLOSING..." : "CONFIRM & CLOSE"}
                   </button>
 
                 </div>
+
+                {modalError && (
+                  <p className="mt-4 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[11px] font-bold text-[#B91C1C]">
+                    {modalError}
+                  </p>
+                )}
 
               </div>
 
