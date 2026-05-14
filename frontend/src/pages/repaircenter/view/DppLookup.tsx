@@ -41,6 +41,49 @@ function assetUrl(value?: string) {
   return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
 }
 
+function passportIdFor(garment: any) {
+  return (
+    garment?.sku ||
+    garment?.batchNumber ||
+    `GP-${String(garment?._id || "").slice(-6).toUpperCase()}`
+  );
+}
+
+function passportFromGarment(garment: any) {
+  const materials = Array.isArray(garment?.materials)
+    ? garment.materials.join(", ")
+    : garment?.material;
+
+  return {
+    id: passportIdFor(garment),
+    garmentId: garment?._id,
+    garment: garment?.productName || "Unnamed garment",
+    brand:
+      garment?.createdBy?.organization ||
+      garment?.currentOwnerName ||
+      garment?.manufacturingCountry ||
+      garment?.location ||
+      "LOOPI",
+    material: materials || "Material pending",
+    materials: garment?.materials || [],
+    grade: garment?.status === "certified" ? "Grade A" : "Grade B+",
+    repairs: "0 services",
+    co2: garment?.carbon ? `${garment.carbon} kg` : "N/A",
+    water: garment?.water ? `${garment.water}L` : "N/A",
+    repairStatus: "No repairs",
+    repairCount: 0,
+    verified: garment?.status === "certified",
+    imageUrl: garment?.imageUrl,
+    status: garment?.status,
+    location: garment?.location || "N/A",
+    productionDate: garment?.productionDate?.slice?.(0, 10),
+    batchNumber: garment?.batchNumber,
+    sku: garment?.sku,
+    hash: "",
+    hashShort: "Pending",
+  };
+}
+
 export default function DPPLookup() {
 
   const [search, setSearch] = useState("");
@@ -93,10 +136,17 @@ useEffect(() => {
       if (!active) return;
       setPassports(data.passports || []);
     } catch (error) {
-      console.error("Failed to load passport directory", error);
-      if (!active) return;
-      setPassports([]);
-      setLookupError("Failed to load passport directory");
+      try {
+        const garments = await apiFetch<any[]>("/garments");
+        if (!active) return;
+        setPassports((Array.isArray(garments) ? garments : []).map(passportFromGarment));
+        setLookupError("");
+      } catch (fallbackError) {
+        console.error("Failed to load passport directory", error, fallbackError);
+        if (!active) return;
+        setPassports([]);
+        setLookupError("Failed to load passport directory");
+      }
     } finally {
       if (active) setDirectoryLoading(false);
     }
