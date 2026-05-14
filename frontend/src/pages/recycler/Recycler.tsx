@@ -25,43 +25,38 @@ export default function Recycler() {
     let active = true;
 
     const loadDashboard = async () => {
-      try {
-        const data = await apiFetch<any>("/recycler/dashboard");
-        if (active) setDashboard(data);
-      } catch (error) {
-        const [processingResult, lifecycleResult] = await Promise.allSettled([
-          apiFetch<any>("/recycler/processing"),
-          apiFetch<any>("/recycler/lifecycle-close"),
-        ]);
+      const [processingResult, lifecycleResult] = await Promise.allSettled([
+        apiFetch<any>("/recycler/processing"),
+        apiFetch<any>("/recycler/lifecycle-close"),
+      ]);
 
-        if (!active) return;
+      if (!active) return;
 
-        const processing =
-          processingResult.status === "fulfilled"
-            ? processingResult.value
-            : { items: [], stats: {} };
-        const lifecycle =
-          lifecycleResult.status === "fulfilled"
-            ? lifecycleResult.value
-            : { passports: [], logs: [] };
+      const processing =
+        processingResult.status === "fulfilled"
+          ? processingResult.value
+          : { items: [], stats: {} };
+      const lifecycle =
+        lifecycleResult.status === "fulfilled"
+          ? lifecycleResult.value
+          : { passports: [], logs: [] };
 
-        setDashboard({
-          stats: {
-            totalProcesses: processing.items?.length || 0,
-            activeProcesses: processing.items?.length || 0,
-            closedProcesses:
-              lifecycle.passports?.filter((item: any) => item.status === "CLOSED").length || 0,
-            readyToClose:
-              lifecycle.passports?.filter((item: any) => item.status === "READY").length || 0,
-            credits: processing.stats?.credits || 0,
-            walletCredits: processing.stats?.credits || 0,
-            logs: lifecycle.logs?.length || 0,
-          },
-          network: {
-            label: "MAINNET ONLINE",
-          },
-        });
-      }
+      setDashboard({
+        stats: {
+          totalProcesses: processing.items?.length || 0,
+          activeProcesses: processing.items?.length || 0,
+          closedProcesses:
+            lifecycle.passports?.filter((item: any) => item.status === "CLOSED").length || 0,
+          readyToClose:
+            lifecycle.passports?.filter((item: any) => item.status === "READY").length || 0,
+          credits: processing.stats?.credits || 0,
+          walletCredits: processing.stats?.credits || 0,
+          logs: lifecycle.logs?.length || 0,
+        },
+        network: {
+          label: "MAINNET ONLINE",
+        },
+      });
     };
 
     loadDashboard();
