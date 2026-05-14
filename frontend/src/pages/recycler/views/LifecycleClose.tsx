@@ -38,138 +38,24 @@ export default function LifecycleClose() {
   DATA
   ========================================= */
 
-  const fallbackPassports = [
-
-    {
-      id: "GP-9811",
-      garment: "Eco Denim Jacket",
-      company: "DenimKind",
-
-      score: "87%",
-      status: "READY",
-
-      credits: "12 LOOPI",
-
-      recyclable: true,
-      hazardous: false,
-
-      color: "#16A34A",
-      badgeBg: "#EAF7EE",
-    },
-
-    {
-      id: "GP-9855",
-      garment: "Linen Shirt",
-      company: "Naturalia",
-
-      score: "65%",
-      status: "WAIT",
-
-      credits: "6 LOOPI",
-
-      recyclable: false,
-      hazardous: true,
-
-      color: "#F59E0B",
-      badgeBg: "#FFF4E6",
-    },
-
-    {
-      id: "GP-9777",
-      garment: "Wool Blend Coat",
-      company: "NordicWool",
-
-      score: "91%",
-      status: "RECOVER",
-
-      credits: "15 LOOPI",
-
-      recyclable: true,
-      hazardous: false,
-
-      color: "#7C3AED",
-      badgeBg: "#F5EFFF",
-    },
-
-    {
-      id: "GP-9762",
-      garment: "Bamboo Sweatshirt",
-      company: "EcoWear",
-
-      score: "78%",
-      status: "CLOSED",
-
-      credits: "9 LOOPI",
-
-      recyclable: true,
-      hazardous: false,
-
-      color: "#9CA3AF",
-      badgeBg: "#F3F4F6",
-    },
-
-  ];
-
-  const fallbackLogs = [
-
-    {
-      hash: "0x8A31...F223",
-      title:
-        "Lifecycle closure initiated for GP-9811",
-      type: "ENTRY",
-      color: "#9CA3AF",
-      bg: "#F3F4F6",
-      time: "12:30",
-    },
-
-    {
-      hash: "0x7BC2...0041",
-      title:
-        "Material decomposition verified for GP-9855",
-      type: "WARNING",
-      color: "#2563EB",
-      bg: "#EEF4FF",
-      time: "10:14",
-    },
-
-    {
-      hash: "0x51A1...9D33",
-      title:
-        "Recyclability score updated to 91%",
-      type: "CLOSED",
-      color: "#16A34A",
-      bg: "#EAF7EE",
-      time: "09:21",
-    },
-
-    {
-      hash: "0xA82E...3221",
-      title:
-        "Energy recovery route selected",
-      type: "STAGE",
-      color: "#9333EA",
-      bg: "#F5EFFF",
-      time: "08:42",
-    },
-
-    {
-      hash: "0x6AF7...8039",
-      title:
-        "Hazard material separation required",
-      type: "ALERT",
-      color: "#DC2626",
-      bg: "#FFF1F1",
-      time: "07:18",
-    },
-
-  ];
-
   /* =========================================
   FILTERED
   ========================================= */
 
   const [passports, setPassports] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
+
+  const downloadJson = (fileName: string, payload: any) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const loadCloseQueue = () => {
     apiFetch<any>("/recycler/lifecycle-close")
@@ -200,7 +86,6 @@ export default function LifecycleClose() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to close lifecycle";
       setApiError(message);
-      alert(message);
     }
   };
 
@@ -617,7 +502,7 @@ export default function LifecycleClose() {
                 text-[#D1D5DB]
               "
             >
-              RCY-{8801 + index}
+              {item.processId}
             </p>
 
           </div>
@@ -811,6 +696,13 @@ export default function LifecycleClose() {
           </div>
 
           <button
+            onClick={() =>
+              downloadJson("recycler-lifecycle-log.json", {
+                exportedAt: new Date().toISOString(),
+                passports: filteredPassports,
+                logs,
+              })
+            }
             className="
               text-[9px]
 
@@ -939,12 +831,21 @@ export default function LifecycleClose() {
                   {log.time}
                 </p>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (log.explorerUrl) window.open(log.explorerUrl, "_blank", "noopener,noreferrer");
+                  }}
+                  disabled={!log.explorerUrl}
+                  className="disabled:opacity-30"
+                >
                 <OpenInNewRoundedIcon
                   style={{
                     fontSize: 13,
                     color: "#D1D5DB",
                   }}
                 />
+                </button>
 
               </div>
 

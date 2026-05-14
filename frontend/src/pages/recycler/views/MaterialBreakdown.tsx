@@ -25,173 +25,21 @@ export default function MaterialBreakdown() {
     useState("");
   const [apiError, setApiError] = useState("");
 
-  const fallbackPassports = [
-
-    {
-      id: "GP-9811",
-      garment: "Eco Denim Jacket",
-      company: "DenimKind",
-      weight: "0.82 kg",
-
-      verified: true,
-      hazardous: false,
-
-      metrics: {
-        carbon: "6.1 kg CO₂e",
-        water: "18.0 L",
-        recyclability: "87%",
-        energy: "2.4 kWh",
-      },
-
-      materials: [
-
-        {
-          name: "Organic Cotton",
-          type: "NATURAL",
-          value: 78,
-          barColor: "#1F6B2A",
-
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-        },
-
-        {
-          name: "Elastane",
-          type: "SYNTHETIC",
-          value: 14,
-          barColor: "#2D74DA",
-
-          badge: "Non-Extract",
-          badgeBg: "#F4F4F5",
-          badgeColor: "#9CA3AF",
-        },
-
-        {
-          name: "Metal Hardware",
-          type: "METAL",
-          value: 8,
-          barColor: "#B95D10",
-
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-        },
-
-      ],
-    },
-
-    {
-      id: "GP-9855",
-      garment: "Linen Shirt",
-      company: "Naturalia",
-      weight: "0.45 kg",
-
-      verified: true,
-      hazardous: true,
-
-      metrics: {
-        carbon: "3.5 kg CO₂e",
-        water: "10.1 L",
-        recyclability: "65%",
-        energy: "1.1 kWh",
-      },
-
-      materials: [
-
-        {
-          name: "Linen",
-          type: "NATURAL",
-          value: 65,
-          barColor: "#1F6B2A",
-
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-        },
-
-        {
-          name: "Polyester",
-          type: "SYNTHETIC",
-          value: 30,
-          barColor: "#2D74DA",
-
-          badge: "Non-Extract",
-          badgeBg: "#F4F4F5",
-          badgeColor: "#9CA3AF",
-        },
-
-        {
-          name: "Dye Chemicals",
-          type: "CHEMICAL",
-          value: 5,
-          barColor: "#DC2626",
-
-          badge: "Non-Extract",
-          badgeBg: "#F4F4F5",
-          badgeColor: "#9CA3AF",
-        },
-
-      ],
-    },
-
-    {
-      id: "GP-9777",
-      garment: "Wool Blend Coat",
-      company: "NordicWool",
-      weight: "1.20 kg",
-
-      verified: true,
-      hazardous: false,
-
-      metrics: {
-        carbon: "4.8 kg CO₂e",
-        water: "22.5 L",
-        recyclability: "91%",
-        energy: "3.6 kWh",
-      },
-
-      materials: [
-
-        {
-          name: "Merino Wool",
-          type: "NATURAL",
-          value: 60,
-          barColor: "#1F6B2A",
-
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-        },
-
-        {
-          name: "rPET Polyester",
-          type: "RECYCLED",
-          value: 35,
-          barColor: "#7C3AED",
-
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-        },
-
-        {
-          name: "Lining Cotton",
-          type: "NATURAL",
-          value: 5,
-          barColor: "#059669",
-
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-        },
-
-      ],
-    },
-
-  ];
-
   const [passports, setPassports] = useState<any[]>([]);
+
+  const downloadReport = () => {
+    if (!selectedPassport) return;
+
+    const blob = new Blob([JSON.stringify(selectedPassport, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `material-breakdown-${selectedPassport.id}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     apiFetch<any>("/recycler/materials")
@@ -299,13 +147,19 @@ export default function MaterialBreakdown() {
                 text-[#9CA3AF]
               "
             >
-              3 loaded
+              {passports.length} loaded
             </p>
 
           </div>
 
           {/* LIST */}
           <div>
+
+            {filteredPassports.length === 0 && (
+              <div className="px-4 py-10 text-center text-sm font-semibold text-[#9CA3AF]">
+                No material passports found
+              </div>
+            )}
 
             {filteredPassports.map((item) => {
 
@@ -780,6 +634,7 @@ export default function MaterialBreakdown() {
             >
 
               <button
+                onClick={downloadReport}
                 className="
                   flex-1
 

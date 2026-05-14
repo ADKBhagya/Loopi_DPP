@@ -25,161 +25,11 @@ export default function DPPLookup() {
   const [selectedId, setSelectedId] =
     useState("");
   const [apiError, setApiError] = useState("");
+  const [queueing, setQueueing] = useState(false);
 
   /* =========================================
   DATA
   ========================================= */
-
-  const fallbackPassports = [
-
-    {
-      id: "GP-9811",
-      garment: "Eco Denim Jacket",
-      company: "DenimKind",
-      weight: "0.82 kg",
-
-      verified: true,
-      hazardous: false,
-
-      metrics: {
-        recyclability: "87%",
-        carbon: "6.1 kg CO₂e",
-      },
-
-      materials: [
-
-        {
-          name: "Organic Cotton",
-          type: "Natural",
-          value: "78%",
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-          color: "#166534",
-        },
-
-        {
-          name: "Elastane",
-          type: "Synthetic",
-          value: "14%",
-          badge: "Non-Extract",
-          badgeBg: "#F3F4F6",
-          badgeColor: "#9CA3AF",
-          color: "#2563EB",
-        },
-
-        {
-          name: "Metal Hardware",
-          type: "Metal",
-          value: "8%",
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-          color: "#B45309",
-        },
-
-      ],
-    },
-
-    {
-      id: "GP-9855",
-      garment: "Linen Shirt",
-      company: "Naturalia",
-      weight: "0.45 kg",
-
-      verified: true,
-      hazardous: true,
-
-      metrics: {
-        recyclability: "65%",
-        carbon: "3.5 kg CO₂e",
-      },
-
-      materials: [
-
-        {
-          name: "Linen",
-          type: "Natural",
-          value: "65%",
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-          color: "#166534",
-        },
-
-        {
-          name: "Polyester",
-          type: "Synthetic",
-          value: "30%",
-          badge: "Non-Extract",
-          badgeBg: "#F3F4F6",
-          badgeColor: "#9CA3AF",
-          color: "#2563EB",
-        },
-
-        {
-          name: "Dye Chemicals",
-          type: "Chemical",
-          value: "5%",
-          badge: "Non-Extract",
-          badgeBg: "#F3F4F6",
-          badgeColor: "#9CA3AF",
-          color: "#DC2626",
-        },
-
-      ],
-    },
-
-    {
-      id: "GP-9777",
-      garment: "Wool Blend Coat",
-      company: "NordicWool",
-      weight: "1.20 kg",
-
-      verified: true,
-      hazardous: false,
-
-      metrics: {
-        recyclability: "91%",
-        carbon: "4.8 kg CO₂e",
-      },
-
-      materials: [
-
-        {
-          name: "Merino Wool",
-          type: "Natural",
-          value: "60%",
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-          color: "#166534",
-        },
-
-        {
-          name: "rPET Polyester",
-          type: "Recycled",
-          value: "35%",
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-          color: "#7C3AED",
-        },
-
-        {
-          name: "Lining Cotton",
-          type: "Natural",
-          value: "5%",
-          badge: "Extractable",
-          badgeBg: "#EAF7EE",
-          badgeColor: "#16A34A",
-          color: "#059669",
-        },
-
-      ],
-    },
-
-  ];
 
   /* =========================================
   FILTER
@@ -245,7 +95,7 @@ const handleSearch = async () => {
   }
 
   try {
-    const data = await apiFetch<any>(`/recycler/passport/${search.trim()}`);
+    const data = await apiFetch<any>(`/recycler/passport/${encodeURIComponent(search.trim())}`);
     setApiError("");
     setPassports((prev) =>
       prev.some((item) => item.id === data.id) ? prev : [data, ...prev]
@@ -254,9 +104,49 @@ const handleSearch = async () => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Digital passport not found";
     setApiError(message);
-    alert(message);
   }
 
+};
+
+const downloadReport = () => {
+  if (!selectedPassport) return;
+
+  const blob = new Blob([JSON.stringify(selectedPassport, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `recycler-dpp-${selectedPassport.id}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const queueForRecycling = async () => {
+  if (!selectedPassport) return;
+
+  try {
+    setQueueing(true);
+    const material = selectedPassport.materials
+      ?.map((item: any) => item.name || item)
+      .join(", ");
+
+    await apiFetch("/recycler/processing", {
+      method: "POST",
+      body: JSON.stringify({
+        passport: selectedPassport.id,
+        garment: selectedPassport.garment,
+        material,
+        weight: selectedPassport.weight,
+        stage: "SORTING",
+      }),
+    });
+    setApiError("");
+  } catch (error) {
+    setApiError(error instanceof Error ? error.message : "Failed to queue passport");
+  } finally {
+    setQueueing(false);
+  }
 };
 
   return (
@@ -404,7 +294,7 @@ const handleSearch = async () => {
                   }
 
                 }}
-                placeholder="GP-9811"
+                placeholder="Passport ID, SKU, or product name"
                 className="
                   w-full
 
@@ -466,63 +356,6 @@ const handleSearch = async () => {
               SEARCH
 
             </button>
-
-          </div>
-
-          {/* QUICK IDS */}
-          <div
-            className="
-              mt-5
-
-              flex items-center
-              justify-center
-
-              gap-2
-
-              flex-wrap
-            "
-          >
-
-            {[
-              "GP-9811",
-              "GP-9855",
-              "GP-9777",
-            ].map((id) => (
-
-              <button
-                key={id}
-                onClick={() => {
-
-                  setSearch(id);
-                  setSelectedId(id);
-
-                }}
-                className={`
-                  h-7
-
-                  px-3
-
-                  rounded-full
-
-                  border
-
-                  text-[10px]
-
-                  font-black
-
-                  transition-all
-
-                  ${
-                    selectedId === id
-                      ? "bg-[#166B2D] text-white border-[#166B2D]"
-                      : "bg-[#F9FAFB] text-[#6B7280] border-[#E5E7EB]"
-                  }
-                `}
-              >
-                {id}
-              </button>
-
-            ))}
 
           </div>
 
@@ -864,6 +697,8 @@ const handleSearch = async () => {
             >
 
               <button
+                onClick={queueForRecycling}
+                disabled={queueing}
                 className="
                   h-[38px]
 
@@ -891,11 +726,12 @@ const handleSearch = async () => {
                   style={{ fontSize: 15 }}
                 />
 
-                QUEUE FOR RECYCLING
+                {queueing ? "QUEUEING..." : "QUEUE FOR RECYCLING"}
 
               </button>
 
               <button
+                onClick={downloadReport}
                 className="
                   h-[38px]
 
@@ -1022,6 +858,11 @@ const handleSearch = async () => {
 
         {/* LIST */}
         <div>
+          {filteredPassports.length === 0 && (
+            <div className="px-5 py-10 text-center text-sm font-semibold text-[#9CA3AF]">
+              No recycler passports found
+            </div>
+          )}
 
           {filteredPassports.map((item) => (
 
