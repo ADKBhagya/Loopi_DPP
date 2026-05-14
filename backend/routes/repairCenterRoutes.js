@@ -5,6 +5,7 @@ import { allowRoles } from "../middleware/roleMiddleware.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 import {
   createRepairService,
+  getRepairDashboard,
   getRepairLogs,
   getRepairPassports,
   getRepairQueue,
@@ -17,6 +18,7 @@ const router = express.Router();
 const repairCenterAccess = [verifyToken, allowRoles("Repair Center", "Admin")];
 
 router.get("/queue", repairCenterAccess, getRepairQueue);
+router.get("/dashboard", repairCenterAccess, getRepairDashboard);
 router.post(
   "/queue",
   repairCenterAccess,

@@ -179,8 +179,22 @@ const handleSearch = async () => {
     );
     setSelectedPassport(found);
   } catch (error) {
-    setLookupError(error instanceof Error ? error.message : "Passport lookup failed");
-    setSelectedPassport(null);
+    const value = search.toLowerCase().trim();
+    const localMatch = passports.find((item) => {
+      return (
+        String(item.id || "").toLowerCase().includes(value) ||
+        String(item.garment || "").toLowerCase().includes(value) ||
+        String(item.brand || "").toLowerCase().includes(value)
+      );
+    });
+
+    if (localMatch) {
+      setSelectedPassport(localMatch);
+      setLookupError("");
+    } else {
+      setLookupError(error instanceof Error ? error.message : "Passport lookup failed");
+      setSelectedPassport(null);
+    }
   } finally {
     setLoading(false);
   }

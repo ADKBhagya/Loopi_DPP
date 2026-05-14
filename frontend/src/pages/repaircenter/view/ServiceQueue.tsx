@@ -84,12 +84,12 @@ export default function ServiceQueue() {
   const [queueError, setQueueError] = useState("");
 
   const [newJob, setNewJob] = useState({
-    passport: "GP-9821",
-    garment: "Recycled Wool Blazer",
+    passport: "",
+    garment: "",
     type: "Mending",
     technician: "Erik Lund",
     duration: "2h",
-    price: "€20",
+    price: "",
     note: "",
   });
 
@@ -244,12 +244,12 @@ export default function ServiceQueue() {
         setRepairPhotos([]);
         setRepairCertificates([]);
         setNewJob({
-          passport: "GP-9821",
-          garment: "Recycled Wool Blazer",
+          passport: "",
+          garment: "",
           type: "Mending",
           technician: "Erik Lund",
           duration: "2h",
-          price: "€20",
+          price: "",
           note: "",
         });
 
@@ -279,7 +279,10 @@ export default function ServiceQueue() {
       );
       setShowMenu("");
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update repair job");
+      setToast({
+        message: error instanceof Error ? error.message : "Failed to update repair job",
+        type: "error",
+      });
     }
   };
 

@@ -448,6 +448,46 @@ export const getRepairRecords = async (req, res) => {
   }
 };
 
+export const getRepairDashboard = async (req, res) => {
+  try {
+    const [services, garmentCount, transactionCount] = await Promise.all([
+      RepairService.find().sort({ createdAt: -1 }),
+      Garment.countDocuments(),
+      Transaction.countDocuments({ transactionType: /REPAIR|CONSUMER_REPAIR/i }),
+    ]);
+
+    const completed = services.filter((item) => item.status === "COMPLETED").length;
+    const inProgress = services.filter((item) => item.status === "IN PROGRESS").length;
+    const queued = services.filter((item) => item.status === "QUEUED").length;
+    const uploadCount = services.reduce(
+      (total, item) =>
+        total + (item.photos?.length || 0) + (item.certificates?.length || 0),
+      0
+    );
+
+    res.status(200).json({
+      stats: {
+        totalServices: services.length,
+        completed,
+        inProgress,
+        queued,
+        passports: garmentCount,
+        logs: transactionCount,
+        uploads: uploadCount,
+        walletCredits: completed * 15,
+      },
+      recent: services.slice(0, 5).map(formatService),
+      network: {
+        status: "ONLINE",
+        label: "MAINNET ONLINE",
+      },
+    });
+  } catch (error) {
+    console.error("REPAIR DASHBOARD ERROR:", error);
+    res.status(500).json({ message: "Failed to fetch repair dashboard" });
+  }
+};
+
 export const getRepairPassports = async (req, res) => {
   try {
     const garments = await Garment.find()

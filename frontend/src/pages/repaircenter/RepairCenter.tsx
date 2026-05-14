@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { apiFetch } from "../../lib/api";
 
 /* LAYOUT */
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -11,11 +13,27 @@ import DppLookup from "./view/DppLookup";
 import ServiceLogs from "./view/ServiceLogs";
 
 function RepairCenter() {
+  const [dashboard, setDashboard] = useState<any>(null);
+
+  useEffect(() => {
+    apiFetch<any>("/repair-center/dashboard")
+      .then(setDashboard)
+      .catch((error) => {
+        console.error("Failed to load repair center dashboard summary", error);
+      });
+  }, []);
+
   return (
 
     <DashboardLayout
       menuItems={repairCenterMenu}
       title="Repair Center"
+      walletCredits={dashboard?.stats?.walletCredits ?? 0}
+      networkLabel={
+        dashboard?.network?.label
+          ? `● ${dashboard.network.label}`
+          : undefined
+      }
     >
 
       <Routes>
