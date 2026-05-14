@@ -18,6 +18,10 @@ import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 
+type LifecycleCloseProps = {
+  onDataChanged?: () => void;
+};
+
 const lifecycleStatusRank = (status: string) => {
   if (status === "RECOVER" || status === "READY" || status === "WAIT") return 3;
   if (status === "CLOSED") return 2;
@@ -47,7 +51,7 @@ const dedupeLifecyclePassports = (items: any[]) => {
   return Array.from(grouped.values());
 };
 
-export default function LifecycleClose() {
+export default function LifecycleClose({ onDataChanged }: LifecycleCloseProps) {
 
   /* =========================================
   STATE
@@ -116,6 +120,7 @@ export default function LifecycleClose() {
       setModalError("");
       await apiFetch(`/recycler/processing/${selectedItem.processId}/close`, {
         method: "POST",
+        body: JSON.stringify({ stage: "CLOSED" }),
       });
       setPassports((prev) =>
         prev.map((item) =>
@@ -132,6 +137,7 @@ export default function LifecycleClose() {
       );
       setSelectedItem(null);
       loadCloseQueue();
+      onDataChanged?.();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to close lifecycle";
       setApiError(message);

@@ -14,7 +14,11 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 
-export default function DPPLookup() {
+type DPPLookupProps = {
+  onDataChanged?: () => void;
+};
+
+export default function DPPLookup({ onDataChanged }: DPPLookupProps) {
   const navigate = useNavigate();
 
   /* =========================================
@@ -144,6 +148,7 @@ const queueForRecycling = async () => {
       }),
     });
     setApiError("");
+    onDataChanged?.();
     navigate("/recycler/processing");
   } catch (error) {
     setApiError(error instanceof Error ? error.message : "Failed to queue passport");
@@ -767,6 +772,18 @@ const queueForRecycling = async () => {
               </button>
 
               <button
+                type="button"
+                onClick={() => {
+                  if (selectedPassport?.id) {
+                    window.open(
+                      `/consumer/passport/${encodeURIComponent(selectedPassport.id)}`,
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                  }
+                }}
+                disabled={!selectedPassport?.id}
+                title="Open public passport"
                 className="
                   w-[38px]
                   h-[38px]
@@ -780,6 +797,8 @@ const queueForRecycling = async () => {
                   flex items-center justify-center
 
                   text-[#9CA3AF]
+
+                  disabled:opacity-40
                 "
               >
 
