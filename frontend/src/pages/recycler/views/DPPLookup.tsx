@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../lib/api";
 
 /* =========================================
@@ -14,6 +15,7 @@ import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 
 export default function DPPLookup() {
+  const navigate = useNavigate();
 
   /* =========================================
   STATE
@@ -142,6 +144,7 @@ const queueForRecycling = async () => {
       }),
     });
     setApiError("");
+    navigate("/recycler/processing");
   } catch (error) {
     setApiError(error instanceof Error ? error.message : "Failed to queue passport");
   } finally {

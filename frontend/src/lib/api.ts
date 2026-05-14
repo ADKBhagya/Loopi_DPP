@@ -44,7 +44,7 @@ export async function apiFetch<T = any>(
     const message =
       typeof data === "object" && data && "message" in data
         ? String(data.message)
-        : "Request failed";
+        : `Request failed (${response.status} ${response.statusText || ""} ${path})`;
     throw new Error(message);
   }
 

@@ -21,6 +21,14 @@ const hashFor = (...parts) =>
     .update(parts.filter(Boolean).join("-"))
     .digest("hex");
 
+const runSideEffect = async (label, action) => {
+  try {
+    await action();
+  } catch (error) {
+    console.warn(`${label} skipped:`, error?.message || error);
+  }
+};
+
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const findGarmentByIdentifier = async (identifier) => {
@@ -290,17 +298,19 @@ export const createRecyclingProcess = async (req, res) => {
       metadata: req.body,
     });
 
-    await createBlockchainTransaction({
-      transactionType: "RECYCLING_PROCESS_CREATED",
-      entityType: "RecyclingProcess",
-      entityId: process._id,
-      garmentId: garment._id,
-      user: req.user,
-      metadata: {
-        processId,
-        passportId,
-      },
-    });
+    await runSideEffect("Recycling create blockchain transaction", () =>
+      createBlockchainTransaction({
+        transactionType: "RECYCLING_PROCESS_CREATED",
+        entityType: "RecyclingProcess",
+        entityId: process._id,
+        garmentId: garment._id,
+        user: req.user,
+        metadata: {
+          processId,
+          passportId,
+        },
+      })
+    );
 
     res.status(201).json({
       message: "Recycling process created",
@@ -329,33 +339,37 @@ export const updateRecyclingProcess = async (req, res) => {
       (process.stage === "COMPLETED" || process.stage === "CLOSED") &&
       previousStage !== process.stage
     ) {
-      await LifecycleEvent.create({
+      await runSideEffect("Recycling lifecycle event", () =>
+        LifecycleEvent.create({
+          garmentId: process.garmentId,
+          stage: "RECYCLED",
+          description: `Recycling ${process.processId} ${process.stage.toLowerCase()}`,
+          actorRole: req.user?.role || "recycler",
+          actorId: req.user?._id,
+          blockchainHash: process.blockchainHash,
+          metadata: {
+            processId: process.processId,
+            passportId: process.passportId,
+            credits: process.credits,
+          },
+        })
+      );
+    }
+
+    await runSideEffect("Recycling update blockchain transaction", () =>
+      createBlockchainTransaction({
+        transactionType: "RECYCLING_PROCESS_UPDATED",
+        entityType: "RecyclingProcess",
+        entityId: process._id,
         garmentId: process.garmentId,
-        stage: "RECYCLED",
-        description: `Recycling ${process.processId} ${process.stage.toLowerCase()}`,
-        actorRole: req.user.role,
-        actorId: req.user._id,
-        blockchainHash: process.blockchainHash,
+        user: req.user,
         metadata: {
           processId: process.processId,
           passportId: process.passportId,
-          credits: process.credits,
+          stage: process.stage,
         },
-      });
-    }
-
-    await createBlockchainTransaction({
-      transactionType: "RECYCLING_PROCESS_UPDATED",
-      entityType: "RecyclingProcess",
-      entityId: process._id,
-      garmentId: process.garmentId,
-      user: req.user,
-      metadata: {
-        processId: process.processId,
-        passportId: process.passportId,
-        stage: process.stage,
-      },
-    });
+      })
+    );
 
     res.status(200).json({
       message: "Recycling process updated",
@@ -448,6 +462,9 @@ export const getLifecycleCloseQueue = async (req, res) => {
 };
 
 export const closeRecyclerLifecycle = async (req, res) => {
-  req.body.stage = "CLOSED";
+  req.body = {
+    ...(req.body || {}),
+    stage: "CLOSED",
+  };
   return updateRecyclingProcess(req, res);
 };

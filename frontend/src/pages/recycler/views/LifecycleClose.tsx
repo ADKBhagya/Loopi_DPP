@@ -18,6 +18,35 @@ import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 
+const lifecycleStatusRank = (status: string) => {
+  if (status === "RECOVER" || status === "READY" || status === "WAIT") return 3;
+  if (status === "CLOSED") return 2;
+  return 1;
+};
+
+const processNumber = (processId?: string) =>
+  Number.parseInt(String(processId || "").replace(/\D/g, ""), 10) || 0;
+
+const dedupeLifecyclePassports = (items: any[]) => {
+  const grouped = new Map<string, any>();
+
+  items.forEach((item) => {
+    const key = String(item.id || item.passport || item.processId || "").toLowerCase();
+    const existing = grouped.get(key);
+
+    if (
+      !existing ||
+      lifecycleStatusRank(item.status) > lifecycleStatusRank(existing.status) ||
+      (lifecycleStatusRank(item.status) === lifecycleStatusRank(existing.status) &&
+        processNumber(item.processId) > processNumber(existing.processId))
+    ) {
+      grouped.set(key, item);
+    }
+  });
+
+  return Array.from(grouped.values());
+};
+
 export default function LifecycleClose() {
 
   /* =========================================
@@ -63,7 +92,7 @@ export default function LifecycleClose() {
     apiFetch<any>("/recycler/lifecycle-close")
       .then((data) => {
         setApiError("");
-        setPassports(data.passports || []);
+        setPassports(dedupeLifecyclePassports(data.passports || []));
         setLogs(data.logs || []);
       })
       .catch((error) => {
