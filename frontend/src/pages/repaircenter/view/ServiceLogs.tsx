@@ -40,13 +40,31 @@ export default function ServiceLogs() {
   const [logsLoading, setLogsLoading] = useState(true);
   const [logsError, setLogsError] = useState("");
 
+  const hydratePassports = (items: ServiceLog[], records: any[]) => {
+    const passportByServiceId = new Map(
+      records.map((record) => [String(record.id), record.passport])
+    );
+
+    return items.map((log) => {
+      if (log.passport && log.passport !== "N/A") return log;
+
+      const serviceId = String(log.description || "").match(/REP-\d+/)?.[0];
+      const passport = serviceId ? passportByServiceId.get(serviceId) : "";
+
+      return passport ? { ...log, passport } : log;
+    });
+  };
+
   useEffect(() => {
     setLogsLoading(true);
     setLogsError("");
 
-    apiFetch<{ logs: ServiceLog[] }>("/repair-center/logs")
-      .then((data) => {
-        setLogs(data.logs || []);
+    Promise.all([
+      apiFetch<{ logs: ServiceLog[] }>("/repair-center/logs"),
+      apiFetch<{ records: any[] }>("/repair-center/records").catch(() => ({ records: [] })),
+    ])
+      .then(([data, recordsData]) => {
+        setLogs(hydratePassports(data.logs || [], recordsData.records || []));
       })
       .catch((error) => {
         console.error("Failed to load repair service logs", error);
