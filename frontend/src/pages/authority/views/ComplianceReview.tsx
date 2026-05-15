@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../../lib/api";
+import { useNavigate } from "react-router-dom";
 
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -9,9 +10,16 @@ import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 
 export default function ComplianceReview() {
+  const navigate = useNavigate();
   const [expandedStage, setExpandedStage] =
     useState<string | null>(null);
   const [apiError, setApiError] = useState("");
+  const [monthlySummary, setMonthlySummary] = useState({
+    total: 0,
+    gold: 0,
+    silver: 0,
+    bronze: 0,
+  });
 
   const stageIcon = (label: string) => {
     if (label.includes("Submitted")) return <DescriptionOutlinedIcon style={{ fontSize: 15 }} />;
@@ -120,6 +128,18 @@ export default function ComplianceReview() {
   void fallbackRegions;
   const [regions, setRegions] = useState<any[]>([]);
 
+  const downloadJson = (fileName: string, payload: any) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     apiFetch<any>("/authority/compliance-review")
       .then((data) => {
@@ -131,6 +151,7 @@ export default function ComplianceReview() {
           }))
         );
         setRegions(data.regions || []);
+        setMonthlySummary(data.monthlySummary || { total: 0, gold: 0, silver: 0, bronze: 0 });
       })
       .catch((error) => {
         console.error("Failed to load authority compliance review", error);
@@ -164,7 +185,17 @@ export default function ComplianceReview() {
               </p>
             </div>
 
-            <button className="h-[38px] px-4 rounded-xl border border-gray-200 bg-[#FAFAFA] text-[11px] font-bold text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-all">
+            <button
+              onClick={() =>
+                downloadJson("authority-compliance-review.json", {
+                  exportedAt: new Date().toISOString(),
+                  pipeline: pipelineData.map(({ icon, ...item }) => item),
+                  regions,
+                  monthlySummary,
+                })
+              }
+              className="h-[38px] px-4 rounded-xl border border-gray-200 bg-[#FAFAFA] text-[11px] font-bold text-gray-600 flex items-center gap-2 hover:bg-gray-100 transition-all"
+            >
               
               <DownloadOutlinedIcon
                 style={{ fontSize: 16 }}
@@ -250,7 +281,10 @@ export default function ComplianceReview() {
                             {item.description}
                           </p>
 
-                          <button className="mt-4 h-[30px] px-3 rounded-lg border border-gray-200 bg-white text-[10px] font-bold text-gray-600 flex items-center gap-2 hover:bg-gray-50 transition-all">
+                          <button
+                            onClick={() => navigate("/authority/control")}
+                            className="mt-4 h-[30px] px-3 rounded-lg border border-gray-200 bg-white text-[10px] font-bold text-gray-600 flex items-center gap-2 hover:bg-gray-50 transition-all"
+                          >
                             
                             <VisibilityOutlinedIcon
                               style={{
@@ -334,7 +368,7 @@ export default function ComplianceReview() {
             </p>
 
             <h1 className="text-[25px] font-black mt-2">
-              128 Seals
+              {monthlySummary.total} Seals
             </h1>
 
             <p className="text-[13px] text-green-100 mt-1">
@@ -347,28 +381,36 @@ export default function ComplianceReview() {
               
               <SummaryBar
                 label="Gold Seals"
-                value="82"
-                width="100%"
+                value={String(monthlySummary.gold)}
+                width={monthlySummary.total ? `${Math.round((monthlySummary.gold / monthlySummary.total) * 100)}%` : "0%"}
                 color="#EAB308"
               />
 
               <SummaryBar
                 label="Silver Seals"
-                value="31"
-                width="48%"
+                value={String(monthlySummary.silver)}
+                width={monthlySummary.total ? `${Math.round((monthlySummary.silver / monthlySummary.total) * 100)}%` : "0%"}
                 color="#D1D5DB"
               />
 
               <SummaryBar
                 label="Bronze Seals"
-                value="15"
-                width="24%"
+                value={String(monthlySummary.bronze)}
+                width={monthlySummary.total ? `${Math.round((monthlySummary.bronze / monthlySummary.total) * 100)}%` : "0%"}
                 color="#EA580C"
               />
             </div>
 
             {/* DOWNLOAD */}
-            <button className="mt-8 h-[42px] px-5 rounded-xl bg-white/10 border border-white/10 text-[11px] font-bold tracking-[0.14em] text-white hover:bg-white/20 transition-all flex items-center gap-2">
+            <button
+              onClick={() =>
+                downloadJson("authority-monthly-summary.json", {
+                  exportedAt: new Date().toISOString(),
+                  monthlySummary,
+                })
+              }
+              className="mt-8 h-[42px] px-5 rounded-xl bg-white/10 border border-white/10 text-[11px] font-bold tracking-[0.14em] text-white hover:bg-white/20 transition-all flex items-center gap-2"
+            >
               
               <DownloadOutlinedIcon
                 style={{ fontSize: 16 }}

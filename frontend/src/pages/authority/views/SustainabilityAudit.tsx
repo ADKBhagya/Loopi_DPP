@@ -56,6 +56,32 @@ export default function SustainabilityAudit() {
     },
   ]);
 
+  const downloadAuditReport = () => {
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            exportedAt: new Date().toISOString(),
+            passportId: auditPassport,
+            score: auditScore,
+            completed,
+            items: auditItems,
+            logs,
+          },
+          null,
+          2
+        ),
+      ],
+      { type: "application/json" }
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `authority-audit-${auditPassport || "report"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const resetAudit = () => {
     setCompleted(false);
     setRunning(false);
@@ -279,7 +305,10 @@ export default function SustainabilityAudit() {
                       </div>
                     </div>
 
-                    <button className="h-[42px] px-4 rounded-xl border border-gray-200 bg-white text-[11px] font-black tracking-[0.14em] text-gray-600 flex items-center gap-2">
+                    <button
+                      onClick={downloadAuditReport}
+                      className="h-[42px] px-4 rounded-xl border border-gray-200 bg-white text-[11px] font-black tracking-[0.14em] text-gray-600 flex items-center gap-2"
+                    >
                       <DownloadRoundedIcon
                         style={{ fontSize: 16 }}
                       />

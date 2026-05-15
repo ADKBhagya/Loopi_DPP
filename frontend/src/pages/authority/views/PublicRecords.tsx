@@ -22,50 +22,19 @@ export default function PublicRecords() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [apiError, setApiError] = useState("");
 
-  const fallbackRecords = [
-    {
-      id: "GP-9822",
-      type: "GOLD SEAL",
-      garment: "Premium Cotton Hoodie",
-      factory: "FCA Compliance",
-      country: "Germany",
-      date: "2026-03-19",
-      status: "PUBLIC VERIFIED",
-      color: "#16A34A",
-    },
-    {
-      id: "GP-9821",
-      type: "SILVER SEAL",
-      garment: "Organic Sports Tee",
-      factory: "Nordic Textile Lab",
-      country: "Sweden",
-      date: "2026-03-16",
-      status: "PUBLIC VERIFIED",
-      color: "#94A3B8",
-    },
-    {
-      id: "GP-4770",
-      type: "BRONZE SEAL",
-      garment: "Eco Denim",
-      factory: "EU Textile Group",
-      country: "France",
-      date: "2026-03-14",
-      status: "UNDER REVIEW",
-      color: "#D97706",
-    },
-    {
-      id: "GP-4716",
-      type: "GOLD SEAL",
-      garment: "Recycled Jacket",
-      factory: "Berlin Fabric Labs",
-      country: "Germany",
-      date: "2026-03-11",
-      status: "PUBLIC VERIFIED",
-      color: "#16A34A",
-    },
-  ];
-  void fallbackRecords;
   const [records, setRecords] = useState<any[]>([]);
+
+  const downloadJson = (fileName: string, payload: any) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     apiFetch<any>("/authority/public-records")
@@ -390,12 +359,20 @@ export default function PublicRecords() {
                   </p>
 
                   <p className="mt-3 text-[13px] font-bold text-gray-700 break-all">
-                    0x98a2_77bc_44fa_9901_cc77_efaa
+                    {selectedRecord.hash || "PENDING"}
                   </p>
                 </div>
 
                 {/* ACTION */}
-                <button className="mt-7 w-full h-[54px] rounded-[18px] bg-[#16641E] text-white text-[12px] font-black tracking-[0.16em] shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 hover:bg-[#0F4E16] transition-all">
+                <button
+                  onClick={() =>
+                    downloadJson(`authority-public-record-${selectedRecord.id}.json`, {
+                      exportedAt: new Date().toISOString(),
+                      record: selectedRecord,
+                    })
+                  }
+                  className="mt-7 w-full h-[54px] rounded-[18px] bg-[#16641E] text-white text-[12px] font-black tracking-[0.16em] shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 hover:bg-[#0F4E16] transition-all"
+                >
                   
                   <DownloadRoundedIcon
                     style={{ fontSize: 18 }}

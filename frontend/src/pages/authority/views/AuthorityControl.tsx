@@ -39,6 +39,18 @@ export default function AuthorityControl() {
 
   const [complianceData, setComplianceData] = useState<any[]>([]);
 
+  const downloadJson = (fileName: string, payload: any) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const loadControl = () => {
     apiFetch<any>("/authority/control")
       .then((data) => {
@@ -68,7 +80,7 @@ export default function AuthorityControl() {
       setSelectedClaim(null);
       loadControl();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update compliance record");
+      setApiError(error instanceof Error ? error.message : "Failed to update compliance record");
     }
   };
 
@@ -346,7 +358,16 @@ export default function AuthorityControl() {
               records
             </p>
 
-            <button className="flex items-center gap-2 text-[#1B5E20] font-bold text-sm tracking-wider">
+            <button
+              onClick={() =>
+                downloadJson("authority-compliance-records.json", {
+                  exportedAt: new Date().toISOString(),
+                  stats,
+                  records: filteredData,
+                })
+              }
+              className="flex items-center gap-2 text-[#1B5E20] font-bold text-sm tracking-wider"
+            >
               
               <OpenInNewRoundedIcon
                 style={{ fontSize: 18 }}
@@ -622,7 +643,10 @@ export default function AuthorityControl() {
             {/* FOOTER */}
             <div className="border-t border-gray-100 px-5 py-4 flex items-center justify-between">
               
-              <button className="text-[11px] font-bold tracking-[0.16em] text-gray-400">
+              <button
+                onClick={() => setSelectedClaim(null)}
+                className="text-[11px] font-bold tracking-[0.16em] text-gray-400"
+              >
                 RETURN TO QUEUE
               </button>
 
@@ -730,6 +754,7 @@ function StatusBadge({
     blue: "bg-blue-50 text-blue-600",
     orange: "bg-orange-50 text-orange-600",
     green: "bg-green-50 text-green-600",
+    red: "bg-red-50 text-red-600",
   };
 
   return (
