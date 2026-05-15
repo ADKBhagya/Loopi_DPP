@@ -18,6 +18,15 @@ const passportIdFor = (garment) =>
 const shortHash = (hash = "") =>
   hash ? `0x${String(hash).slice(0, 4)}_${String(hash).slice(-4)}` : "PENDING";
 
+const runSideEffect = async (label, action) => {
+  try {
+    return await action();
+  } catch (error) {
+    console.warn(`${label} skipped:`, error?.message || error);
+    return null;
+  }
+};
+
 const regionFor = (garment) => {
   const country = String(garment?.manufacturingCountry || garment?.location || "").toLowerCase();
   if (/sweden|norway|finland|denmark|north/.test(country)) return "EU-NORTH";
@@ -170,7 +179,8 @@ export const updateComplianceRecord = async (req, res) => {
       await garment.save();
     }
 
-    const transaction = await createBlockchainTransaction({
+    const transaction = await runSideEffect("Authority compliance blockchain transaction", () =>
+      createBlockchainTransaction({
       transactionType:
         requestedStatus === "FLAGGED" ? "AUTHORITY_REAUDIT_FLAGGED" : "AUTHORITY_FINAL_APPROVAL",
       entityType: record.entityType,
@@ -182,23 +192,26 @@ export const updateComplianceRecord = async (req, res) => {
         passportId: passportIdFor(garment),
         status: requestedStatus || "FINAL APPROVED",
       },
-    });
+      })
+    );
 
-    await LifecycleEvent.create({
-      garmentId: garment._id,
-      stage: "CERTIFIED",
-      description:
-        requestedStatus === "FLAGGED"
-          ? `Authority flagged ${record.id} for re-audit`
-          : `Authority final approval granted for ${record.id}`,
-      actorRole: req.user.role,
-      actorId: req.user._id,
-      blockchainHash: transaction.blockchainHash,
-      metadata: {
-        complianceId: record.id,
-        status: requestedStatus || "FINAL APPROVED",
-      },
-    });
+    await runSideEffect("Authority lifecycle event", () =>
+      LifecycleEvent.create({
+        garmentId: garment._id,
+        stage: "CERTIFIED",
+        description:
+          requestedStatus === "FLAGGED"
+            ? `Authority flagged ${record.id} for re-audit`
+            : `Authority final approval granted for ${record.id}`,
+        actorRole: req.user?.role || "Authority",
+        actorId: req.user?._id,
+        blockchainHash: transaction?.blockchainHash || garment._id.toString(),
+        metadata: {
+          complianceId: record.id,
+          status: requestedStatus || "FINAL APPROVED",
+        },
+      })
+    );
 
     const updatedRecords = await buildComplianceRecords();
     res.status(200).json({
@@ -235,6 +248,14 @@ export const getComplianceReview = async (req, res) => {
       return map;
     }, {});
 
+    const sealedRecords = records.filter((item) => item.status === "FINAL APPROVED");
+    const gold = sealedRecords.filter((item) => Number.parseFloat(item.score) >= 90).length;
+    const silver = sealedRecords.filter((item) => {
+      const score = Number.parseFloat(item.score);
+      return score >= 80 && score < 90;
+    }).length;
+    const bronze = sealedRecords.filter((item) => Number.parseFloat(item.score) < 80).length;
+
     res.status(200).json({
       pipeline: [
         stage("Submitted by Auditor", total, "#98A2B3", `${total} compliance records submitted for authority review.`),
@@ -252,6 +273,12 @@ export const getComplianceReview = async (req, res) => {
           width: `${percentage}%`,
         };
       }),
+      monthlySummary: {
+        total: sealed,
+        gold,
+        silver,
+        bronze,
+      },
     });
   } catch (error) {
     console.error("AUTHORITY COMPLIANCE REVIEW ERROR:", error);
